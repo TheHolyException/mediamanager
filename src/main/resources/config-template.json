@@ -1,0 +1,20 @@
+{
+  "systemSettings": {
+    "VOE_THREADS": "2",
+    "PARALLEL_DOWNLOADS": "10"
+  },
+  "targets": [
+    {
+      "identifier": "stream-series",
+      "path": "/home/patrick/downloads/series"
+    },
+    {
+      "identifier": "stream-anime",
+      "path": "/home/patrick/downloads/anime"
+    },
+    {
+      "identifier": "stream-movies",
+      "path": "/home/patrick/downloads/movies"
+    }
+  ]
+}

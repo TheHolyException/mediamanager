@@ -1,0 +1,34 @@
+{
+    "systemSettings": {
+        "PARALLEL_DOWNLOADS": {
+            "value": 10,
+            "forClient": true
+        },
+        "VOE_THREADS": {
+            "value": 2,
+            "forClient": true
+        },
+        "FFMPEG": {
+            "value": "/data/ffmpeg"
+        },
+        "DOWNLOAD_FOLDER": {
+            "value": "./tmp"
+        }
+    },
+    "targets": [
+        {
+            "identifier": "stream-series",
+            "path": "\/home\/patrick\/Downloads\/series",
+            "subFolders": true
+        },
+        {
+            "identifier": "stream-animes",
+            "path": "\/home\/patrick\/Downloads\/anime",
+            "subFolders": true
+        },
+        {
+            "identifier": "stream-movies",
+            "path": "\/home\/patrick\/Downloads\/movies"
+        }
+    ]
+}

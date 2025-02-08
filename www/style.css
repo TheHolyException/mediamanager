@@ -1,0 +1,131 @@
+body {
+    background-color: #222;
+}
+
+input {
+    background-color: rgb(77, 77, 77);
+    color: wheat
+}
+
+label,
+h3,
+h4 {
+    color: wheat;
+    margin: 0;
+    margin-top: 20px;
+}
+
+table,
+th,
+td {
+    border: 3px solid;
+    border-collapse: collapse;
+    color: wheat;
+    width: 0px;
+}
+
+#table {
+    width: 100%;
+}
+
+#table>tr>td>i {
+    display: flex;
+    justify-self: center;
+    align-self: center;
+    font-size: 20px;
+}
+
+#settingsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+}
+
+#globalSettingsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+.settingsGroup {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: column;
+}
+
+#inputContainer,
+#globalSettingsContainer,
+.settingsGroup,
+#aniworldconfig {
+    border: 3px solid gray;
+    border-collapse: collapse;
+    padding: 5px;
+}
+
+#btnAdd {
+    width: 100%;
+}
+
+.failed {
+    background-color: rgb(85, 0, 0);
+}
+
+.success {
+    background-color: rgb(0, 85, 0);
+}
+
+.downlading {
+    background-color: rgb(85, 85, 0);
+}
+
+.committed {
+    background-color: rgb(0, 85, 85);
+}
+
+#controlContainer {
+    display: flex;
+    flex-wrap: nowrap;
+    flex-direction: column;
+}
+
+#statusElement {
+    width: 100%;
+    height: 15px;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#statusElement>label {
+    margin: 0;
+    font-size: 14px;
+}
+
+.statusElement-status1 {
+    background-color: purple;
+}
+
+.statusElement-status2 {
+    background-color: green;
+}
+
+.statusElement-status4 {
+    background-color: red;
+}
+
+#selector {
+    display: flex;
+}
+
+.resolverStatusOK {
+    color: lime;
+}
+
+.resolverStatusERROR {
+    color: red;
+}
+
+.resolverStatusWAIT {
+    color: cyan;
+}

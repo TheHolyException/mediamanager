@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mediamanager</title>
+    <script src="./websocket.js" defer></script>
+    <script src="./script.js" defer></script>
+    <script src="./aniworld.js" defer></script>
+    <script src="./autoloader.js" defer></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" type="text/css" href="./style.css" />
+</head>
+
+<body>
+    <div id="statusElement">
+        <label id="statusText">Initialisiere</label>
+    </div>
+    <h4>Java Heap:</h4>
+    <label id="heapInfo"></label>
+    <br>
+    <h4>Docker Heap:</h4>
+    <label id="dockerInfo"></label>
+    <br>
+    <h4>Thread Pool:</h4>
+    <label id="downloaderInfo"></label>
+    <br>
+    <h3>Source</h3>
+    <label>(i) Supported are (voe; streamtape; vidoza; doodstream; )</label>
+    <div id="selector">
+        <div id="inputContainer" class="padding5">
+            <label>URL</label>
+            <input id="url" type="text" onpaste="onPaste();" />
+            <br>
+            <label>Add on paste</label>
+            <input id="autoadd" type="checkbox" />
+            <br>
+        </div>
+        <div id="aniworldconfig" class="padding5">
+            <label>Aniworld Resolver</label>
+            <div>
+                <Label>URL</Label>
+                <input id="aniworld-url" type="text" />
+            </div>
+            <div>
+                <label>Language: </label>
+                <select id="aniworldLanguage">
+                    <option value="1">German</option>
+                    <option value="2">English SUB</option>
+                    <option value="3">German SUB</option>
+                </select>
+            </div>
+            <button id="btnResolve" onclick="resolveAniworld()">Resolve</button>
+            <label id="resolveInfo"></label>
+            <br>
+            <button id="btnReset" onclick="resetAniworld()">Reset</button>
+        </div>
+    </div>
+    <br>
+    <label>Target Folder:</label>
+    <select id="targetSelection" onchange="onTargetSelection()">
+        <option value="stream-series">Stream - Series</option>
+        <option value="stream-movies">Stream - Movies</option>
+        <option value="stream-animes">Stream - Animes</option>
+        <!--
+        <option value="downloadable">Downloadable</option>
+        <option value="devnull">/dev/null</option>
+        -->
+    </select>
+    <br>
+    <label>Subfolder</label>
+    <input id="subfolder" type="text" />
+    <label>Subfolders on Server</label>
+    <select id="subfolderSelection" onchange="onSubfolderSelection()">
+    </select>
+    <br>
+
+    <h3>Global Settings</h3>
+    <div id="globalSettingsContainer">
+        <div>
+            <label>VOE Threads:</label>
+            <input id="VOE_THREADS" class="globalSetting" type="number" style="width: 40px;" value="4" max="10" min="1">
+        </div>
+        <div>
+            <label>Parallel Downloads:</label>
+            <input id="PARALLEL_DOWNLOADS" class="globalSetting" type="number" style="width: 40px;" value="4" max="10"
+                min="1">
+        </div>
+        <button onclick="saveGlobalSettings()">Save</button>
+    </div>
+
+    <h3>Individual Settings</h3>
+    <div id="settingsContainer">
+    </div>
+    <button id="btnAdd" onclick="onElementAdd()">Add</button>
+    </div>
+    <br>
+    <button onclick="onCommit()">Commit</button>
+    <button onclick="onClear()">Clear All</button>
+    <table id="table">
+        <tr>
+            <th>Delete</th>
+            <th>Resend</th>
+            <th>Status</th>
+            <th>URL</th>
+            <th>Target</th>
+        </tr>
+    </table>
+    <label>(i) Hover over the row to see the options</label>
+</body>
+
+</html>
