@@ -1,18 +1,35 @@
 {
+    "handler": {
+        "autoloader": {
+            "checkIntervalMin": 5,
+            "dataFile": ".\/autoloader.data.json",
+            "mysql": {
+                "password": "NoXq7e9FgAJeVvUwkW7p2GTd51YUFEIEZ4XLr7zZD",
+                "database": "mediamanager",
+                "port": 3306,
+                "host": "homelab",
+                "username": "root"
+            },
+            "urlResolverThreads": 10
+        },
+        "aniworld": {
+            
+        }
+    },
     "systemSettings": {
         "PARALLEL_DOWNLOADS": {
-            "value": 10,
-            "forClient": true
-        },
-        "VOE_THREADS": {
-            "value": 2,
-            "forClient": true
+            "forClient": true,
+            "value": 10
         },
         "FFMPEG": {
-            "value": "/data/ffmpeg"
+            "value": "\/data\/ffmpeg\/ffmpeg"
         },
         "DOWNLOAD_FOLDER": {
-            "value": "./tmp"
+            "value": "\/tmp"
+        },
+        "VOE_THREADS": {
+            "forClient": true,
+            "value": 1
         }
     },
     "targets": [

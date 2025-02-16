@@ -26,12 +26,13 @@
         <dependency>
             <groupId>me.kaigermany</groupId>
             <artifactId>ultimateutils</artifactId>
-            <version>1.2.0</version>
+            <version>1.2.2</version>
         </dependency>
+
         <dependency>
             <groupId>me.kaigermany</groupId>
             <artifactId>downloaders</artifactId>
-            <version>1.0.18</version>
+            <version>1.1.80</version>
         </dependency>
         <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
         <dependency>
@@ -58,7 +59,7 @@
         <dependency>
             <groupId>de.theholyexception</groupId>
             <artifactId>HolyAPI</artifactId>
-            <version>1.1.18</version>
+            <version>1.1.19</version>
         </dependency>
 
         <dependency>
@@ -66,6 +67,14 @@
             <artifactId>cute-json</artifactId>
             <version>0.2</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.18.3</version>
+        </dependency>
+
+
     </dependencies>
 
     <build>
@@ -111,7 +120,6 @@
                                         <exclude>org/reactivestreams/**</exclude>
                                         <exclude>org/scijava/**</exclude>
                                         <exclude>org/sqlite/**</exclude>
-                                        <exclude>org/apache/**</exclude>
                                         <exclude>natives/**</exclude>
                                         <exclude>google/protobuf/**</exclude>
                                         <exclude>net/lingala/**</exclude>
