@@ -9,13 +9,6 @@ const settings = {
             useDirectMemory: "Use Direct Memory"
         }
     }
-    /*,
-    streamtape: {
-        title: "Streamtape",
-        items: {
-            none: "none"
-        }
-    }*/
 }
 
 connect(); // Connect WebSocket
@@ -92,39 +85,38 @@ function onElementAdd() {
     url.value = ""; // reset input field
 }
 
-function onWSResponseDefault(data) {
-    switch (data.type) {
+function onWSResponseDefault(cmd, content) {
+    switch (cmd) {
         case "systemInfo":
             let heapInfo = document.getElementById("heapInfo");
-            heapInfo.innerText = data.heap;
+            heapInfo.innerText = content.heap;
 
             let dockerInfo = document.getElementById("dockerInfo");
-            dockerInfo.innerText = data.containerHeap;
+            dockerInfo.innerText = content.containerHeap;
 
             let downloaderInfo = document.getElementById("downloaderInfo");
-            downloaderInfo.innerText = data.handler;
+            downloaderInfo.innerText = content.handler;
             break;
         case "syn": // Acknowledge data sync
-            for (i = 0; i < data.content.length; i++) {
-                let entry = data.content[i];
+            for (i = 0; i < content.data.length; i++) {
+                let entry = content.data[i];
                 addObjectToTable(entry);
             }
             break;
         case "del":
-            indexes.delete(data.uuid);
-            document.getElementById(data.uuid).remove();
+            indexes.delete(content.uuid);
+            document.getElementById(content.uuid).remove();
             break;
         case "sch": // State Change of item
-            indexes.get(data.uuid).state = data.state;
+            indexes.get(content.uuid).state = content.state;
             break;
         case "setting":
-            let entry = data.content;
-            let settingObject = document.getElementById(entry.key);
+            let settingObject = document.getElementById(content.key);
             if (settingObject.tagName == 'INPUT') {
-                settingObject.value = entry.val;
+                settingObject.value = content.val;
             }
             break;
-        case "targetSelectionResolved":
+        case "requestSubfoldersResponse":
             let subfolderSelection = document.getElementById("subfolderSelection");
             subfolderSelection.innerHTML = '';
             { // Dummy element adden
@@ -132,8 +124,8 @@ function onWSResponseDefault(data) {
                 subfolderSelection.appendChild(option);
             }
 
-            for (let index in data.subfolders) {
-                let folder = data.subfolders[index];
+            for (let index in content.subfolders) {
+                let folder = content.subfolders[index];
                 let option = document.createElement('option');
                 option.setAttribute('value', folder);
                 option.innerText = folder;
@@ -167,10 +159,7 @@ function addObjectToTable(entry) {
                 let entity = indexes.get(entry.uuid);
                 indexes.delete(entity.uuid);
                 if (entity.state != "new") {
-                    send({
-                        type: "del",
-                        uuid: entry.uuid
-                    });
+                    sendPacket("del", "default", { "uuid": entry.uuid });
                 }
             })
             btnDelete.setAttribute("id", "delete-" + entry.uuid);
@@ -190,11 +179,7 @@ function addObjectToTable(entry) {
                 let entity = indexes.get(entry.uuid);
                 if (!entity.state.startsWith("Error")) return;
                 entity.state = "new";
-                let request = {
-                    type: "put",
-                    content: entity
-                }
-                send(request);
+                sendPacket("put", "default", entity);
             });
             btnResent.setAttribute("id", "resent-" + entry.uuid);
 
@@ -271,11 +256,7 @@ function saveGlobalSettings() {
         let key = settings[i].id;
         let val = settings[i].value;
 
-        let request = {
-            type: "setting",
-            content: { key: key, val: val }
-        }
-        send(request);
+        sendPacket("setting", "default", { key: key, val: val })
     }
 }
 
@@ -323,22 +304,12 @@ function onCommit() {
         // We only want to put new entries
         if (data.state != "new") continue;
 
-
-        let request = {
-            type: "put",
-            content: data
-        }
-
-        console.log(request);
-        send(request);
+        sendPacket("put", "default", data)
     }
 }
 
 function onClear() {
-    let request = {
-        type: "del-all"
-    }
-    send(request)
+    sendPacket("del-all", "default", {});
 
     let table = document.getElementById("table");
     let keys = Object.keys(indexes);
@@ -368,11 +339,7 @@ function onElementAdd() {
 
 function onTargetSelection() {
     let selection = document.getElementById("targetSelection").value;
-    let request = {
-        type: "targetSelection",
-        selection: selection
-    }
-    send(request);
+    sendPacket("requestSubfolders", "default", { "selection": selection })
     subfolderSelection.innerHTML = '';
     { // Dummy element adden
         let option = document.createElement('option');

@@ -2,11 +2,10 @@ var ws = null;
 
 
 function connect() {
-    //ws = new WebSocket('wss://media.vpn.minebug.de');
     ws = new WebSocket((document.location.protocol === "https:" ? "wss://" : "ws://") + window.location.hostname + ":" + window.location.port);
     setWebSocketStatusFeedback(1);
     ws.onopen = function () {
-        send({ "type": "syn" });
+        sendPacket("syn", "default", {});
         setWebSocketStatusFeedback(2);
         onTargetSelection(); // Refresh subfolders
     };
@@ -16,14 +15,23 @@ function connect() {
         console.log("<-");
         console.log(data);
 
-        if (data.type.startsWith("aniworld")) {
-            onWSResponseAniworldParser(data);
-            return;
-        } else {
-            onWSResponseDefault(data);
+        let targetSystem = "default";
+        if (data.targetSystem != undefined) targetSystem = data.targetSystem;
+
+        let cmd = data.cmd;
+        let content = data.content;
+
+        switch (targetSystem) {
+            case "default":
+                onWSResponseDefault(cmd, content);
+                break;
+            case "aniworld":
+                onWSResponseAniworldParser(cmd, content);
+                break;
+            case "autoloader":
+                onWSResponseAutoloader(cmd, content);
+                break;
         }
-
-
     };
 
     ws.onclose = function (e) {
@@ -41,9 +49,13 @@ function connect() {
     };
 }
 
-function send(data) {
+function sendPacket(cmd, targetSystem, content) {
+    let request = {
+        cmd: cmd,
+        targetSystem: targetSystem,
+        content: content
+    }
     console.log("->")
-    console.log(data)
-    ws.send(JSON.stringify(data));
+    console.log(JSON.stringify(request))
+    ws.send(JSON.stringify(request));
 }
-

@@ -14,12 +14,12 @@ public class AniWorldParser {
     public static
     String url = "https://aniworld.to/anime/stream/that-time-i-got-reincarnated-as-a-slime/staffel-2";
 
-    static List<String> getLinks(String url, int language) {
+    public static List<String> getLinks(String url, int language) {
         ArrayList<String> links = readPageUrls(url);
         return readVideoTargetLinksFromPages(links, language);
     }
 
-    private static ArrayList<String> readVideoTargetLinksFromPages(ArrayList<String> in, int language){
+    public static ArrayList<String> readVideoTargetLinksFromPages(ArrayList<String> in, int language){
         ArrayList<String> out = new ArrayList<String>(in.size());
         String serverName = in.get(0).substring(0, in.get(0).indexOf('/', 8) + 1);
         for(String s : in){
@@ -35,7 +35,9 @@ public class AniWorldParser {
         return out;
     }
 
-    private static ArrayList<String> readPageUrls(String base_link){
+
+
+    public static ArrayList<String> readPageUrls(String base_link){
         ArrayList<String> links = new ArrayList<String>();
         String serverName = base_link.substring(0, base_link.indexOf('/', 8) + 1);
         String page = new String(pingServer_simple(base_link));
@@ -49,7 +51,7 @@ public class AniWorldParser {
         return links;
     }
 
-    private static byte[] pingServer_simple(String a) {
+    public static byte[] pingServer_simple(String a) {
         try {
             URL url = new URL(a);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();

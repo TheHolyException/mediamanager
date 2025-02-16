@@ -1,5 +1,6 @@
 package de.theholyexception.mediamanager.models;
 
+import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import lombok.Getter;
 import org.json.simple.JSONObject;
 
@@ -20,14 +21,14 @@ public class TableItem implements Comparable<TableItem> {
     private UUID uuid;
 
     @Getter
-    private JSONObject jsonObject;
+    private JSONObjectContainer jsonObject;
 
 
-    public TableItem(JSONObject content) {
-        created = Long.parseLong(content.get("created").toString());
-        state = content.get("state").toString();
-        url = content.get("url").toString();
-        uuid = UUID.fromString(content.get("uuid").toString());
+    public TableItem(JSONObjectContainer content) {
+        created = content.get("created", Long.class);
+        state = content.get("state", String.class);
+        url = content.get("url", String.class);
+        uuid = UUID.fromString(content.get("uuid", String.class));
         jsonObject = content;
     }
 

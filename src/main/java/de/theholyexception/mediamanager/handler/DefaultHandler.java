@@ -1,0 +1,281 @@
+package de.theholyexception.mediamanager.handler;
+
+import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
+import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.holyapi.util.ExecutorHandler;
+import de.theholyexception.holyapi.util.ExecutorTask;
+import de.theholyexception.mediamanager.MediaManager;
+import de.theholyexception.mediamanager.models.TableItem;
+import de.theholyexception.mediamanager.models.Target;
+import de.theholyexception.mediamanager.settings.SettingProperty;
+import de.theholyexception.mediamanager.settings.Settings;
+import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
+import me.kaigermany.downloaders.DownloadStatusUpdateEvent;
+import me.kaigermany.downloaders.Downloader;
+import me.kaigermany.downloaders.DownloaderSelector;
+import me.kaigermany.downloaders.FFmpeg;
+import me.kaigermany.downloaders.voe.VOEDownloadEngine;
+import me.kaigermany.ultimateutils.StaticUtils;
+import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+
+import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
+
+@Slf4j
+public class DefaultHandler extends Handler {
+
+    private final Map<UUID, TableItem> urls = Collections.synchronizedMap(new HashMap<>());
+    @Getter
+    private final Map<String, Target> targets = new HashMap<>();
+
+    private long dockerMemoryLimit;
+    private long dockerMemoryUsage;
+    private final ExecutorHandler executorHandler;
+    private File downloadFolder;
+
+    private SettingProperty<Integer> spDownloadThreads;
+    private SettingProperty<Integer> spVoeThreads;
+    private SettingProperty<String> spFFMPEGPath;
+    private SettingProperty<String> spDownloadTempPath;
+
+    public DefaultHandler(String targetSystem) {
+        super(targetSystem);
+        executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
+    }
+
+    @Override
+    public void loadConfigurations() {
+        log.info("Loading Configurations");
+        spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, "systemSettings");
+        spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, "systemSettings");
+        spFFMPEGPath = Settings.getSettingProperty("FFMPEG", "ffmpeg", "systemSettings");
+        spDownloadTempPath = Settings.getSettingProperty("DOWNLOAD_FOLDER", "./tmp", "systemSettings");
+
+        spDownloadThreads.addSubscriber(value -> executorHandler.updateExecutorService(Executors.newFixedThreadPool(value)));
+        spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
+        spFFMPEGPath.addSubscriber(FFmpeg::setFFmpegPath);
+        spDownloadTempPath.addSubscriber(value -> {
+            downloadFolder = new File(value);
+            if (!downloadFolder.exists())
+                downloadFolder.mkdirs();
+        });
+    }
+
+    @Override
+    public void initialize() {
+        startSystemDataFetcher();
+        loadTargets();
+    }
+
+    private void loadTargets() {
+        JSONArrayContainer targetsConfig = MediaManager.getInstance().getConfiguration().getJson().getArrayContainer("targets");
+        for (Object object : targetsConfig.getRaw()) {
+            JSONObject target = (JSONObject) object;
+            Target tar = new Target(
+                    target.get("identifier").toString()
+                    , target.get("path").toString()
+                    , target.containsKey("subFolders") && Boolean.parseBoolean(target.get("subFolders").toString()));
+            targets.put(target.get("identifier").toString(), tar);
+        }
+    }
+
+    @Override
+    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+        super.handleCommand(socket, command, content);
+
+        switch (command) {
+            case "syn" -> syncData(socket);
+
+            case "put" -> putData(content);
+
+            case "del" -> delete(content);
+
+            case "del-all" -> deleteAll();
+
+            case "setting" -> changeSetting(content);
+
+            case "requestSubfolders" -> requestSubfolders(socket, content);
+
+            default -> log.error("invalid dataset " + command);
+        }
+    }
+
+    private void syncData(WebSocketBasic socket) {
+        List<JSONObjectContainer> jsonData = urls.values().stream()
+                .sorted(TableItem::compareTo)
+                .map(TableItem::getJsonObject)
+                .toList();
+        sendObject(socket, jsonData.stream().map(JSONObjectContainer::getRaw).toList());
+        sendSettings(socket);
+        sendSystemInformation(socket);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void putData(JSONObjectContainer content) {
+        urls.put(UUID.fromString(content.get("uuid", String.class)), new TableItem(content));
+        changeObject(content.getRaw(), "state", "Committed");
+
+        String url = content.get("url", String.class);
+        String targetPath = content.get("target", String.class);
+        log.debug("Resolving target: " + targetPath.split("/")[0]);
+        Target target = targets.get(targetPath.split("/")[0]);
+        log.debug("Target resolved!: " + target);
+
+        File outputFolder = new File(target.path(), targetPath.replace(targetPath.split("/")[0] + "/", ""));
+        log.debug("Output Folder: " + outputFolder.getAbsolutePath());
+        if (!outputFolder.exists()) outputFolder.mkdirs();
+
+        var updateEvent = new DownloadStatusUpdateEvent() {
+            @Override
+            public void onProgressUpdate(double v) {
+                if (v >= 1) {
+                    changeObject(content.getRaw(), "state", "Completed");
+                } else {
+                    changeObject(content.getRaw(), "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
+                }
+            }
+
+            @Override
+            public void onInfo(String s) {
+            }
+
+            @Override
+            public void onWarn(String s) {
+                log.warn(s);
+            }
+
+            @Override
+            public void onError(String s) {
+                changeObject(content.getRaw(), "state", "Error: " + s);
+            }
+
+            @Override
+            public void onLogFile(String s, byte[] bytes) {
+            }
+        };
+
+        JSONObject options = content.getObjectContainer("options").getRaw();
+
+        // Getting the right downloader
+        Downloader downloader = DownloaderSelector.selectDownloader(url);
+
+        // Start the download task
+        executorHandler.putTask(new ExecutorTask(() -> {
+            try {
+                File file = downloader.start(url, downloadFolder, updateEvent, options);
+                File targetFile = new File(outputFolder, file.getName());
+                log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
+                Files.move(file.toPath(), targetFile.toPath());
+            } catch (Exception ex) {
+                log.error(ex.getMessage());
+                if (!ex.getMessage().contains("File.getName()"))
+                    updateEvent.onError(ex.getMessage());
+            }
+        }));
+    }
+
+    private void delete(JSONObjectContainer content) {
+        UUID uuid = UUID.fromString(content.get("uuid", String.class));
+        TableItem toDelete = urls.get(uuid);
+        deleteObjectToAll(toDelete);
+        urls.remove(uuid);
+    }
+
+    private void deleteAll() {
+        urls.values().forEach(WebSocketUtils::deleteObjectToAll);
+        urls.clear();
+    }
+
+    private void changeSetting(JSONObjectContainer content) {
+        String key = content.get("key", String.class);
+        String val = content.get("val", String.class);
+
+        switch (key) {
+            case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
+            case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
+            default -> throw new IllegalStateException("Unsupported Setting: " + key);
+        }
+        sendSettings(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void requestSubfolders(WebSocketBasic socket, JSONObjectContainer content) {
+        String targetPath = content.get("selection", String.class);
+        Target target = targets.get(targetPath.split("/")[0]);
+
+        if (!target.subFolders()) {
+            sendWarn(socket, content.get("type", String.class), "No sub-folders are configured for " + target.identifier());
+            return;
+        }
+
+        JSONObject response = new JSONObject();
+        JSONArray array = new JSONArray();
+        File subFolder = new File(target.path());
+        if (subFolder.listFiles() != null)
+            array.addAll(Arrays.stream(subFolder.listFiles()).map(File::getName).toList());
+        response.put("subfolders", array);
+        sendPacket("requestSubfoldersResponse", "default", response, socket);
+    }
+
+    private void startSystemDataFetcher() {
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                sendSystemInformation(null);
+            }
+        }, 0, 5000);
+    }
+
+    private void sendSystemInformation(WebSocketBasic target) {
+        try {
+            if (MediaManager.getInstance().isDockerEnvironment()) {
+                dockerMemoryLimit = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.max").start().getInputStream())).trim());
+                dockerMemoryUsage = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.current").start().getInputStream())).trim());
+            }
+            sendPacket("systemInfo", "default", formatSystemInfo(), target);
+        } catch (Exception ex) {
+            log.error(ex.getMessage());
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONObject formatSystemInfo() {
+        JSONObject response = new JSONObject();
+        response.put("heap", String.format("Java Runtime: %s/%s/%s"
+                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
+                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory())
+                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory())
+        ));
+        if (MediaManager.getInstance().isDockerEnvironment()) {
+            response.put("containerHeap", String.format("Docker Container: %s/%s"
+                    , StaticUtils.toHumanReadableFileSize(dockerMemoryUsage)
+                    , StaticUtils.toHumanReadableFileSize(dockerMemoryLimit)
+            ));
+        }
+        ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) executorHandler.getExecutorService());
+        response.put("handler", String.format("""
+                        Active Count: %s
+                        Core Size: %s
+                        Pool Size: %s
+                        Pool Size (Max): %s
+                        Completed Tasks: %s
+                        """
+                , threadPoolExecutor.getActiveCount()
+                , threadPoolExecutor.getCorePoolSize()
+                , threadPoolExecutor.getPoolSize()
+                , threadPoolExecutor.getMaximumPoolSize()
+                , threadPoolExecutor.getCompletedTaskCount()
+        ));
+        return response;
+    }
+
+}
