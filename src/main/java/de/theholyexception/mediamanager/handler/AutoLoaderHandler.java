@@ -3,7 +3,7 @@ package de.theholyexception.mediamanager.handler;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
-import de.theholyexception.holyapi.datastorage.sql.interfaces.SQLiteInterface;
+import de.theholyexception.holyapi.util.ResourceUtilities;
 import de.theholyexception.mediamanager.AniworldHelper;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.configuration.ConfigJSON;
@@ -12,11 +12,15 @@ import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.SettingMetadata;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.SettingProperty;
+import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.StaticUtils;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
@@ -29,10 +33,12 @@ public class AutoLoaderHandler extends Handler {
     private JSONObjectContainer subscriptions;
     private SettingProperty<Integer> spCheckIntervalMin;
     private final AtomicInteger checkIntervalMS = new AtomicInteger();
+    private boolean passiveMode;
     private final List<Anime> subscribedAnimes = Collections.synchronizedList(new ArrayList<>());
     private SettingProperty<Integer> spURLResolverThreads;
     private ConfigJSON dataFile;
-    private DataBaseInterface sqlite;
+    private DataBaseInterface db;
+    private DefaultHandler defaultHandler;
 
     public AutoLoaderHandler(String targetSystem) {
         super(targetSystem);
@@ -61,20 +67,21 @@ public class AutoLoaderHandler extends Handler {
         });
         spCheckIntervalMin.setValue(handlerConfiguration.get("checkIntervalMin", 5, Integer.class));
 
+        passiveMode = handlerConfiguration.get("passiveMode", Boolean.class);
     }
 
     @Override
     public void initialize() {
-        DefaultHandler defaultHandler = (DefaultHandler) MediaManager.getInstance().getHandlers().get("default");
+        defaultHandler = (DefaultHandler) MediaManager.getInstance().getHandlers().get("default");
         Anime.setBaseDirectory(new File(defaultHandler.getTargets().get("stream-animes").path()));
 
         loadDatabase();
 
         try {
             subscribedAnimes.clear();
-            subscribedAnimes.addAll(Anime.loadFromDB(sqlite));
+            subscribedAnimes.addAll(Anime.loadFromDB(db));
         } catch (SQLException ex) {
-            ex.printStackTrace();
+            log.error(ex.getMessage());
         }
 
         printTableInfo("anime", "season", "episode");
@@ -82,23 +89,21 @@ public class AutoLoaderHandler extends Handler {
         subscribedAnimes.forEach(Anime::scanDirectoryForExistingEpisodes);
         subscribedAnimes.forEach(a -> System.out.println("unloaded: " + a.getUnloadedEpisodeCount()));
         subscribedAnimes.forEach(a -> {
-            if (a.isDeepDirty()) {
-                System.out.println("WRITE TO DB");
-                a.writeToDB(sqlite);
-            } else {
-                System.out.println("Not Deep Dirty");
-            }
+            if (a.isDeepDirty())
+                a.writeToDB(db);
         });
-        sqlite.getExecutorHandler().awaitGroup(-1);
+        db.getExecutorHandler().awaitGroup(-1);
+        System.out.println(subscribedAnimes.get(0).getEpisodeCount());
 
-        //startThread();
+        startThread();
+        //readTestFromDB();
+    }
 
-        printTableInfo("anime", "season", "episode");
-
+    private void readTestFromDB() {
         System.out.println("Loading animes:");
         List<Anime> dbanimes = new ArrayList<>();
         try {
-            dbanimes = Anime.loadFromDB(sqlite);
+            dbanimes = Anime.loadFromDB(db);
         } catch (SQLException ex) {
             ex.printStackTrace();
         }
@@ -113,9 +118,61 @@ public class AutoLoaderHandler extends Handler {
     }
 
     @Override
-    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
-        super.handleCommand(socket, command, content);
+    public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+        return switch (command) {
+            case "getData" -> cmdGetData(socket);
+            case "subscribe" -> cmdSubscribe(content);
+            case "unsubscribe" -> cmdUnsubscribe(content);
+            case "test" -> WebSocketResponse.ERROR.setMessage("Test Erfolgreich!");
+            default -> {
+                log.error("Invalid command " + command);
+                yield WebSocketResponse.ERROR.setMessage("Invalid command " + command);
+            }
+        };
+    }
 
+    private WebSocketResponse cmdGetData(WebSocketBasic socket) {
+        WebSocketUtils.sendAutoLoaderItem(socket, subscribedAnimes);
+        return null;
+    }
+
+    private WebSocketResponse cmdSubscribe(JSONObjectContainer content) {
+        String url = content.get("url", String.class);
+        int languageId = content.get("languageId", Integer.class);
+
+        if (subscribedAnimes.stream().anyMatch(a -> a.getUrl().equals(url)))
+            return WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url + " this url is already subscribed!");
+
+        log.debug("Adding subscriber " + url);
+        String title = AniworldHelper.getAnimeTitle(url);
+        log.debug("Resolved title: " + title);
+
+        if (title == null)
+            return WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url +  " cannot parse title!");
+
+        Anime anime = new Anime(languageId, title, url);
+        anime.loadMissingEpisodes();
+        subscribedAnimes.add(anime);
+        spCheckIntervalMin.trigger();
+        anime.writeToDB(db);
+
+        db.getExecutorHandler().awaitGroup(-1);
+
+        // Inform everyone about the new item
+        WebSocketUtils.sendAutoLoaderItem(null, anime);
+        return WebSocketResponse.OK;
+    }
+
+    private WebSocketResponse cmdUnsubscribe(JSONObjectContainer content) {
+        int id = content.get("id", Integer.class);
+        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
+        if (optAnime.isPresent()) {
+            spCheckIntervalMin.trigger();
+            subscribedAnimes.remove(optAnime.get());
+        } else {
+            return WebSocketResponse.ERROR.setMessage("Tried to remove anime with id " + id + " but this does not exist.");
+        }
+        return WebSocketResponse.OK;
     }
 
     private void startThread() {
@@ -123,23 +180,47 @@ public class AutoLoaderHandler extends Handler {
             while (!Thread.interrupted()) {
                 try {
                     int checkInterval = checkIntervalMS.get();
-
-                    ResultSet rs = sqlite.executeQuery("select * from anime");
+                    ResultSet rs = db.executeQuery("select * from anime");
                     while (rs.next()) {
                         int id = rs.getInt("nKey");
                         Optional<Anime> optAnime = subscribedAnimes.stream().filter(a -> a.getId() == id).findFirst();
                         Anime anime;
+
                         if (optAnime.isEmpty())
                             anime = new Anime(rs);
                         else
                             anime = optAnime.get();
 
+                        log.info("Scanning following anime: " + anime.getTitle());
+
                         anime.loadMissingEpisodes();
 
-                        if (anime.isDirty()) {
-                            anime.writeToDB(sqlite);
+                        if (!passiveMode) {
+                            for (Episode unloadedEpisode : anime.getUnloadedEpisodes()) {
+                                JSONObjectContainer data = new JSONObjectContainer();
+                                data.set("uuid", UUID.randomUUID());
+                                data.set("state", "new");
+                                data.set("url", unloadedEpisode.getUrl());
+                                data.set("target", "stream-animes/"+anime.getDirectory().getName());
+
+                                JSONObjectContainer options = new JSONObjectContainer();
+                                options.set("useDirectMemory", false);
+                                options.set("enableSessionRecovery", false);
+                                options.set("enableSeasonAndEpisodeRenaming", true);
+
+                                data.set("options", options);
+                                defaultHandler.cmdPutData(data);
+                            }
                         }
+
+                        if (anime.isDirty()) {
+                            anime.writeToDB(db);
+                        }
+
+                        log.info("Scan done, next in " + (checkInterval/1000) + "s");
+                        Thread.sleep(checkInterval);
                     }
+                    rs.close();
                     Thread.sleep(checkInterval);
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -152,111 +233,73 @@ public class AutoLoaderHandler extends Handler {
         t.start();
     }
 
-    public void addSubscriber(String url, int languageId) {
-        if (subscribedAnimes.stream().anyMatch(a -> a.getUrl().equals(url)))
-            throw new IllegalStateException("Failed to subscribe to " + url + " this url is already subscribed!");
-
-        System.out.println("Adding subscriber " + url);
-        String title = AniworldHelper.getAnimeTitle(url);
-        System.out.println("Resolved title: " + title);
-
-        Anime anime = new Anime(-1, languageId, title, url);
-        anime.loadMissingEpisodes();
-        subscribedAnimes.add(anime);
-        spCheckIntervalMin.trigger();
-        anime.writeToDB(sqlite);
-
-        sqlite.getExecutorHandler().awaitGroup(-1);
-
-
-
-
-
-
-
-    }
-
-
-    /*public void removeSubscriber(String key) {
-        seriesSubscribers.remove(key);
-        spCheckIntervalMin.trigger();
-    }*/
-
     private void loadDatabase() {
         try {
-            File f = new File("./datastore.sqlite");
-            if (!f.exists()) f.createNewFile();
-
-            //sqlite = new SQLiteInterface(f);
             JSONObjectContainer mysqlConfig = handlerConfiguration.getObjectContainer("mysql");
-            sqlite = new MySQLInterface(
+            db = new MySQLInterface(
                     mysqlConfig.get("host", String.class),
                     mysqlConfig.get("port", Integer.class),
                     mysqlConfig.get("username", String.class),
                     mysqlConfig.get("password", String.class),
                     mysqlConfig.get("database", String.class));
-            sqlite.asyncDataSettings(1);
-            sqlite.connect();
+            db.asyncDataSettings(1);
+            db.connect();
 
-            if (1 == 2) {
-                sqlite.execute("drop table if exists anime");
-                sqlite.execute("drop table if exists season");
-                sqlite.execute("drop table if exists episode");
-
-                sqlite.execute("""
-                        create table if not exists anime        (nKey           integer primary key,
-                                                                 nLanguageId    integer,
-                                                                 szTitle        varchar(255),
-                                                                 szURL          varchar(255));
-                        """);
-                sqlite.execute("""                                                    
-                        create table if not exists season       (nKey           integer primary key,
-                                                                 nAnimeLink     integer,
-                                                                 nSeasonNumber  integer,
-                                                                 szURL          varchar(255));
-                        """);
-                sqlite.execute("""                                                     
-                        create table if not exists episode      (nKey           integer primary key,
-                                                                 nSeasonLink    integer,
-                                                                 nEpisodeNumber integer,
-                                                                 szTitle        varchar(255),
-                                                                 szURL          varchar(255),
-                                                                 bLoaded        int);
-                        """);
-
-                sqlite.getExecutorHandler().awaitGroup(-1);
-            }
-
+            executeDatabaseScripts();
 
             Anime.setCurrentID(getCurrentId("anime"));
             Season.setCurrentID(getCurrentId("season"));
-
-
         } catch (Exception ex) {
             ex.printStackTrace();
         }
     }
 
+    private void executeDatabaseScripts() throws IOException {
+        File sqlRootFolder = ResourceUtilities.getResourceFile("sql/");
+
+        File[] subFolders = sqlRootFolder.listFiles();
+        if (subFolders == null) return;
+
+        for (File subFolder : subFolders) {
+            if (!subFolder.isDirectory()) continue;
+            File[] sqlFiles = subFolder.listFiles();
+            if (sqlFiles == null) continue;
+
+            for (File sqlFile : sqlFiles) {
+                if (!sqlFile.getName().endsWith(".sql")) continue;
+                log.info("Executing SQL Script: " + sqlFile.getName());
+                try (FileInputStream fis = new FileInputStream(sqlFile)) {
+                    db.executeAsync(-2, new String(StaticUtils.readAllBytes(fis)));
+                }
+            }
+        }
+        db.getExecutorHandler().awaitGroup(-2, 20);
+    }
+
     private void printTableInfo(String... tables) {
         for (String table : tables) {
             try {
-                ResultSet rs = sqlite.executeQuery("select count(*) from " + table);
+                ResultSet rs = db.executeQuery("select count(*) from " + table);
                 rs.next();
-                System.out.println("Table " + table + " row count: " + rs.getInt(1));
-            } catch (SQLException ex) {
-                ex.printStackTrace();
+                log.debug("Table " + table + " row count: " + rs.getInt(1));
+                rs.close();
+            } catch (Exception ex) {
+                log.error(ex.getMessage());
             }
         }
     }
 
     private int getCurrentId(String table) {
+        int result = 0;
         try {
-            ResultSet rs = sqlite.executeQuery("select nKey from " + table + " order by nKey desc");
+            ResultSet rs = db.executeQuery("select nKey from " + table + " order by nKey desc");
             if (rs.next())
-                return rs.getInt(1);
+                result = rs.getInt(1);
+            rs.close();
         } catch (SQLException ex) {
+            log.error(ex.getMessage());
         }
-        return 0;
+        return result;
     }
 
 }

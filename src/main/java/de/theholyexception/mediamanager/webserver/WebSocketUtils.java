@@ -1,7 +1,10 @@
 package de.theholyexception.mediamanager.webserver;
 
+import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
+import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.MediaManager;
-import de.theholyexception.mediamanager.models.TableItem;
+import de.theholyexception.mediamanager.models.TableItemDTO;
+import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.settings.Settings;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
@@ -62,7 +65,7 @@ public class WebSocketUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static void deleteObjectToAll(TableItem object) {
+    public static void deleteObjectToAll(TableItemDTO object) {
         JSONObject body = new JSONObject();
         body.put("uuid", object.getUuid().toString());
         sendPacket("del", "default", body, null);
@@ -80,12 +83,38 @@ public class WebSocketUtils {
         packet.put("cmd", cmd);
         packet.put("targetSystem", targetSystem);
         packet.put("content", content);
-        if (socket != null)
+        if (socket != null) // Broadcast when target websocket is null
             socket.send(packet.toJSONString());
         else {
             for (WebSocketBasic webSocketBasic : new ArrayList<>(MediaManager.getInstance().getClientList())) {
                 sendPacket(cmd, targetSystem, content, webSocketBasic);
             }
         }
+    }
+
+    /**
+     * Builds an object to send as response when a client is requesting
+     * @param code 2 = OK, 4 = Error
+     * @param message
+     * @return JSONObject for the client
+     */
+    public static JSONObjectContainer createResponseObject(int code, String message) {
+        JSONObjectContainer content = new JSONObjectContainer();
+        content.set("code", code);
+        content.set("message", message);
+        return content;
+    }
+
+    public static void sendAutoLoaderItem(WebSocketBasic socket, Anime anime) {
+         sendAutoLoaderItem(socket, Arrays.stream(new Anime[]{anime}).toList());
+    }
+    public static void sendAutoLoaderItem(WebSocketBasic socket, List<Anime> animes) {
+        JSONObjectContainer response = new JSONObjectContainer();
+        JSONArrayContainer items = new JSONArrayContainer();
+        for (Anime anime : animes) {
+            items.add(anime.toJSONObject());   
+        }
+        response.set("items", items);
+        sendPacket("syn", "autoloader", response.getRaw(), socket);
     }
 }

@@ -9,6 +9,8 @@ import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.handler.Handler;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.webserver.WebServer;
+import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.StaticUtils;
@@ -101,7 +103,17 @@ public class MediaManager {
                     if (handler == null)
                         throw new IllegalStateException("Invalid target-system: " + targetSystem);
 
-                    handler.handleCommand(socket, cmd, content);
+                    WebSocketResponse response;
+                    try {
+                        response = handler.handleCommand(socket, cmd, content);
+                    } catch (Exception ex) {
+                        response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
+                    }
+                    if (response != null) {
+                        response.getResponse().set("sourceCommand", cmd);
+                        WebSocketUtils.sendPacket("response", handler.getTargetSystem(),response.getResponse().getRaw(), socket);
+                    }
+
                 } catch (Exception ex) {
                     log.error(ex.getMessage());
                     ex.printStackTrace();
@@ -124,7 +136,4 @@ public class MediaManager {
             }
         }));
     }
-
-
-
 }

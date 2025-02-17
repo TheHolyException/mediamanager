@@ -10,7 +10,8 @@
                 "host": "homelab",
                 "username": "root"
             },
-            "urlResolverThreads": 10
+            "urlResolverThreads": 10,
+            "passiveMode": true
         },
         "aniworld": {
             

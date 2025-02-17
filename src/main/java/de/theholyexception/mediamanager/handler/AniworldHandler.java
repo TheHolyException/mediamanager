@@ -4,6 +4,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.AniworldHelper;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
+import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
@@ -27,17 +28,17 @@ public class AniworldHandler extends Handler {
     }
 
     @Override
-    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
-        super.handleCommand(socket, command, content);
-
-        switch (command) {
-            case "resolve" -> resolve(socket, content);
-            default -> log.error("invalid dataset " + command);
-        }
-
+    public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+        return switch (command) {
+            case "resolve" -> cmdResolve(socket, content);
+            default -> {
+                log.error("Invalid command " + command);
+                yield WebSocketResponse.ERROR.setMessage("Invalid command " + command);
+            }
+        };
     }
 
-    private void resolve(WebSocketBasic socket, JSONObjectContainer content) {
+    private WebSocketResponse cmdResolve(WebSocketBasic socket, JSONObjectContainer content) {
         try {
             int language = Integer.parseInt(content.get("language", String.class));
             String url = content.get("url", String.class);
@@ -72,9 +73,11 @@ public class AniworldHandler extends Handler {
             sendPacket("links", "aniworld", res, socket);
         } catch (Exception ex) {
             ex.printStackTrace();
-            JSONObject res = new JSONObject();
-            res.put("error", ex.getMessage());
-            sendPacket("links", "aniworld", res, socket);
+            //JSONObject res = new JSONObject();
+            //res.put("error", ex.getMessage());
+            //sendPacket("links", "aniworld", res, socket);
+            return WebSocketResponse.ERROR.setMessage(ex.getMessage());
         }
+        return null;
     }
 }

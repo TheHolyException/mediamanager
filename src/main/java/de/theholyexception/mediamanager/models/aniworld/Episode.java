@@ -1,12 +1,10 @@
 package de.theholyexception.mediamanager.models.aniworld;
 
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
-import de.theholyexception.holyapi.datastorage.sql.interfaces.SQLiteInterface;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.AniworldHelper;
 import lombok.Getter;
-import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -63,6 +61,7 @@ public class Episode {
             Episode e = new Episode(rs);
             season.addEpisode(e);
         }
+        rs.close();
     }
 
     public static Episode parseFromElement(Element element) {
@@ -93,39 +92,13 @@ public class Episode {
             return;
 
         System.out.println(this);
-        if (db instanceof SQLiteInterface) {
-            db.executeSafe("""
-                insert or replace into episode (
-                    nKey,
-                    nSeasonLink,
-                    nEpisodeNumber,
-                    szTitle,
-                    szURL,
-                    bLoaded
-                ) values (
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?,
-                    ?
-                )
-                """,
-                    id,
-                    seasonLink,
-                    episodeNumber,
-                    title,
-                    videoUrl == null ? url : videoUrl,
-                    downloaded);
-        } else {
-            db.executeSafe("call addEpisode(?, ?, ?, ?, ?, ?)",
-                    id,
-                    seasonLink,
-                    episodeNumber,
-                    title,
-                    videoUrl == null ? url : videoUrl,
-                    downloaded);
-        }
+        db.executeSafe("call addEpisode(?, ?, ?, ?, ?, ?)",
+                id,
+                seasonLink,
+                episodeNumber,
+                title,
+                videoUrl == null ? url : videoUrl,
+                downloaded ? 1 : 0);
         isDirty = false;
     }
 

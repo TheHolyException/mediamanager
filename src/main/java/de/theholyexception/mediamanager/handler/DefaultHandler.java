@@ -5,10 +5,11 @@ import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.MediaManager;
-import de.theholyexception.mediamanager.models.TableItem;
+import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
+import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -33,7 +34,7 @@ import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
 @Slf4j
 public class DefaultHandler extends Handler {
 
-    private final Map<UUID, TableItem> urls = Collections.synchronizedMap(new HashMap<>());
+    private final Map<UUID, TableItemDTO> urls = Collections.synchronizedMap(new HashMap<>());
     @Getter
     private final Map<String, Target> targets = new HashMap<>();
 
@@ -72,7 +73,7 @@ public class DefaultHandler extends Handler {
 
     @Override
     public void initialize() {
-        startSystemDataFetcher();
+        cmdStartSystemDataFetcher();
         loadTargets();
     }
 
@@ -89,50 +90,58 @@ public class DefaultHandler extends Handler {
     }
 
     @Override
-    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
-        super.handleCommand(socket, command, content);
+    public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+        return switch (command) {
+            case "syn" -> cmdSyncData(socket);
 
-        switch (command) {
-            case "syn" -> syncData(socket);
+            case "put" -> cmdPutData(content);
 
-            case "put" -> putData(content);
+            case "del" -> cmdDelete(content);
 
-            case "del" -> delete(content);
+            case "del-all" -> cmdDeleteAll();
 
-            case "del-all" -> deleteAll();
+            case "setting" -> cmdChangeSetting(content);
 
-            case "setting" -> changeSetting(content);
+            case "requestSubfolders" -> cmdRequestSubfolders(socket, content);
 
-            case "requestSubfolders" -> requestSubfolders(socket, content);
-
-            default -> log.error("invalid dataset " + command);
-        }
+            default -> {
+                log.error("Invalid command " + command);
+                yield WebSocketResponse.ERROR.setMessage("Invalid command " + command);
+            }
+        };
     }
 
-    private void syncData(WebSocketBasic socket) {
+    private WebSocketResponse cmdSyncData(WebSocketBasic socket) {
         List<JSONObjectContainer> jsonData = urls.values().stream()
-                .sorted(TableItem::compareTo)
-                .map(TableItem::getJsonObject)
+                .sorted(TableItemDTO::compareTo)
+                .map(TableItemDTO::getJsonObject)
                 .toList();
         sendObject(socket, jsonData.stream().map(JSONObjectContainer::getRaw).toList());
         sendSettings(socket);
-        sendSystemInformation(socket);
+        cmdSendSystemInformation(socket);
+        return null;
     }
 
     @SuppressWarnings("unchecked")
-    private void putData(JSONObjectContainer content) {
-        urls.put(UUID.fromString(content.get("uuid", String.class)), new TableItem(content));
-        changeObject(content.getRaw(), "state", "Committed");
-
+    protected WebSocketResponse cmdPutData(JSONObjectContainer content) {
         String url = content.get("url", String.class);
+        if (url == null || url.isEmpty())
+            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
+
         String targetPath = content.get("target", String.class);
         log.debug("Resolving target: " + targetPath.split("/")[0]);
         Target target = targets.get(targetPath.split("/")[0]);
         log.debug("Target resolved!: " + target);
 
+        if (target == null || target.path() == null)
+            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
+
         File outputFolder = new File(target.path(), targetPath.replace(targetPath.split("/")[0] + "/", ""));
         log.debug("Output Folder: " + outputFolder.getAbsolutePath());
         if (!outputFolder.exists()) outputFolder.mkdirs();
+
+        urls.put(UUID.fromString(content.get("uuid", String.class)), new TableItemDTO(content));
+        changeObject(content.getRaw(), "state", "Committed");
 
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
@@ -181,40 +190,44 @@ public class DefaultHandler extends Handler {
                     updateEvent.onError(ex.getMessage());
             }
         }));
+        return null;
     }
 
-    private void delete(JSONObjectContainer content) {
+    private WebSocketResponse cmdDelete(JSONObjectContainer content) {
         UUID uuid = UUID.fromString(content.get("uuid", String.class));
-        TableItem toDelete = urls.get(uuid);
+        TableItemDTO toDelete = urls.get(uuid);
         deleteObjectToAll(toDelete);
         urls.remove(uuid);
+        return null;
     }
 
-    private void deleteAll() {
+    private WebSocketResponse cmdDeleteAll() {
         urls.values().forEach(WebSocketUtils::deleteObjectToAll);
         urls.clear();
+        return null;
     }
 
-    private void changeSetting(JSONObjectContainer content) {
+    private WebSocketResponse cmdChangeSetting(JSONObjectContainer content) {
         String key = content.get("key", String.class);
         String val = content.get("val", String.class);
 
         switch (key) {
             case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
             case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
-            default -> throw new IllegalStateException("Unsupported Setting: " + key);
+            default -> WebSocketResponse.ERROR.setMessage("Unsupported setting: " + key);// throw new IllegalStateException("Unsupported Setting: " + key);
         }
         sendSettings(null);
+        return null;
     }
 
     @SuppressWarnings("unchecked")
-    private void requestSubfolders(WebSocketBasic socket, JSONObjectContainer content) {
+    private WebSocketResponse cmdRequestSubfolders(WebSocketBasic socket, JSONObjectContainer content) {
         String targetPath = content.get("selection", String.class);
         Target target = targets.get(targetPath.split("/")[0]);
 
         if (!target.subFolders()) {
             sendWarn(socket, content.get("type", String.class), "No sub-folders are configured for " + target.identifier());
-            return;
+            return WebSocketResponse.WARN.setMessage("No sub-folders are configured for " + target.identifier());
         }
 
         JSONObject response = new JSONObject();
@@ -224,18 +237,19 @@ public class DefaultHandler extends Handler {
             array.addAll(Arrays.stream(subFolder.listFiles()).map(File::getName).toList());
         response.put("subfolders", array);
         sendPacket("requestSubfoldersResponse", "default", response, socket);
+        return null;
     }
 
-    private void startSystemDataFetcher() {
+    private void cmdStartSystemDataFetcher() {
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
-                sendSystemInformation(null);
+                cmdSendSystemInformation(null);
             }
         }, 0, 5000);
     }
 
-    private void sendSystemInformation(WebSocketBasic target) {
+    private void cmdSendSystemInformation(WebSocketBasic target) {
         try {
             if (MediaManager.getInstance().isDockerEnvironment()) {
                 dockerMemoryLimit = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.max").start().getInputStream())).trim());

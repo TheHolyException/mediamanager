@@ -1,7 +1,6 @@
 package de.theholyexception.mediamanager.models.aniworld;
 
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
-import de.theholyexception.holyapi.datastorage.sql.interfaces.SQLiteInterface;
 import de.theholyexception.mediamanager.AniworldHelper;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,7 +14,6 @@ import java.text.ParsePosition;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 @ToString
 public class Season {
@@ -52,12 +50,14 @@ public class Season {
             Episode.loadFromDB(db, season);
             anime.addSeason(season);
         }
+        rs.close();
     }
 
     public Season(int seasonNumber, String url, boolean isDirty) {
         this.seasonNumber = seasonNumber;
         this.url = url;
         this.isDirty = isDirty;
+        this.id = Season.getAndAddCurrentID();
     }
 
     public static Season parseFromElement(Element element) {
@@ -79,38 +79,17 @@ public class Season {
     }
 
     public void writeToDB(DataBaseInterface db, int animeLink) {
-        int seasonId = id == -1 ? Season.getAndAddCurrentID() : id;
         if (isDirty) {
             System.out.println(this);
-            if (db instanceof SQLiteInterface) {
-                db.executeSafeAsync("""
-                insert or replace into season (
-                    nKey,
-                    nAnimeLink,
-                    nSeasonNumber,
-                    szURL
-                ) values (
-                    ?,
-                    ?,
-                    ?,
-                    ?
-                )
-                """,
-                        seasonId,
-                        animeLink,
-                        seasonNumber,
-                        url);
-            } else {
-                db.executeSafe("call addSeason(?, ?, ?, ?)",
-                        seasonId,
-                        seasonNumber,
-                        animeLink,
-                        url);
-            }
+            db.executeSafe("call addSeason(?, ?, ?, ?)",
+                    id,
+                    seasonNumber,
+                    animeLink,
+                    url);
             isDirty = false;
         }
 
-        episodeList.forEach(episode -> episode.writeToDB(db, seasonId));
+        episodeList.forEach(episode -> episode.writeToDB(db, id));
     }
 
     public static boolean isNumeric(String str) {

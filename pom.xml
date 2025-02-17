@@ -59,7 +59,7 @@
         <dependency>
             <groupId>de.theholyexception</groupId>
             <artifactId>HolyAPI</artifactId>
-            <version>1.1.19</version>
+            <version>1.2.1</version>
         </dependency>
 
         <dependency>

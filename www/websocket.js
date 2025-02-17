@@ -21,6 +21,15 @@ function connect() {
         let cmd = data.cmd;
         let content = data.content;
 
+        if (cmd == "response") {
+            yeti.show({
+                message: content.message,
+                severity: getYetiServerity(content.code),
+                time: 5000
+            });
+            return;
+        }
+
         switch (targetSystem) {
             case "default":
                 onWSResponseDefault(cmd, content);
@@ -58,4 +67,13 @@ function sendPacket(cmd, targetSystem, content) {
     console.log("->")
     console.log(JSON.stringify(request))
     ws.send(JSON.stringify(request));
+}
+
+function getYetiServerity(code) {
+    switch (code) {
+        case 2: return 'ok'
+        case 3: return 'warn'
+        case 4: return 'nok'
+        default: return 'info'
+    }
 }

@@ -1,4 +1,5 @@
 let indexes = new Map();
+const yeti = new Yeti();
 
 const settings = {
     voe: {
@@ -51,38 +52,6 @@ function buildUI() {
 
         settingsContainer.appendChild(groupDiv);
     }
-}
-
-function onElementAdd() {
-    let url = "";
-    if (resolvedLinks.length > 0) { // Wenn aniworldlinks vorhanden sind, dann diese bevorzugen
-        url = resolvedLinks;
-    } else {
-        url = document.getElementById("url").value;
-    }
-    let urlArray = url.split(";");
-
-
-    for (let i = 0; i < urlArray.length; i++) {
-        let urlElement = urlArray[i];
-
-        let uuid = uuidv4();
-        let settings = getSettings();
-        let targetSelection = document.getElementById("targetSelection").value;
-        let subfolder = document.getElementById("subfolder").value;
-
-        let obj = {
-            uuid: uuid,
-            state: "new",
-            created: new Date().getTime(),
-            url: urlElement,
-            options: settings,
-            target: targetSelection + "/" + subfolder
-        }
-
-        addObjectToTable(obj);
-    }
-    url.value = ""; // reset input field
 }
 
 function onWSResponseDefault(cmd, content) {
@@ -231,7 +200,6 @@ function addObjectToTable(entry) {
     row.title = tooltip;
 
     row.classList = getStatusClass(entry.state);
-    console.log();
     indexes.set(entry.uuid, entry);
 }
 
@@ -261,6 +229,7 @@ function saveGlobalSettings() {
 }
 
 function addNewElement() {
+    var txtURL = document.getElementById("url");
     let url = "";
     if (resolvedLinks.length > 0) { // Wenn aniworldlinks vorhanden sind, dann diese bevorzugen
         url = resolvedLinks;
@@ -289,7 +258,7 @@ function addNewElement() {
 
         addObjectToTable(obj);
     }
-    url.value = ""; // reset input field
+    txtURL.value = ""; // reset input field
 }
 
 // Events

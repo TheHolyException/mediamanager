@@ -1,14 +1,12 @@
 package de.theholyexception.mediamanager.models.aniworld;
 
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
-import de.theholyexception.holyapi.datastorage.sql.interfaces.SQLiteInterface;
 import de.theholyexception.mediamanager.AniworldHelper;
-import de.theholyexception.mediamanager.MediaManager;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import org.json.simple.JSONObject;
 
-import javax.xml.crypto.dsig.spec.XPathType;
 import java.io.File;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -31,6 +29,7 @@ public class Anime {
     private File directory;
     @Getter
     private List<Season> seasonList = new ArrayList<>();
+    private Long lastUpdate = 0L;
 
     @Getter
     private boolean isDirty = false;
@@ -39,6 +38,7 @@ public class Anime {
     private static int currentID;
     @Setter
     private static File baseDirectory;
+
 
     private static int getAndAddCurrentID() {
         return ++currentID;
@@ -59,16 +59,17 @@ public class Anime {
             Season.loadFromDB(db, anime);
             result.add(anime);
         }
+        rs.close();
         return result;
     }
 
 
-    public Anime(int id, int languageId, String title, String url) {
-        this.id = id;
+    public Anime(int languageId, String title, String url) {
         this.languageId = languageId;
         this.title = title;
         this.url = url;
         isDirty = true;
+        this.id = Anime.getAndAddCurrentID();
         setDirectoryPath();
     }
 
@@ -115,6 +116,17 @@ public class Anime {
         return cnt;
     }
 
+    public List<Episode> getUnloadedEpisodes() {
+        List<Episode> result = new ArrayList<>();
+        for (Season season : seasonList) {
+            for (Episode episode : season.getEpisodeList()) {
+                if (episode.isDownloaded()) continue; // We do not need to download already downloaded episodes xD
+                result.add(episode);
+            }
+        }
+        return result;
+    }
+
     public static final Pattern pattern = Pattern.compile("S\\d{2}E\\d{2}");
     public void scanDirectoryForExistingEpisodes() {
         if (directory == null) return;
@@ -132,15 +144,12 @@ public class Anime {
 
         for (Season season : seasonList) {
             String sn = String.format("S%02d", season.getSeasonNumber());
-            for (Episode episode : season.getEpisodeList()) {
+            for (Episode episode : season.getEpisodeList().stream().filter(e -> !e.isDownloaded()).toList()) {
                 String en = String.format("E%02d", episode.getEpisodeNumber());
                 if (existingFiles.contains(sn + en))
                     episode.setDownloaded(true);
             }
         }
-
-
-
     }
 
     public void addSeason(Season season) {
@@ -169,6 +178,8 @@ public class Anime {
                     addEpisode(onlineSeason, onlineEpisode);
             }
         }
+
+        lastUpdate = System.currentTimeMillis();
     }
 
 
@@ -184,38 +195,28 @@ public class Anime {
     }
 
     public void writeToDB(DataBaseInterface db) {
-        int animeId = id == -1 ? Anime.getAndAddCurrentID() : id;
         if (isDirty) {
             System.out.println(this);
-            if (db instanceof SQLiteInterface) {
-                db.executeSafe("""
-                insert or replace into anime (
-                    nKey,
-                    nLanguageId,
-                    szTitle,
-                    szURL
-                ) values (
-                    ?,
-                    ?,
-                    ?,
-                    ?
-                )
-                """,
-                        animeId,
-                        languageId,
-                        title,
-                        url);
-            } else {
-                db.executeSafe("call addAnime(?, ?, ?, ?)",
-                        animeId,
-                        languageId,
-                        title,
-                        url);
-            }
+            db.executeSafe("call addAnime(?, ?, ?, ?)",
+                    id,
+                    languageId,
+                    title,
+                    url);
             isDirty = false;
         }
 
-        seasonList.forEach(season -> season.writeToDB(db, animeId));
+        seasonList.forEach(season -> season.writeToDB(db, id));
+    }
+
+    public JSONObject toJSONObject() {
+        JSONObject object = new JSONObject();
+        object.put("id", id);
+        object.put("languageId", languageId);
+        object.put("title", title);
+        object.put("url", url);
+        object.put("unloaded", getUnloadedEpisodeCount());
+        object.put("lastScan", lastUpdate);
+        return object;
     }
 
 }

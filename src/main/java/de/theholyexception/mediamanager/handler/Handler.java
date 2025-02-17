@@ -2,6 +2,7 @@ package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.MediaManager;
+import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import lombok.Getter;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONObject;
@@ -16,9 +17,7 @@ public abstract class Handler {
         this.targetSystem = targetSystem;
     }
 
-    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
-
-    }
+    public abstract WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content);
 
     public void loadConfigurations() {
         handlerConfiguration = MediaManager.getInstance().getConfiguration().getJson()
