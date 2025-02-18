@@ -1,0 +1,20 @@
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "master"'
+
+default:
+  image: maven:3.8.6-openjdk-8
+
+
+stages:
+  - build
+  - test
+
+build:
+    stage: build
+    script: 
+        - mvn install -B
+test:
+    stage: test
+    script:
+        - mvn test
