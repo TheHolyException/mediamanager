@@ -260,7 +260,9 @@ public class AutoLoaderHandler extends Handler {
             db.asyncDataSettings(2);
             db.connect();
 
-            executeDatabaseScripts();
+            if (handlerConfiguration.get("executeDBScripts", false, Boolean.class)) {
+                executeDatabaseScripts();
+            }
 
             Anime.setCurrentID(getCurrentId("anime"));
             Season.setCurrentID(getCurrentId("season"));

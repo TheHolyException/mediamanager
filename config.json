@@ -1,14 +1,15 @@
 {
     "handler": {
         "autoloader": {
+            "executeDBScripts": true,
             "checkIntervalMin": 5,
             "dataFile": ".\/autoloader.data.json",
             "mysql": {
-                "password": "",
+                "password": "2gEoRmJ4uKoSAnrPedbpqMQ3^",
                 "database": "mediamanager",
                 "port": 3306,
-                "host": "homelab",
-                "username": "root"
+                "host": "minebug.de",
+                "username": "mediamanager"
             },
             "checkDelayMs": 500,
             "urlResolverThreads": 10,
