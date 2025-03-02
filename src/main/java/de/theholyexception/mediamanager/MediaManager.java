@@ -33,14 +33,14 @@ public class MediaManager {
     @Getter
     private static MediaManager instance;
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         new MediaManager();
     }
+
     public void changeLogLevel(Level level) {
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
-        context.getLogger("ROOT").setLevel(level); // Hier änderst du das Log-Level des ROOT-Loggers
+        context.getLogger("ROOT").setLevel(level);
     }
-
 
     @Getter
     private boolean isDockerEnvironment = false;
@@ -49,7 +49,7 @@ public class MediaManager {
     @Getter
     private ConfigJSON configuration;
     @Getter
-    private final Map<String, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
+    private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
 
     public MediaManager() {
         MediaManager.instance = this;
@@ -62,9 +62,13 @@ public class MediaManager {
     }
 
     private void loadHandlers() {
-        handlers.put("default", new DefaultHandler("default"));
-        handlers.put("autoloader", new AutoLoaderHandler("autoloader"));
-        handlers.put("aniworld", new AniworldHandler("aniworld"));
+        addHandler(new DefaultHandler(TargetSystem.DEFAULT));
+        addHandler(new AniworldHandler(TargetSystem.ANIWORLD));
+        addHandler(new AutoLoaderHandler(TargetSystem.AUTOLOADER));
+    }
+
+    private void addHandler(Handler handler) {
+        handlers.put(handler.getTargetSystem(), handler);
     }
 
     private void loadConfiguration() {
@@ -72,6 +76,7 @@ public class MediaManager {
         configuration.loadConfig();
         if (!configuration.getFile().exists()) {
             URL url = MediaManager.class.getClassLoader().getResource("config-template.json");
+            if (url == null) throw new IllegalStateException("URL is null");
             try (FileInputStream fis = new FileInputStream(new File(url.toURI()))) {
                 boolean result = configuration.createNewIfNotExists(fis);
                 if (result) log.info("New configuration created");
@@ -111,7 +116,7 @@ public class MediaManager {
                     String cmd = dataset.get("cmd", String.class);
                     JSONObjectContainer content = dataset.getObjectContainer("content", new JSONObjectContainer());
 
-                    Handler handler = handlers.get(targetSystem);
+                    Handler handler = handlers.get(TargetSystem.valueOf(targetSystem.toUpperCase()));
                     if (handler == null)
                         throw new IllegalStateException("Invalid target-system: " + targetSystem);
 
@@ -127,8 +132,7 @@ public class MediaManager {
                     }
 
                 } catch (Exception ex) {
-                    log.error(ex.getMessage());
-                    ex.printStackTrace();
+                    log.error("", ex);
                 }
             }
 

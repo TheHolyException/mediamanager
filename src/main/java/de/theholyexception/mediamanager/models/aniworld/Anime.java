@@ -13,9 +13,7 @@ import org.json.simple.JSONObject;
 
 import java.io.File;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,13 +22,13 @@ import java.util.regex.Pattern;
 public class Anime {
 
     @Getter
-    private int id = -1;
+    private final int id;
     @Getter
-    private int languageId;
+    private final int languageId;
     @Getter
-    private String title;
+    private final String title;
     @Getter
-    private String url;
+    private final String url;
     @Getter
     private File directory;
     @Getter
@@ -38,12 +36,13 @@ public class Anime {
     private Long lastUpdate = 0L;
 
     @Getter
-    private boolean isDirty = false;
+    private boolean isDirty;
 
     @Getter @Setter
     private static int currentID;
     @Setter
     private static File baseDirectory;
+    private String customDirectory;
 
 
     private static int getAndAddCurrentID() {
@@ -80,26 +79,15 @@ public class Anime {
         this.title = row.get("szTitle", String.class);
         this.url = row.get("szURL", String.class);
         String overridePath = row.get("szCustomDirectory", String.class);
-        if (overridePath.isEmpty()) overridePath = null;
+        if (overridePath == null || overridePath.isEmpty()) overridePath = null;
         this.isDirty = false;
         setDirectoryPath(overridePath);
     }
 
-    @Deprecated(forRemoval = true)
-    public void addEpisode(Season season, Episode episode) {
-        Optional<Season> optSeason = seasonList.stream().filter(s -> s.getSeasonNumber() == season.getSeasonNumber()).findFirst();
-        if (optSeason.isEmpty())
-            throw new IllegalStateException("Season locally not found " + season);
-        if (optSeason.get().getEpisodeList().stream().anyMatch(e -> e.getId() == episode.getId()))
-            throw new IllegalStateException("Episode already exists locally " + episode);
-
-        Season s = optSeason.get();
-        s.getEpisodeList().add(episode);
-        s.isDirty = true;
-    }
-
-    private void setDirectoryPath(String overridePath) {
+    public void setDirectoryPath(String overridePath) {
         if (overridePath != null) {
+            customDirectory = overridePath;
+            isDirty = true;
             directory = new File(baseDirectory, overridePath);
         } else {
             String[] segments = url.split("/");
@@ -153,10 +141,7 @@ public class Anime {
             String sn = String.format("S%02d", season.getSeasonNumber());
             for (Episode episode : season.getEpisodeList().stream().filter(e -> !e.isDownloaded()).toList()) {
                 String en = String.format("E%02d", episode.getEpisodeNumber());
-                if (existingFiles.contains(sn + en))
-                    episode.setDownloaded(true);
-                else
-                    episode.setDownloaded(false);
+                episode.setDownloaded(existingFiles.contains(sn + en));
             }
         }
     }
@@ -207,11 +192,12 @@ public class Anime {
     public void writeToDB(DataBaseInterface db) {
         if (isDirty) {
             log.debug("Writing season to db: " + this);
-            db.executeSafe("call addAnime(?, ?, ?, ?)",
+            db.executeSafe("call addAnime(?, ?, ?, ?, ?)",
                     id,
                     languageId,
                     title,
-                    url);
+                    url,
+                    customDirectory);
             isDirty = false;
         }
 
@@ -219,7 +205,7 @@ public class Anime {
     }
 
     public JSONObject toJSONObject() {
-        JSONObject object = new JSONObject();
+        Map<String, Object> object = new HashMap<>();
         object.put("id", id);
         object.put("languageId", languageId);
         object.put("title", title);
@@ -227,7 +213,7 @@ public class Anime {
         object.put("unloaded", getUnloadedEpisodeCount());
         object.put("lastScan", lastUpdate);
         object.put("directory", getDirectory().toString().replace(baseDirectory.toString(), ""));
-        return object;
+        return new JSONObject(object);
     }
 
 }

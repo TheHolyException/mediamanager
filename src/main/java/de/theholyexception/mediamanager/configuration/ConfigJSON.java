@@ -5,13 +5,17 @@ import de.theholyexception.holyapi.datastorage.file.FileConfiguration;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.holyapi.util.NotImplementedException;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.StaticUtils;
 
 import java.io.*;
 
+@Slf4j
 public class ConfigJSON implements FileConfiguration {
 
 	private final File file;
+	@Getter
 	private JSONObjectContainer json;
 
 	public ConfigJSON(File file) {
@@ -25,7 +29,7 @@ public class ConfigJSON implements FileConfiguration {
 		try (FileOutputStream fos = new FileOutputStream(file)) {
 			fos.write(formattedJson.getBytes());
 		} catch (IOException ex) {
-			ex.printStackTrace();
+			log.error("Failed to safe configuration", ex);
 		}
 	}
 
@@ -54,7 +58,7 @@ public class ConfigJSON implements FileConfiguration {
 			saveConfig();
 			return true;
 		} catch (IOException ex) {
-			ex.printStackTrace();
+			log.error("Failed to create configuration file", ex);
 		}
 		return false;
 	}
@@ -65,7 +69,7 @@ public class ConfigJSON implements FileConfiguration {
 			boolean result = file.createNewFile();
 			if (!result) throw new IllegalStateException("File cant be created!");
 		} catch (IOException ex) {
-			ex.printStackTrace();
+			log.error("Failed to create configuration file", ex);
 		}
 	}
 
@@ -83,7 +87,4 @@ public class ConfigJSON implements FileConfiguration {
 		json = (JSONObjectContainer) JSONReader.readFile(file);
 	}
 
-	public JSONObjectContainer getJson() {
-		return json;
-	}
 }

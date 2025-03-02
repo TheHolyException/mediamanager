@@ -1,8 +1,8 @@
 package de.theholyexception.mediamanager;
 
-import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -13,7 +13,12 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 public class AniworldHelper {
+
+    private AniworldHelper() {}
+
+    public static final String ANIWORLD_URL = "https://aniworld.to";
 
     public static boolean isSeasonLink(String url) {
         return url.contains("staffel");
@@ -38,7 +43,7 @@ public class AniworldHelper {
                 result.add(Season.parseFromElement(domSeason));
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to obtain seasons", ex);
         }
         return result;
     }
@@ -57,7 +62,7 @@ public class AniworldHelper {
                 return Season.parseFromElement(domSeason);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to obtain season", ex);
         }
         return null;
     }
@@ -83,7 +88,7 @@ public class AniworldHelper {
                 result.add(Episode.parseFromElement(domEpisode));
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to obtain episodes", ex);
         }
         return result;
     }
@@ -95,7 +100,7 @@ public class AniworldHelper {
 
             return seriesTitle.text();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to obtain anime title", ex);
         }
         return null;
     }
@@ -113,7 +118,7 @@ public class AniworldHelper {
                 return con.getHeaderField("Location");
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to follow redirect url", ex);
         }
         return null;
     }

@@ -31,7 +31,7 @@ public class WebServer extends Thread {
 
             this.start();
         } catch (IOException ex) {
-            ex.printStackTrace();
+            log.error("Failed to start WebServer", ex);
         }
     }
 
@@ -40,7 +40,7 @@ public class WebServer extends Thread {
         while (!isInterrupted()) {
             try {
                 connectionList.add(new Connection(serverSocket.accept(), configuration));
-            } catch (Throwable ex) {
+            } catch (Exception ex) {
                 // Can be ignored
             }
         }

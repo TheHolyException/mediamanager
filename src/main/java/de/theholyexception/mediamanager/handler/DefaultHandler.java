@@ -5,8 +5,10 @@ import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.MediaManager;
+import de.theholyexception.mediamanager.TargetSystem;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.Target;
+import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
@@ -46,10 +48,8 @@ public class DefaultHandler extends Handler {
 
     private SettingProperty<Integer> spDownloadThreads;
     private SettingProperty<Integer> spVoeThreads;
-    private SettingProperty<String> spFFMPEGPath;
-    private SettingProperty<String> spDownloadTempPath;
 
-    public DefaultHandler(String targetSystem) {
+    public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
         executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
     }
@@ -57,10 +57,11 @@ public class DefaultHandler extends Handler {
     @Override
     public void loadConfigurations() {
         log.info("Loading Configurations");
-        spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, "systemSettings");
-        spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, "systemSettings");
-        spFFMPEGPath = Settings.getSettingProperty("FFMPEG", "ffmpeg", "systemSettings");
-        spDownloadTempPath = Settings.getSettingProperty("DOWNLOAD_FOLDER", "./tmp", "systemSettings");
+        String systemSettings = "systemSettings";
+        spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
+        spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
+        SettingProperty<String> spFFMPEGPath = Settings.getSettingProperty("FFMPEG", "ffmpeg", systemSettings);
+        SettingProperty<String> spDownloadTempPath = Settings.getSettingProperty("DOWNLOAD_FOLDER", "./tmp", systemSettings);
 
         spDownloadThreads.addSubscriber(value -> executorHandler.updateExecutorService(Executors.newFixedThreadPool(value)));
         spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
@@ -70,12 +71,12 @@ public class DefaultHandler extends Handler {
             if (!downloadFolder.exists())
                 downloadFolder.mkdirs();
         });
+        loadTargets();
     }
 
     @Override
     public void initialize() {
         cmdStartSystemDataFetcher();
-        loadTargets();
     }
 
     private void loadTargets() {
@@ -145,6 +146,8 @@ public class DefaultHandler extends Handler {
         urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
         changeObject(content.getRaw(), "state", "Committed");
 
+        int animeId = content.get("animeId", -1, Integer.class);
+
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
             public void onProgressUpdate(double v) {
@@ -157,6 +160,7 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onInfo(String s) {
+                // Not implemented
             }
 
             @Override
@@ -171,6 +175,7 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onLogFile(String s, byte[] bytes) {
+                // Not implemented
             }
         };
 
@@ -186,9 +191,14 @@ public class DefaultHandler extends Handler {
                 File targetFile = new File(outputFolder, file.getName());
                 log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
                 Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                if (animeId != -1) {
+                    Anime anime = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER)).getAnimeByID(animeId);
+                    anime.scanDirectoryForExistingEpisodes();
+                    WebSocketUtils.sendAutoLoaderItem(null, anime);
+                }
             } catch (Exception ex) {
-                log.error(ex.getMessage());
-                ex.printStackTrace();
+                log.error("Failed to download", ex);
                 if (!ex.getMessage().contains("File.getName()"))
                     updateEvent.onError(ex.getMessage());
             }
@@ -225,7 +235,7 @@ public class DefaultHandler extends Handler {
         switch (key) {
             case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
             case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
-            default -> WebSocketResponse.ERROR.setMessage("Unsupported setting: " + key);// throw new IllegalStateException("Unsupported Setting: " + key);
+            default -> WebSocketResponse.ERROR.setMessage("Unsupported setting: " + key);
         }
         sendSettings(null);
         return null;
@@ -247,7 +257,7 @@ public class DefaultHandler extends Handler {
         if (subFolder.listFiles() != null)
             array.addAll(Arrays.stream(subFolder.listFiles()).map(File::getName).toList());
         response.put("subfolders", array);
-        sendPacket("requestSubfoldersResponse", "default", response, socket);
+        sendPacket("requestSubfoldersResponse", TargetSystem.DEFAULT, response, socket);
         return null;
     }
 
@@ -266,7 +276,7 @@ public class DefaultHandler extends Handler {
                 dockerMemoryLimit = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.max").start().getInputStream())).trim());
                 dockerMemoryUsage = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.current").start().getInputStream())).trim());
             }
-            sendPacket("systemInfo", "default", formatSystemInfo(), target);
+            sendPacket("systemInfo", TargetSystem.DEFAULT, formatSystemInfo(), target);
         } catch (Exception ex) {
             log.error(ex.getMessage());
         }

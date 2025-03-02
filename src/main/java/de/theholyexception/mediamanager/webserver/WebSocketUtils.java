@@ -3,6 +3,7 @@ package de.theholyexception.mediamanager.webserver;
 import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.MediaManager;
+import de.theholyexception.mediamanager.TargetSystem;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.settings.Settings;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @Slf4j
 public class WebSocketUtils {
+    private WebSocketUtils() {}
 
     @SuppressWarnings("unchecked")
     public static void sendObject(WebSocketBasic socket, List<JSONObject> objects) {
@@ -24,7 +26,7 @@ public class WebSocketUtils {
         JSONArray dataset = new JSONArray();
         dataset.addAll(objects);
         response.put("data", dataset);
-        sendPacket("syn", "default", response, socket);
+        sendPacket("syn", TargetSystem.DEFAULT, response, socket);
     }
 
     @SuppressWarnings("unchecked")
@@ -33,7 +35,7 @@ public class WebSocketUtils {
         body.put("level", "warn");
         body.put("sourceType", sourceType);
         body.put("message", message);
-        sendPacket("response", "default", body, socket);
+        sendPacket("response", TargetSystem.DEFAULT, body, socket);
     }
 
     @SuppressWarnings("unchecked")
@@ -44,7 +46,7 @@ public class WebSocketUtils {
                     JSONObject dataset = new JSONObject();
                     dataset.put("key", entry.getKey());
                     dataset.put("val", entry.getValue().getValue());
-                    sendPacket("setting", "default", dataset, socket);
+                    sendPacket("setting", TargetSystem.DEFAULT, dataset, socket);
                 });
     }
 
@@ -68,7 +70,7 @@ public class WebSocketUtils {
     public static void deleteObjectToAll(TableItemDTO object) {
         JSONObject body = new JSONObject();
         body.put("uuid", object.getUuid().toString());
-        sendPacket("del", "default", body, null);
+        sendPacket("del", TargetSystem.DEFAULT, body, null);
     }
 
     @SuppressWarnings("unchecked")
@@ -78,10 +80,11 @@ public class WebSocketUtils {
         sendObjectToAll(object);
     }
 
-    public static void sendPacket(String cmd, String targetSystem, JSONObject content, WebSocketBasic socket) {
+    @SuppressWarnings("unchecked")
+    public static void sendPacket(String cmd, TargetSystem targetSystem, JSONObject content, WebSocketBasic socket) {
         JSONObject packet = new JSONObject();
         packet.put("cmd", cmd);
-        packet.put("targetSystem", targetSystem);
+        packet.put("targetSystem", targetSystem.toString());
         packet.put("content", content);
         if (socket != null) // Broadcast when target websocket is null
             socket.send(packet.toJSONString());
@@ -95,7 +98,7 @@ public class WebSocketUtils {
     /**
      * Builds an object to send as response when a client is requesting
      * @param code 2 = OK, 4 = Error
-     * @param message
+     * @param message Message
      * @return JSONObject for the client
      */
     public static JSONObjectContainer createResponseObject(int code, String message) {
@@ -115,6 +118,6 @@ public class WebSocketUtils {
             items.add(anime.toJSONObject());   
         }
         response.set("items", items);
-        sendPacket("syn", "autoloader", response.getRaw(), socket);
+        sendPacket("syn", TargetSystem.AUTOLOADER, response.getRaw(), socket);
     }
 }

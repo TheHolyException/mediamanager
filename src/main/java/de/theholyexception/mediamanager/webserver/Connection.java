@@ -1,16 +1,15 @@
 package de.theholyexception.mediamanager.webserver;
 
+import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketServer;
 
 import java.io.*;
 import java.net.Socket;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class Connection implements Runnable {
-    private static final String TAG = "WebServer-Connection";
-
     private final Socket socket;
     private DataInputStream is;
     private DataOutputStream os;
@@ -85,7 +84,7 @@ public class Connection implements Runnable {
             }
 
         } catch (IOException ex) {
-            ex.printStackTrace();
+            log.error("Failed to process web request", ex);
         }
     }
 
@@ -96,8 +95,8 @@ public class Connection implements Runnable {
 
     /**
      * Handles the incoming request as HTTP Request
-     * @param arguments
-     * @throws IOException
+     * @param arguments http arguments
+     * @throws IOException when you do something stupid
      */
     private void handleHttpRequest(String[] arguments) throws IOException {
         String methode = arguments[0];

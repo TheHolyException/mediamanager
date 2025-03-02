@@ -15,30 +15,22 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.sql.SQLException;
 import java.util.concurrent.Executors;
 
 @ToString
 @Slf4j
+@Getter
 public class Episode {
 
-    @Getter
-    private int id = -1;
-    @Getter
-    private int episodeNumber;
-    @Getter
+    private final int id;
+    private final int episodeNumber;
     private String url;
-    @Getter
     private String videoUrl;
-    @Getter
-    private String title;
-    @Getter
+    private final String title;
     private boolean downloaded = false;
-    @Getter @Setter
+    @Setter
     private boolean downloading = false;
-
-    @Getter
-    private boolean isDirty = false;
+    private boolean isDirty;
 
     public static final ExecutorHandler urlResolver = new ExecutorHandler(Executors.newFixedThreadPool(50));
 
@@ -51,7 +43,7 @@ public class Episode {
         this.isDirty = isDirty;
     }
 
-    public static void loadFromDB(DataBaseInterface db, Season season) throws SQLException {
+    public static void loadFromDB(DataBaseInterface db, Season season) {
         Result rs = db.getResult(String.format("""
                         select *
                         from episode
@@ -67,7 +59,7 @@ public class Episode {
         return new Episode(
                 Integer.parseInt(element.text()),
                 Integer.parseInt(element.attr("data-episode-id")),
-                "https://aniworld.to" + element.attr("href"),
+                AniworldHelper.ANIWORLD_URL + element.attr("href"),
                 element.attr("title"),
                 true
         );
@@ -77,7 +69,7 @@ public class Episode {
         this.episodeNumber = row.get("nEpisodeNumber", Integer.class);
         this.id = row.get("nKey", Integer.class);
         String szURL = row.get("szURL", String.class);
-        if (szURL.startsWith("https://aniworld.to"))
+        if (szURL.startsWith(AniworldHelper.ANIWORLD_URL))
             this.url = szURL;
         else
             this.videoUrl = szURL;
@@ -117,14 +109,14 @@ public class Episode {
                 Elements list = document.select(".row > li");
                 for (Element element : list) {
                     if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
-                    this.videoUrl = AniworldHelper.getRedirectedURL("https://aniworld.to"+element.attr("data-link-target"));
+                    this.videoUrl = AniworldHelper.getRedirectedURL(AniworldHelper.ANIWORLD_URL+element.attr("data-link-target"));
                     break;
                 }
 
                 if (then != null)
                     then.run();
             } catch (Exception ex) {
-                ex.printStackTrace();
+                log.error("Failed to load video url", ex);
             }
         }), 1);
         isDirty = true;

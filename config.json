@@ -1,5 +1,8 @@
 {
     "handler": {
+        "ANIWORLD": {
+            
+        },
         "autoloader": {
             "executeDBScripts": true,
             "checkIntervalMin": 5,

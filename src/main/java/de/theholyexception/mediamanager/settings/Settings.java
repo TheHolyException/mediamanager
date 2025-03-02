@@ -12,7 +12,7 @@ public class Settings {
 
     private Settings() {}
 
-    public static final Map<String, String> SETTING_DATA = Collections.synchronizedMap(new HashMap<>());
+    protected static final Map<String, String> SETTING_DATA = Collections.synchronizedMap(new HashMap<>());
     public static final Map<String, SettingProperty<?>> SETTING_PROPERTIES = Collections.synchronizedMap(new HashMap<>());
 
     @SuppressWarnings("unchecked")

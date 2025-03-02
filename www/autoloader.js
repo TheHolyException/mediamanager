@@ -86,11 +86,15 @@ function autoloaderAddTableItem(item) {
 function autoloaderSave() {
     let input = document.getElementById('autoloaderInputText');
     let text = input.value;
+
+    let subfolder = document.getElementById('autoloader-subfolder').value;
+
     if (text.length == 0) return;
 
     let request = {
         url: text,
-        languageId: 1
+        languageId: 1,
+        directory: subfolder
     }
 
     sendPacket('subscribe', 'autoloader', request);
