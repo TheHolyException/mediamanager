@@ -1,5 +1,7 @@
 package de.theholyexception.mediamanager;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.mediamanager.configuration.ConfigJSON;
@@ -16,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.StaticUtils;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketEvent;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,6 +36,11 @@ public class MediaManager {
     public static void main(String[] args) {
         new MediaManager();
     }
+    public void changeLogLevel(Level level) {
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+        context.getLogger("ROOT").setLevel(level); // Hier änderst du das Log-Level des ROOT-Loggers
+    }
+
 
     @Getter
     private boolean isDockerEnvironment = false;
@@ -74,6 +82,10 @@ public class MediaManager {
         Settings.init(configuration);
         handlers.values().forEach(Handler::loadConfigurations);
         configuration.saveConfig();
+
+        // set the log level
+        Level newLogLevel = Level.valueOf(configuration.getJson().get("logLevel", String.class));
+        changeLogLevel(newLogLevel);
     }
 
     private void checkForDockerEnvironment() {

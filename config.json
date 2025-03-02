@@ -10,6 +10,7 @@
                 "host": "homelab",
                 "username": "root"
             },
+            "checkDelayMs": 500,
             "urlResolverThreads": 10,
             "passiveMode": true
         },
@@ -17,10 +18,11 @@
             
         }
     },
+    "logLevel": "DEBUG",
     "systemSettings": {
         "PARALLEL_DOWNLOADS": {
             "forClient": true,
-            "value": 10
+            "value": 9
         },
         "FFMPEG": {
             "value": "\/data\/ffmpeg\/ffmpeg"
@@ -36,17 +38,17 @@
     "targets": [
         {
             "identifier": "stream-series",
-            "path": "\/home\/patrick\/Downloads\/series",
+            "path": "\/home\/patrick\/mnt\/series",
             "subFolders": true
         },
         {
             "identifier": "stream-animes",
-            "path": "\/home\/patrick\/Downloads\/anime",
+            "path": "\/home\/patrick\/mnt\/animes",
             "subFolders": true
         },
         {
             "identifier": "stream-movies",
-            "path": "\/home\/patrick\/Downloads\/movies"
+            "path": "\/home\/patrick\/mnt\/movies"
         }
     ]
 }

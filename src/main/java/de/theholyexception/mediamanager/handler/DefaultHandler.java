@@ -25,6 +25,7 @@ import org.json.simple.JSONObject;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -140,7 +141,8 @@ public class DefaultHandler extends Handler {
         log.debug("Output Folder: " + outputFolder.getAbsolutePath());
         if (!outputFolder.exists()) outputFolder.mkdirs();
 
-        urls.put(UUID.fromString(content.get("uuid", String.class)), new TableItemDTO(content));
+        TableItemDTO tableItem = new TableItemDTO(content);
+        urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
         changeObject(content.getRaw(), "state", "Committed");
 
         var updateEvent = new DownloadStatusUpdateEvent() {
@@ -178,26 +180,33 @@ public class DefaultHandler extends Handler {
         Downloader downloader = DownloaderSelector.selectDownloader(url);
 
         // Start the download task
-        executorHandler.putTask(new ExecutorTask(() -> {
+        ExecutorTask task = new ExecutorTask(() -> {
             try {
                 File file = downloader.start(url, downloadFolder, updateEvent, options);
                 File targetFile = new File(outputFolder, file.getName());
                 log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
-                Files.move(file.toPath(), targetFile.toPath());
+                Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
             } catch (Exception ex) {
                 log.error(ex.getMessage());
+                ex.printStackTrace();
                 if (!ex.getMessage().contains("File.getName()"))
                     updateEvent.onError(ex.getMessage());
             }
-        }));
+        });
+        tableItem.setTask(task);
+        executorHandler.putTask(task);
         return null;
     }
 
     private WebSocketResponse cmdDelete(JSONObjectContainer content) {
         UUID uuid = UUID.fromString(content.get("uuid", String.class));
         TableItemDTO toDelete = urls.get(uuid);
-        deleteObjectToAll(toDelete);
-        urls.remove(uuid);
+        if (executorHandler.removeTask(toDelete.getTask())) {
+            deleteObjectToAll(toDelete);
+            urls.remove(uuid);
+        } else {
+            return WebSocketResponse.WARN.setMessage("Cannot remove task, already downloading!");
+        }
         return null;
     }
 
@@ -210,6 +219,8 @@ public class DefaultHandler extends Handler {
     private WebSocketResponse cmdChangeSetting(JSONObjectContainer content) {
         String key = content.get("key", String.class);
         String val = content.get("val", String.class);
+
+        log.info("Change setting " + key + " to: " + val);
 
         switch (key) {
             case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));

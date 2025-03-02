@@ -1,20 +1,26 @@
 package de.theholyexception.mediamanager.models.aniworld;
 
+import de.theholyexception.holyapi.datastorage.sql.Result;
+import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.mediamanager.AniworldHelper;
+import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONObject;
 
 import java.io.File;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @ToString
+@Slf4j
 public class Anime {
 
     @Getter
@@ -28,7 +34,7 @@ public class Anime {
     @Getter
     private File directory;
     @Getter
-    private List<Season> seasonList = new ArrayList<>();
+    private final List<Season> seasonList = new ArrayList<>();
     private Long lastUpdate = 0L;
 
     @Getter
@@ -47,19 +53,14 @@ public class Anime {
     public static List<Anime> loadFromDB(DataBaseInterface db) throws SQLException {
         List<Anime> result = new ArrayList<>();
 
-        ResultSet rs = db.executeQuery("""
-                select nKey,
-                       nLanguageId,
-                       szTitle,
-                       szURL
-                from anime
-                """);
-        while (rs.next()) {
-            Anime anime = new Anime(rs);
+        Result rs = db.getResult("select * from anime");
+
+        for (Row row : rs.getTable(0).getRows()) {
+            Anime anime = new Anime(row);
             Season.loadFromDB(db, anime);
             result.add(anime);
         }
-        rs.close();
+
         return result;
     }
 
@@ -70,16 +71,18 @@ public class Anime {
         this.url = url;
         isDirty = true;
         this.id = Anime.getAndAddCurrentID();
-        setDirectoryPath();
+        setDirectoryPath(null);
     }
 
-    public Anime(ResultSet rs) throws SQLException {
-        this.id = rs.getInt("nKey");
-        this.languageId = rs.getInt("nLanguageId");
-        this.title = rs.getString("szTitle");
-        this.url = rs.getString("szURL");
+    public Anime(Row row) {
+        this.id = row.get("nKey", Integer.class);
+        this.languageId = row.get("nLanguageId", Integer.class);
+        this.title = row.get("szTitle", String.class);
+        this.url = row.get("szURL", String.class);
+        String overridePath = row.get("szCustomDirectory", String.class);
+        if (overridePath.isEmpty()) overridePath = null;
         this.isDirty = false;
-        setDirectoryPath();
+        setDirectoryPath(overridePath);
     }
 
     @Deprecated(forRemoval = true)
@@ -95,11 +98,15 @@ public class Anime {
         s.isDirty = true;
     }
 
-    private void setDirectoryPath() {
-        String[] segments = url.split("/");
-        String path = segments[segments.length-1];
-        path = path.replaceAll("[^a-zA-Z0-9-_.]", "_");
-        directory = new File(baseDirectory, path);
+    private void setDirectoryPath(String overridePath) {
+        if (overridePath != null) {
+            directory = new File(baseDirectory, overridePath);
+        } else {
+            String[] segments = url.split("/");
+            String path = segments[segments.length-1];
+            path = path.replaceAll("[^a-zA-Z0-9-_.]", "_");
+            directory = new File(baseDirectory, path);
+        }
     }
 
     public int getEpisodeCount() {
@@ -120,7 +127,7 @@ public class Anime {
         List<Episode> result = new ArrayList<>();
         for (Season season : seasonList) {
             for (Episode episode : season.getEpisodeList()) {
-                if (episode.isDownloaded()) continue; // We do not need to download already downloaded episodes xD
+                if (episode.isDownloaded() || episode.isDownloading()) continue; // We do not need to download already downloaded episodes xD
                 result.add(episode);
             }
         }
@@ -148,6 +155,8 @@ public class Anime {
                 String en = String.format("E%02d", episode.getEpisodeNumber());
                 if (existingFiles.contains(sn + en))
                     episode.setDownloaded(true);
+                else
+                    episode.setDownloaded(false);
             }
         }
     }
@@ -175,11 +184,12 @@ public class Anime {
             for (Episode onlineEpisode : onlineSeason.getEpisodeList()) {
                 Optional<Episode> localEpisode = localSeason.get().getEpisodeList().stream().filter(episode -> episode.getEpisodeNumber() == onlineEpisode.getEpisodeNumber()).findFirst();
                 if (localEpisode.isEmpty())
-                    addEpisode(onlineSeason, onlineEpisode);
+                    localSeason.get().addEpisode(onlineEpisode);
             }
         }
 
         lastUpdate = System.currentTimeMillis();
+        WebSocketUtils.sendAutoLoaderItem(null, this);
     }
 
 
@@ -196,7 +206,7 @@ public class Anime {
 
     public void writeToDB(DataBaseInterface db) {
         if (isDirty) {
-            System.out.println(this);
+            log.debug("Writing season to db: " + this);
             db.executeSafe("call addAnime(?, ?, ?, ?)",
                     id,
                     languageId,
@@ -216,6 +226,7 @@ public class Anime {
         object.put("url", url);
         object.put("unloaded", getUnloadedEpisodeCount());
         object.put("lastScan", lastUpdate);
+        object.put("directory", getDirectory().toString().replace(baseDirectory.toString(), ""));
         return object;
     }
 

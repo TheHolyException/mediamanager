@@ -17,13 +17,15 @@ public class Settings {
 
     @SuppressWarnings("unchecked")
     public static <T> SettingProperty<T> getSettingProperty(String setting, T defaultValue, String configPath) {
+        // Check for duplicates, and returns already registered settings
         if (SETTING_PROPERTIES.containsKey(setting)) {
             SettingProperty<?> property = SETTING_PROPERTIES.get(setting);
             if (!property.getArgumentType().getClass().equals(defaultValue.getClass()))
                 throw new IllegalStateException("There is already a Setting registered with another type");
             return (SettingProperty<T>) property;
         }
-
+        
+        // Reading data from the configuration file
         JSONObjectContainer settingElement;
         Boolean forClient = false;
         if (configPath != null) {
@@ -35,12 +37,19 @@ public class Settings {
             settingElement = null;
         }
 
+        // Creating metadata for the setting
+        // forClient for example indicates if the setting should be provided to the web clients
         SettingMetadata metadata = new SettingMetadata(setting, forClient != null && forClient);
         SettingProperty<T> property = new SettingProperty<>(metadata) {
             @Override
             public void setValue(T value) {
                 SETTING_DATA.put(setting, value.toString());
-                if (settingElement != null) settingElement.set("value", value);
+                // Writing the updated setting value to the configuration file
+                if (settingElement != null) {
+                    settingElement.set("value", value);
+                    configJSON.saveConfig();
+                }
+                // Setting the setting object value
                 super.setValue(value);
             }
         };

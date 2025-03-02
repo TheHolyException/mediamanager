@@ -1,7 +1,9 @@
 package de.theholyexception.mediamanager.models;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.holyapi.util.ExecutorTask;
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
@@ -21,6 +23,9 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
 
     @Getter
     private JSONObjectContainer jsonObject;
+
+    @Getter @Setter
+    private ExecutorTask task;
 
 
     public TableItemDTO(JSONObjectContainer content) {
