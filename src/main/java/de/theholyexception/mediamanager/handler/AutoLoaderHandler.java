@@ -7,9 +7,9 @@ import de.theholyexception.holyapi.util.ResourceUtilities;
 import de.theholyexception.mediamanager.AniworldHelper;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.configuration.ConfigJSON;
+import de.theholyexception.mediamanager.models.SettingMetadata;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
-import de.theholyexception.mediamanager.models.SettingMetadata;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
@@ -25,14 +25,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class AutoLoaderHandler extends Handler {
 
     private JSONObjectContainer subscriptions;
     private SettingProperty<Integer> spCheckIntervalMin;
-    private final AtomicInteger checkIntervalMS = new AtomicInteger();
+    private SettingProperty<Integer> spCheckDelayMs;
     private boolean passiveMode;
     private final List<Anime> subscribedAnimes = Collections.synchronizedList(new ArrayList<>());
     private SettingProperty<Integer> spURLResolverThreads;
@@ -59,13 +58,9 @@ public class AutoLoaderHandler extends Handler {
 
         subscriptions = dataFile.getJson().getObjectContainer("subscriptions", new JSONObjectContainer());
         spCheckIntervalMin = new SettingProperty<>(new SettingMetadata("checkIntervalMin", false));
-        spCheckIntervalMin.addSubscriber(value -> {
-            if (!subscriptions.getRaw().isEmpty())
-                checkIntervalMS.set(value*60*1000 / subscriptions.getRaw().size());
-            else
-                checkIntervalMS.set(Integer.MAX_VALUE);
-        });
         spCheckIntervalMin.setValue(handlerConfiguration.get("checkIntervalMin", 5, Integer.class));
+        spCheckDelayMs = new SettingProperty<>(new SettingMetadata("checkDelayMs", false));
+        spCheckDelayMs.setValue(handlerConfiguration.get("checkDelayMs", 5, Integer.class));
 
         passiveMode = handlerConfiguration.get("passiveMode", Boolean.class);
     }
@@ -85,9 +80,8 @@ public class AutoLoaderHandler extends Handler {
         }
 
         printTableInfo("anime", "season", "episode");
-        //addSubscriber("https://aniworld.to/anime/stream/dr-stone", 1);
         subscribedAnimes.forEach(Anime::scanDirectoryForExistingEpisodes);
-        subscribedAnimes.forEach(a -> System.out.println("unloaded: " + a.getUnloadedEpisodeCount()));
+        subscribedAnimes.forEach(a -> log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount()));
         subscribedAnimes.forEach(a -> {
             if (a.isDeepDirty())
                 a.writeToDB(db);
@@ -117,12 +111,14 @@ public class AutoLoaderHandler extends Handler {
         System.out.println("Unloaded: " + a.getUnloadedEpisodeCount());
     }
 
+    //region commands
     @Override
     public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
         return switch (command) {
             case "getData" -> cmdGetData(socket);
             case "subscribe" -> cmdSubscribe(content);
             case "unsubscribe" -> cmdUnsubscribe(content);
+            case "runDownload" -> cmdRunDownload(socket, content);
             case "test" -> WebSocketResponse.ERROR.setMessage("Test Erfolgreich!");
             default -> {
                 log.error("Invalid command " + command);
@@ -175,53 +171,39 @@ public class AutoLoaderHandler extends Handler {
         return WebSocketResponse.OK;
     }
 
+    private WebSocketResponse cmdRunDownload(WebSocketBasic socket, JSONObjectContainer content) {
+        int animeId = content.get("id", Integer.class);
+        Optional<Anime> optAnime = subscribedAnimes.stream().filter(a -> a.getId() == animeId).findFirst();
+        if (optAnime.isEmpty()) return WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!");
+
+        runDownload(optAnime.get());
+        return WebSocketResponse.OK;
+    }
+    //endregion
+
     private void startThread() {
         Thread t = new Thread(() -> {
             while (!Thread.interrupted()) {
                 try {
-                    int checkInterval = checkIntervalMS.get();
-                    ResultSet rs = db.executeQuery("select * from anime");
-                    while (rs.next()) {
-                        int id = rs.getInt("nKey");
-                        Optional<Anime> optAnime = subscribedAnimes.stream().filter(a -> a.getId() == id).findFirst();
-                        Anime anime;
+                    Iterator<Anime> animeList = subscribedAnimes.iterator();
 
-                        if (optAnime.isEmpty())
-                            anime = new Anime(rs);
-                        else
-                            anime = optAnime.get();
-
-                        log.info("Scanning following anime: " + anime.getTitle());
+                    while (animeList.hasNext()) {
+                        Anime anime = animeList.next();
+                        log.info("Scanning anime: " + anime.getTitle());
 
                         anime.loadMissingEpisodes();
 
                         if (!passiveMode) {
-                            for (Episode unloadedEpisode : anime.getUnloadedEpisodes()) {
-                                JSONObjectContainer data = new JSONObjectContainer();
-                                data.set("uuid", UUID.randomUUID());
-                                data.set("state", "new");
-                                data.set("url", unloadedEpisode.getUrl());
-                                data.set("target", "stream-animes/"+anime.getDirectory().getName());
-
-                                JSONObjectContainer options = new JSONObjectContainer();
-                                options.set("useDirectMemory", false);
-                                options.set("enableSessionRecovery", false);
-                                options.set("enableSeasonAndEpisodeRenaming", true);
-
-                                data.set("options", options);
-                                defaultHandler.cmdPutData(data);
-                            }
+                            runDownload(anime);
                         }
 
-                        if (anime.isDirty()) {
-                            anime.writeToDB(db);
-                        }
-
-                        log.info("Scan done, next in " + (checkInterval/1000) + "s");
-                        Thread.sleep(checkInterval);
+                        Thread.sleep(spCheckDelayMs.getValue());
                     }
-                    rs.close();
-                    Thread.sleep(checkInterval);
+
+                    long sleepTime = spCheckIntervalMin.getValue()*1000L*60L;
+                    sleepTime = (long)(sleepTime * ((Math.random()*.5D) + .75D));
+                    log.info("Scan done, next in " + (sleepTime/1000) + "s");
+                    Thread.sleep(sleepTime);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                     try {Thread.sleep(2000);} catch (Exception ee) {ee.printStackTrace();}
@@ -233,6 +215,39 @@ public class AutoLoaderHandler extends Handler {
         t.start();
     }
 
+    private void runDownload(Anime anime) {
+        for (Episode unloadedEpisode : anime.getUnloadedEpisodes()) {
+            unloadedEpisode.setDownloading(true);
+            try {
+                unloadedEpisode.loadVideoURL(1, () -> {
+                    JSONObjectContainer data = new JSONObjectContainer();
+                    data.set("uuid", UUID.randomUUID().toString());
+                    data.set("state", "new");
+                    data.set("url", unloadedEpisode.getVideoUrl());
+                    data.set("target", "stream-animes/"+anime.getDirectory().getName());
+                    data.set("created", System.currentTimeMillis());
+
+                    JSONObjectContainer options = new JSONObjectContainer();
+                    options.set("useDirectMemory", "false");
+                    options.set("enableSessionRecovery", "false");
+                    options.set("enableSeasonAndEpisodeRenaming", "true");
+
+                    data.set("options", options.getRaw());
+                    log.debug("Starting download of " + unloadedEpisode.getTitle());
+                    defaultHandler.cmdPutData(data);
+                });
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            } finally {
+                unloadedEpisode.setDownloading(false);
+            }
+        }
+
+        if (anime.isDirty()) {
+            anime.writeToDB(db);
+        }
+    }
+
     private void loadDatabase() {
         try {
             JSONObjectContainer mysqlConfig = handlerConfiguration.getObjectContainer("mysql");
@@ -242,7 +257,7 @@ public class AutoLoaderHandler extends Handler {
                     mysqlConfig.get("username", String.class),
                     mysqlConfig.get("password", String.class),
                     mysqlConfig.get("database", String.class));
-            db.asyncDataSettings(1);
+            db.asyncDataSettings(2);
             db.connect();
 
             executeDatabaseScripts();

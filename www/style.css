@@ -17,11 +17,11 @@ h4 {
 
 table,
 th,
+tr,
 td {
     border: 3px solid;
     border-collapse: collapse;
     color: wheat;
-    width: 0px;
 }
 
 #table {
@@ -132,4 +132,20 @@ td {
 
 #tabs {
     display: flex;
+    justify-content: space-between;
+}
+
+#autoloadertable {
+    width: auto;
+}
+
+.toolbar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: none;
+}
+
+.toolbar>i {
+    margin-right: 10px;
 }

@@ -29,4 +29,12 @@ public class Utils {
         return stream.readAllBytes();
     }
 
+    public static void sendNotify(String content) {
+        try {
+            Runtime.getRuntime().exec("curl -d \"MediaManager - "+content+"\" 10.0.1.1:60001/main");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
 }

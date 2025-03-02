@@ -1,0 +1,31 @@
+<configuration>
+    <!-- Zentrale Pattern-Definition -->
+    <property name="logPattern" value="%d{yyyy-MM-dd HH:mm:ss} [%level] [%logger{0}] - %msg%n"/>
+
+    <!-- Konsole Logging -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${logPattern}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Datei Logging mit täglicher Rotation -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- Dateiname direkt mit Datum -->
+            <fileNamePattern>logs/app-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <!-- Alte Log-Dateien nach 30 Tagen löschen -->
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>${logPattern}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root Logger (INFO-Level für Konsole & Datei) -->
+    <root level="info">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="FILE" />
+    </root>
+</configuration>

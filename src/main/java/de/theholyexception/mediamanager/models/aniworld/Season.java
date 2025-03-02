@@ -1,13 +1,15 @@
 package de.theholyexception.mediamanager.models.aniworld;
 
+import de.theholyexception.holyapi.datastorage.sql.Result;
+import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.mediamanager.AniworldHelper;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.text.ParsePosition;
@@ -16,6 +18,7 @@ import java.util.Collections;
 import java.util.List;
 
 @ToString
+@Slf4j
 public class Season {
 
     @Getter
@@ -38,19 +41,16 @@ public class Season {
     }
 
     public static void loadFromDB(DataBaseInterface db, Anime anime) throws SQLException {
-        ResultSet rs = db.executeQuerySafe("""
-                        select nKey,
-                               nSeasonNumber,
-                               szURL
+        Result rs = db.getResult(String.format("""
+                        select *
                         from season
-                        where nAnimeLink = ?
-                        """, anime.getId());
-        while (rs.next()) {
-            Season season = new Season(rs);
+                        where nAnimeLink = %s
+                        """, anime.getId()));
+        for (Row row : rs.getTable(0).getRows()) {
+            Season season = new Season(row);
             Episode.loadFromDB(db, season);
             anime.addSeason(season);
         }
-        rs.close();
     }
 
     public Season(int seasonNumber, String url, boolean isDirty) {
@@ -67,10 +67,10 @@ public class Season {
                 true);
     }
 
-    public Season(ResultSet rs) throws SQLException {
-        this.id = rs.getInt("nKey");
-        this.url = rs.getString("szURL");
-        this.seasonNumber = rs.getInt("nSeasonNumber");
+    public Season(Row row) {
+        this.id = row.get("nKey", Integer.class);
+        this.url = row.get("szURL", String.class);
+        this.seasonNumber = row.get("nSeasonNumber", Integer.class);
         this.isDirty = false;
     }
 
@@ -80,7 +80,8 @@ public class Season {
 
     public void writeToDB(DataBaseInterface db, int animeLink) {
         if (isDirty) {
-            System.out.println(this);
+
+            log.debug("Writing season to db: " + this);
             db.executeSafe("call addSeason(?, ?, ?, ?)",
                     id,
                     seasonNumber,

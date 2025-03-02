@@ -6,14 +6,18 @@ function connect() {
     setWebSocketStatusFeedback(1);
     ws.onopen = function () {
         sendPacket("syn", "default", {});
+        sendPacket('getData', 'autoloader');
         setWebSocketStatusFeedback(2);
         onTargetSelection(); // Refresh subfolders
     };
 
     ws.onmessage = function (e) {
         let data = JSON.parse(e.data);
-        console.log("<-");
-        console.log(data);
+
+        if (data.cmd != "systemInfo") {
+            console.log("<-")
+            console.log(data)
+        }
 
         let targetSystem = "default";
         if (data.targetSystem != undefined) targetSystem = data.targetSystem;
@@ -64,8 +68,10 @@ function sendPacket(cmd, targetSystem, content) {
         targetSystem: targetSystem,
         content: content
     }
-    console.log("->")
-    console.log(JSON.stringify(request))
+    if (cmd != "systemInfo") {
+        console.log("->")
+        console.log(JSON.stringify(request))
+    }
     ws.send(JSON.stringify(request));
 }
 

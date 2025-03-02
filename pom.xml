@@ -41,13 +41,6 @@
             <version>1.18.36</version>
             <scope>provided</scope>
         </dependency>
-        <!-- https://mvnrepository.com/artifact/org.slf4j/slf4j-simple -->
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>2.0.16</version>
-            <scope>runtime</scope>
-        </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.googlecode.json-simple/json-simple -->
         <dependency>
@@ -59,7 +52,7 @@
         <dependency>
             <groupId>de.theholyexception</groupId>
             <artifactId>HolyAPI</artifactId>
-            <version>1.2.1</version>
+            <version>1.2.5.4</version>
         </dependency>
 
         <dependency>
@@ -74,6 +67,11 @@
             <version>1.18.3</version>
         </dependency>
 
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <version>1.5.17</version>
+        </dependency>
 
     </dependencies>
 

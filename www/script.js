@@ -114,53 +114,54 @@ function addObjectToTable(entry) {
         let table = document.getElementById("table");
 
         // Row
+        row = document.createElement("tr");
+        row.setAttribute("id", entry.uuid);
+        table.appendChild(row);
+
+        // Column - toolbar
         {
-            row = document.createElement("tr");
-            row.setAttribute("id", entry.uuid);
-            table.appendChild(row);
+            let toolbar = document.createElement("td");
+            toolbar.classList.add('toolbar');
 
-            // Column - Delete
-            let btnDelete = document.createElement("td");
-            btnDelete.addEventListener('click', function () {
-                table.removeChild(row);
+            // Delete
+            {
+                let btnDelete = document.createElement("i");
+                btnDelete.setAttribute("id", "delete-" + entry.uuid);
+                btnDelete.classList.add("fa");
+                btnDelete.classList.add("fa-trash");
+                btnDelete.addEventListener('click', function () {
+                    table.removeChild(row);
 
-                // We only send an update to the server, if the server knows about this item
-                let entity = indexes.get(entry.uuid);
-                indexes.delete(entity.uuid);
-                if (entity.state != "new") {
-                    sendPacket("del", "default", { "uuid": entry.uuid });
-                }
-            })
-            btnDelete.setAttribute("id", "delete-" + entry.uuid);
-            let icon = document.createElement("i");
-            icon.classList.add("fa");
-            icon.classList.add("fa-trash");
+                    // We only send an update to the server, if the server knows about this item
+                    let entity = indexes.get(entry.uuid);
+                    indexes.delete(entity.uuid);
+                    if (entity.state != "new") {
+                        sendPacket("del", "default", { "uuid": entry.uuid });
+                    }
+                })
+                toolbar.appendChild(btnDelete);
+            }
 
-            btnDelete.appendChild(icon);
-            row.appendChild(btnDelete);
-        }
+            // Resend
+            {
+                let btnResent = document.createElement("i");
+                btnResent.setAttribute("id", "resent-" + entry.uuid);
+                btnResent.classList.add("fa");
+                btnResent.classList.add("fa-rotate-right")
+                btnResent.addEventListener('click', function () {
+                    let entity = indexes.get(entry.uuid);
+                    if (!entity.state.startsWith("Error")) return;
+                    entity.state = "new";
+                    sendPacket("put", "default", entity);
+                });
 
-        // Column - Resend
-        {
-            let btnResent = document.createElement("td");
-            btnResent.addEventListener('click', function () {
-                debugger;
-                let entity = indexes.get(entry.uuid);
-                if (!entity.state.startsWith("Error")) return;
-                entity.state = "new";
-                sendPacket("put", "default", entity);
-            });
-            btnResent.setAttribute("id", "resent-" + entry.uuid);
+                let displayMode = entry.state.startsWith('Error') ? 'block' : 'none';
+                btnResent.style.display = displayMode;
 
-            let icon = document.createElement("i");
-            icon.classList.add("fa");
-            icon.classList.add("fa-rotate-right")
+                toolbar.appendChild(btnResent);
+            }
 
-            let displayMode = entry.state.startsWith('Error') ? 'block' : 'none';
-            icon.style.display = displayMode;
-
-            btnResent.appendChild(icon);
-            row.appendChild(btnResent);
+            row.appendChild(toolbar);
         }
 
         // Column - Status
@@ -187,7 +188,7 @@ function addObjectToTable(entry) {
 
         let btnResent = document.getElementById("resent-" + entry.uuid);
         let displayMode = entry.state.startsWith('Error') ? 'block' : 'none';
-        btnResent.getElementsByTagName("i")[0].style.display = displayMode;
+        btnResent.style.display = displayMode;
 
         row = document.getElementById(entry.uuid);
     }

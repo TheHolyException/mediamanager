@@ -1,3 +1,5 @@
+
+
 function onWSResponseAutoloader(cmd, content) {
 
     switch (cmd) {
@@ -10,25 +12,35 @@ function onWSResponseAutoloader(cmd, content) {
 
 }
 
-function onTest() {
-    let table = document.getElementById('autoloadertable');
-    let tr = Array.from(table.children);
-    console.log(tr);
-    for (let i in tr) {
-        console.log(i);
-        if (i == 0) continue; // do not remove the table header xD
-        table.removeChild(tr[i]);
-    }
-    sendPacket('getData', 'autoloader');
-}
-
 
 function autoloaderAddTableItem(item) {
-    console.log(item);
     let table = document.getElementById('autoloadertable');
+    let itemId = "autoloader-row-" + item.id;
+
+    let existing = document.getElementById(itemId);
+    if (existing != undefined)
+        table.removeChild(existing);
 
     let row = document.createElement('tr');
+    row.setAttribute("id", itemId);
 
+    // Toolbar
+    {
+        let toolbar = document.createElement("td");
+        toolbar.classList.add('toolbar');
+
+        // Run Download
+        {
+            let btnDownload = document.createElement("i");
+            btnDownload.classList.add("fa");
+            btnDownload.classList.add("fa-download");
+            btnDownload.addEventListener('click', function () {
+                sendPacket("runDownload", "autoloader", { id: item.id })
+            });
+            toolbar.appendChild(btnDownload);
+        }
+        row.appendChild(toolbar);
+    }
     // Title
     {
         let txtTitle = document.createElement('td');
@@ -38,9 +50,17 @@ function autoloaderAddTableItem(item) {
 
     // URL
     {
-        let txtURL = document.createElement('td');
-        txtURL.innerText = item.url;
-        row.appendChild(txtURL);
+        let td = document.createElement('td');
+        let txtURL = document.createElement('label');
+        txtURL.innerText = 'Aniworld';
+
+        let link = document.createElement('a');
+        link.setAttribute('href', item.url);
+        link.setAttribute('target', '_blank')
+
+        link.appendChild(txtURL);
+        td.appendChild(link)
+        row.appendChild(td);
     }
 
     // Unloaded Episodes
@@ -54,11 +74,12 @@ function autoloaderAddTableItem(item) {
     {
         let txtLastScan = document.createElement('td');
         let date = new Date(item.lastScan);
-        txtLastScan.innerText = date.getHours() + ':' + date.getMinutes();
+        let hours = date.getHours().toString().padStart(2, '0');
+        let minutes = date.getMinutes().toString().padStart(2, '0');
+        txtLastScan.innerText = hours + ':' + minutes;
         row.appendChild(txtLastScan);
     }
 
-    console.log("AHHHHHHHh");
     table.appendChild(row);
 }
 

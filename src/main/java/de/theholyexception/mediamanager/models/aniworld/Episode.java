@@ -1,10 +1,13 @@
 package de.theholyexception.mediamanager.models.aniworld;
 
+import de.theholyexception.holyapi.datastorage.sql.Result;
+import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.AniworldHelper;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -12,7 +15,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.concurrent.Executors;
 
@@ -32,6 +34,8 @@ public class Episode {
     private String title;
     @Getter
     private boolean downloaded = false;
+    @Getter @Setter
+    private boolean downloading = false;
 
     @Getter
     private boolean isDirty = false;
@@ -48,20 +52,15 @@ public class Episode {
     }
 
     public static void loadFromDB(DataBaseInterface db, Season season) throws SQLException {
-        ResultSet rs = db.executeQuerySafe("""
-                        select nKey,
-                               nEpisodeNumber,
-                               szTitle,
-                               szURL,
-                               bLoaded
+        Result rs = db.getResult(String.format("""
+                        select *
                         from episode
-                        where nSeasonLink = ?
-                        """, season.getId());
-        while (rs.next()) {
-            Episode e = new Episode(rs);
+                        where nSeasonLink = %s
+                        """, season.getId()));
+        for (Row row : rs.getTable(0).getRows()) {
+            Episode e = new Episode(row);
             season.addEpisode(e);
         }
-        rs.close();
     }
 
     public static Episode parseFromElement(Element element) {
@@ -74,16 +73,16 @@ public class Episode {
         );
     }
 
-    public Episode(ResultSet rs) throws SQLException {
-        this.episodeNumber = rs.getInt("nEpisodeNumber");
-        this.id = rs.getInt("nKey");
-        String szURL = rs.getString("szURL");
+    public Episode(Row row) {
+        this.episodeNumber = row.get("nEpisodeNumber", Integer.class);
+        this.id = row.get("nKey", Integer.class);
+        String szURL = row.get("szURL", String.class);
         if (szURL.startsWith("https://aniworld.to"))
             this.url = szURL;
         else
             this.videoUrl = szURL;
-        this.title = rs.getString("szTitle");
-        this.downloaded = rs.getBoolean("bLoaded");
+        this.title = row.get("szTitle", String.class);
+        this.downloaded = row.get("bLoaded", Integer.class) == 1;
         this.isDirty = false;
     }
 
@@ -91,7 +90,7 @@ public class Episode {
         if (!isDirty)
             return;
 
-        System.out.println(this);
+        log.debug("Writing episode to db: " + this);
         db.executeSafe("call addEpisode(?, ?, ?, ?, ?, ?)",
                 id,
                 seasonLink,
