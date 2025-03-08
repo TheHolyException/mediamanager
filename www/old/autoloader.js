@@ -80,7 +80,7 @@ function autoloaderAddTableItem(item) {
         row.appendChild(txtLastScan);
     }
 
-    table.appendChild(row);
+    //table.appendChild(row);
 }
 
 function autoloaderSave() {

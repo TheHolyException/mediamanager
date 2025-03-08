@@ -1,0 +1,83 @@
+.download-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    color: var(--textColor);
+    padding: 50px;
+}
+
+.queue-action-bar {
+    display: flex;
+    gap: 15px;
+
+    a {
+        font-size: 1.2em;
+        cursor: pointer;
+        border-radius: 10px;
+        padding: 10px;
+    }
+}
+
+.add-sources-btn {
+    background-color: var(--success);
+}
+
+.commit-sources-btn {
+    background-color: var(--committed);
+}
+
+.queue-table {
+    table-layout: auto;
+    font-size: 1.2em;
+    tr {
+        &:first-of-type {
+            position: sticky;
+            top: 0;
+            font-size: 1.5em;
+            background-color: var(--darkBGColor3);
+        }
+        
+        th {
+            padding: 10px 10px;
+            width: auto;
+        }
+
+        td {
+            padding: 10px 10px;
+            width: auto;
+        }
+
+        [col="actions"] {
+            width: 150px;
+            text-align: center;
+        }
+
+        /* [col="state"] {
+            
+        }
+
+        [col="url"] {
+            
+        }
+
+        [col="target"] {
+            
+        } */
+    }
+}
+
+.failed {
+    background-color: var(--error);
+}
+
+.success {
+    background-color: var(--success);
+}
+
+.downlading {
+    background-color: var(--processing);
+}
+
+.committed {
+    background-color: var(--committed);
+}

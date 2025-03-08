@@ -8,7 +8,7 @@ function connect() {
         sendPacket("syn", "default", {});
         sendPacket('getData', 'autoloader');
         setWebSocketStatusFeedback(2);
-        //onTargetSelection(); // Refresh subfolders
+        onTargetSelection(); // Refresh subfolders
     };
 
     ws.onmessage = function (e) {
@@ -41,9 +41,9 @@ function connect() {
             case "aniworld":
                 Aniworld.onWSResponseAniworldParser(cmd, content);
                 break;
-            /* case "autoloader":
+            case "autoloader":
                 onWSResponseAutoloader(cmd, content);
-                break; */
+                break;
         }
     };
 
