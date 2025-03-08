@@ -1,8 +1,11 @@
 package de.theholyexception.mediamanager;
 
-import de.theholyexception.mediamanager.models.aniworld.Anime;
+import de.theholyexception.holyapi.util.ExecutorHandler;
+import de.theholyexception.holyapi.util.ExecutorTask;
+import de.theholyexception.holyapi.util.expiringmap.ExpiringMap;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -11,9 +14,19 @@ import org.jsoup.select.Elements;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
 
+@Slf4j
 public class AniworldHelper {
+
+    private AniworldHelper() {}
+
+    public static final ExecutorHandler urlResolver = new ExecutorHandler(Executors.newFixedThreadPool(20));
+
+    public static final String ANIWORLD_URL = "https://aniworld.to";
 
     public static boolean isSeasonLink(String url) {
         return url.contains("staffel");
@@ -38,7 +51,7 @@ public class AniworldHelper {
                 result.add(Season.parseFromElement(domSeason));
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to obtain seasons", ex);
         }
         return result;
     }
@@ -57,7 +70,7 @@ public class AniworldHelper {
                 return Season.parseFromElement(domSeason);
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to obtain season", ex);
         }
         return null;
     }
@@ -83,7 +96,7 @@ public class AniworldHelper {
                 result.add(Episode.parseFromElement(domEpisode));
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to obtain episodes", ex);
         }
         return result;
     }
@@ -95,7 +108,7 @@ public class AniworldHelper {
 
             return seriesTitle.text();
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to obtain anime title", ex);
         }
         return null;
     }
@@ -113,9 +126,65 @@ public class AniworldHelper {
                 return con.getHeaderField("Location");
             }
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to follow redirect url", ex);
         }
         return null;
+    }
+
+
+    private static final ExpiringMap<String, List<Integer>> episodeLanguageCache = new ExpiringMap<>(1000L*60L*30L, false);
+    public static ExecutorTask resolveEpisodeLanguages(Episode episode) {
+        if (episodeLanguageCache.containsKey(episode.getUrl())) {
+            episode.setLanguageIds(new ArrayList<>(episodeLanguageCache.get(episode.getUrl())));
+            return null;
+        }
+
+        List<Integer> languageIds = episode.getLanguageIds();
+        ExecutorTask task = new ExecutorTask(() -> {
+            try {
+                Document document = Jsoup.connect(episode.getUrl()).get();
+                Elements list = document.select(".row > li");
+                for (Element element : list) {
+                    int langId = Integer.parseInt(element.attr("data-lang-key"));
+                    if (languageIds.contains(langId)) continue;
+                    languageIds.add(langId);
+                }
+            } catch (Exception ex) {
+                log.error("Failed to parse episode language Id", ex);
+            }
+        });
+
+        episodeLanguageCache.put(episode.getUrl(), languageIds);
+        urlResolver.putTask(task);
+        return task;
+    }
+
+    private static final Map<String, String> videoUrlCache = Collections.synchronizedMap(new ExpiringMap<>(1000L*60L*30L, false)); // 30 min
+    public static ExecutorTask resolveVideoURL(Episode episode, int languageId) {
+        ExecutorTask task = new ExecutorTask(() -> {
+            String cacheIdentifier = episode.getUrl() + languageId;
+            if (videoUrlCache.containsKey(cacheIdentifier)) {
+                episode.setVideoUrl(videoUrlCache.get(cacheIdentifier));
+                return;
+            }
+
+            try {
+                Document document = Jsoup.connect(episode.getUrl()).get();
+                Elements list = document.select(".row > li");
+                for (Element element : list) {
+                    if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
+                    episode.setVideoUrl(AniworldHelper.getRedirectedURL(AniworldHelper.ANIWORLD_URL+element.attr("data-link-target")));
+                    break;
+                }
+
+                if (episode.getVideoUrl() != null)
+                    videoUrlCache.put(cacheIdentifier, episode.getVideoUrl());
+            } catch (Exception ex) {
+                log.error("Failed to load video url", ex);
+            }
+        });
+        urlResolver.putTask(task, 1);
+        return task;
     }
 
 }

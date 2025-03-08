@@ -10,7 +10,6 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
 
-import java.sql.SQLException;
 import java.text.NumberFormat;
 import java.text.ParsePosition;
 import java.util.ArrayList;
@@ -22,16 +21,16 @@ import java.util.List;
 public class Season {
 
     @Getter
-    private int id = -1;
+    private final int id;
     @Getter
-    private int seasonNumber;
+    private final int seasonNumber;
     @Getter
-    private String url;
+    private final String url;
     @Getter
     private List<Episode> episodeList = Collections.synchronizedList(new ArrayList<>());
 
     @Getter
-    protected boolean isDirty = false;
+    protected boolean isDirty;
 
     @Getter @Setter
     private static int currentID;
@@ -40,7 +39,7 @@ public class Season {
         return ++currentID;
     }
 
-    public static void loadFromDB(DataBaseInterface db, Anime anime) throws SQLException {
+    public static void loadFromDB(DataBaseInterface db, Anime anime) {
         Result rs = db.getResult(String.format("""
                         select *
                         from season

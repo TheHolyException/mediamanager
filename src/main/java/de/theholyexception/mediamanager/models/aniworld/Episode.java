@@ -3,44 +3,36 @@ package de.theholyexception.mediamanager.models.aniworld;
 import de.theholyexception.holyapi.datastorage.sql.Result;
 import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
-import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.AniworldHelper;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
-import java.sql.SQLException;
-import java.util.concurrent.Executors;
+import java.util.ArrayList;
+import java.util.List;
 
 @ToString
 @Slf4j
+@Getter
 public class Episode {
 
-    @Getter
-    private int id = -1;
-    @Getter
-    private int episodeNumber;
-    @Getter
+    private final int id;
+    private final int episodeNumber;
     private String url;
-    @Getter
+    @Setter
     private String videoUrl;
-    @Getter
-    private String title;
-    @Getter
+    private final String title;
     private boolean downloaded = false;
-    @Getter @Setter
+    @Setter
     private boolean downloading = false;
+    @Getter @Setter
+    private List<Integer> languageIds = new ArrayList<>();
+    private boolean isDirty;
 
-    @Getter
-    private boolean isDirty = false;
 
-    public static final ExecutorHandler urlResolver = new ExecutorHandler(Executors.newFixedThreadPool(50));
 
     private Episode(int episodeNumber, int id, String url, String title, boolean isDirty) {
         this.episodeNumber = episodeNumber;
@@ -49,9 +41,10 @@ public class Episode {
         else this.url = url;
         this.title = title;
         this.isDirty = isDirty;
+        AniworldHelper.resolveEpisodeLanguages(this);
     }
 
-    public static void loadFromDB(DataBaseInterface db, Season season) throws SQLException {
+    public static void loadFromDB(DataBaseInterface db, Season season) {
         Result rs = db.getResult(String.format("""
                         select *
                         from episode
@@ -67,7 +60,7 @@ public class Episode {
         return new Episode(
                 Integer.parseInt(element.text()),
                 Integer.parseInt(element.attr("data-episode-id")),
-                "https://aniworld.to" + element.attr("href"),
+                AniworldHelper.ANIWORLD_URL + element.attr("href"),
                 element.attr("title"),
                 true
         );
@@ -77,7 +70,7 @@ public class Episode {
         this.episodeNumber = row.get("nEpisodeNumber", Integer.class);
         this.id = row.get("nKey", Integer.class);
         String szURL = row.get("szURL", String.class);
-        if (szURL.startsWith("https://aniworld.to"))
+        if (szURL.startsWith(AniworldHelper.ANIWORLD_URL))
             this.url = szURL;
         else
             this.videoUrl = szURL;
@@ -111,22 +104,9 @@ public class Episode {
             log.error("Cant load videoURL because url is null");
             return;
         }
-        urlResolver.putTask(new ExecutorTask(() -> {
-            try {
-                Document document = Jsoup.connect(url).get();
-                Elements list = document.select(".row > li");
-                for (Element element : list) {
-                    if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
-                    this.videoUrl = AniworldHelper.getRedirectedURL("https://aniworld.to"+element.attr("data-link-target"));
-                    break;
-                }
-
-                if (then != null)
-                    then.run();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }), 1);
+        ExecutorTask task = AniworldHelper.resolveVideoURL(this, languageId);
+        if (then != null)
+            task.onComplete(then);
         isDirty = true;
     }
 

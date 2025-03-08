@@ -2,18 +2,18 @@ package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.MediaManager;
+import de.theholyexception.mediamanager.TargetSystem;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import lombok.Getter;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
-import org.json.simple.JSONObject;
 
 public abstract class Handler {
 
     protected JSONObjectContainer handlerConfiguration;
     @Getter
-    private String targetSystem;
+    private final TargetSystem targetSystem;
 
-    public Handler(String targetSystem) {
+    protected Handler(TargetSystem targetSystem) {
         this.targetSystem = targetSystem;
     }
 
@@ -22,7 +22,7 @@ public abstract class Handler {
     public void loadConfigurations() {
         handlerConfiguration = MediaManager.getInstance().getConfiguration().getJson()
                 .getObjectContainer("handler", new JSONObjectContainer())
-                .getObjectContainer(targetSystem, new JSONObjectContainer());
+                .getObjectContainer(targetSystem.toString(), new JSONObjectContainer());
     }
     public abstract void initialize();
 

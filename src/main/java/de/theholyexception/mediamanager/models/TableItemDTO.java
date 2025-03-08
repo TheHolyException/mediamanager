@@ -7,24 +7,15 @@ import lombok.Setter;
 
 import java.util.UUID;
 
+@Getter
 public class TableItemDTO implements Comparable<TableItemDTO> {
 
-    @Getter
-    private long created;
-
-    @Getter
-    private String state;
-
-    @Getter
-    private String url;
-
-    @Getter
-    private UUID uuid;
-
-    @Getter
-    private JSONObjectContainer jsonObject;
-
-    @Getter @Setter
+    private final long created;
+    private final String state;
+    private final String url;
+    private final UUID uuid;
+    private final JSONObjectContainer jsonObject;
+    @Setter
     private ExecutorTask task;
 
 

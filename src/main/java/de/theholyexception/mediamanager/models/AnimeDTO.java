@@ -5,16 +5,14 @@ import lombok.Getter;
 
 import java.util.UUID;
 
+@Getter
 public class AnimeDTO {
 
-    @Getter
-    private String url;
+    private final String url;
 
-    @Getter
-    private UUID uuid;
+    private final UUID uuid;
 
-    @Getter
-    private JSONObjectContainer jsonObject;
+    private final JSONObjectContainer jsonObject;
 
     public AnimeDTO(JSONObjectContainer content) {
         url = content.get("url", String.class);

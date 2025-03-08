@@ -12,10 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONObject;
 
 import java.io.File;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,13 +21,13 @@ import java.util.regex.Pattern;
 public class Anime {
 
     @Getter
-    private int id = -1;
+    private final int id;
     @Getter
-    private int languageId;
+    private final int languageId;
     @Getter
-    private String title;
+    private final String title;
     @Getter
-    private String url;
+    private final String url;
     @Getter
     private File directory;
     @Getter
@@ -38,19 +35,20 @@ public class Anime {
     private Long lastUpdate = 0L;
 
     @Getter
-    private boolean isDirty = false;
+    private boolean isDirty;
 
     @Getter @Setter
     private static int currentID;
     @Setter
     private static File baseDirectory;
+    private String customDirectory;
 
 
     private static int getAndAddCurrentID() {
         return ++currentID;
     }
 
-    public static List<Anime> loadFromDB(DataBaseInterface db) throws SQLException {
+    public static List<Anime> loadFromDB(DataBaseInterface db) {
         List<Anime> result = new ArrayList<>();
 
         Result rs = db.getResult("select * from anime");
@@ -71,7 +69,7 @@ public class Anime {
         this.url = url;
         isDirty = true;
         this.id = Anime.getAndAddCurrentID();
-        setDirectoryPath(null);
+        setDirectoryPath(null, false);
     }
 
     public Anime(Row row) {
@@ -80,26 +78,15 @@ public class Anime {
         this.title = row.get("szTitle", String.class);
         this.url = row.get("szURL", String.class);
         String overridePath = row.get("szCustomDirectory", String.class);
-        if (overridePath.isEmpty()) overridePath = null;
+        if (overridePath == null || overridePath.isEmpty()) overridePath = null;
         this.isDirty = false;
-        setDirectoryPath(overridePath);
+        setDirectoryPath(overridePath, false);
     }
 
-    @Deprecated(forRemoval = true)
-    public void addEpisode(Season season, Episode episode) {
-        Optional<Season> optSeason = seasonList.stream().filter(s -> s.getSeasonNumber() == season.getSeasonNumber()).findFirst();
-        if (optSeason.isEmpty())
-            throw new IllegalStateException("Season locally not found " + season);
-        if (optSeason.get().getEpisodeList().stream().anyMatch(e -> e.getId() == episode.getId()))
-            throw new IllegalStateException("Episode already exists locally " + episode);
-
-        Season s = optSeason.get();
-        s.getEpisodeList().add(episode);
-        s.isDirty = true;
-    }
-
-    private void setDirectoryPath(String overridePath) {
+    public void setDirectoryPath(String overridePath, boolean markDirty) {
         if (overridePath != null) {
+            customDirectory = overridePath;
+            if (markDirty) isDirty = true;
             directory = new File(baseDirectory, overridePath);
         } else {
             String[] segments = url.split("/");
@@ -116,10 +103,19 @@ public class Anime {
         return cnt;
     }
 
-    public int getUnloadedEpisodeCount() {
+    public int getUnloadedEpisodeCount(boolean filterLanguage) {
         int cnt = 0;
-        for (Season season : seasonList)
-            cnt += (int) season.getEpisodeList().stream().filter(e -> !e.isDownloaded()).count();
+        for (Season season : seasonList) {
+            for (Episode episode : season.getEpisodeList()) {
+                if (episode.isDownloaded()) continue;
+                if (filterLanguage) {
+                    if (episode.getLanguageIds().contains(languageId))
+                        cnt++;
+                } else {
+                    cnt++;
+                }
+            }
+        }
         return cnt;
     }
 
@@ -128,6 +124,7 @@ public class Anime {
         for (Season season : seasonList) {
             for (Episode episode : season.getEpisodeList()) {
                 if (episode.isDownloaded() || episode.isDownloading()) continue; // We do not need to download already downloaded episodes xD
+                if (!episode.getLanguageIds().contains(languageId)) continue; // We also do not want any episodes that are not in the selected language
                 result.add(episode);
             }
         }
@@ -153,10 +150,7 @@ public class Anime {
             String sn = String.format("S%02d", season.getSeasonNumber());
             for (Episode episode : season.getEpisodeList().stream().filter(e -> !e.isDownloaded()).toList()) {
                 String en = String.format("E%02d", episode.getEpisodeNumber());
-                if (existingFiles.contains(sn + en))
-                    episode.setDownloaded(true);
-                else
-                    episode.setDownloaded(false);
+                episode.setDownloaded(existingFiles.contains(sn + en));
             }
         }
     }
@@ -206,12 +200,13 @@ public class Anime {
 
     public void writeToDB(DataBaseInterface db) {
         if (isDirty) {
-            log.debug("Writing season to db: " + this);
-            db.executeSafe("call addAnime(?, ?, ?, ?)",
+            log.debug("Writing anime to db: " + this);
+            db.executeSafe("call addAnime(?, ?, ?, ?, ?)",
                     id,
                     languageId,
                     title,
-                    url);
+                    url,
+                    customDirectory == null ?"" : customDirectory);
             isDirty = false;
         }
 
@@ -219,15 +214,15 @@ public class Anime {
     }
 
     public JSONObject toJSONObject() {
-        JSONObject object = new JSONObject();
+        Map<String, Object> object = new HashMap<>();
         object.put("id", id);
         object.put("languageId", languageId);
         object.put("title", title);
         object.put("url", url);
-        object.put("unloaded", getUnloadedEpisodeCount());
+        object.put("unloaded", getUnloadedEpisodeCount(true) + "("+getUnloadedEpisodeCount(false)+")");
         object.put("lastScan", lastUpdate);
         object.put("directory", getDirectory().toString().replace(baseDirectory.toString(), ""));
-        return object;
+        return new JSONObject(object);
     }
 
 }

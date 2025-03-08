@@ -19,10 +19,14 @@ public class WebServer extends Thread {
     private final List<Connection> connectionList = Collections.synchronizedList(new ArrayList<>());
 
     public WebServer(Configuration configuration) {
-        log.info("Starting WebServer with following configuration: " + configuration);
+        log.debug("Starting WebServer with following configuration: " + configuration);
         this.configuration = configuration;
         File webRoot = new File(configuration.webroot());
-        if (!webRoot.exists()) webRoot.mkdirs();
+
+        if (!webRoot.exists() && !webRoot.mkdirs()) {
+            log.error("Failed to create webroot directory");
+            return;
+        }
 
         try {
             InetAddress address = InetAddress.getByName(configuration.host());
@@ -31,7 +35,7 @@ public class WebServer extends Thread {
 
             this.start();
         } catch (IOException ex) {
-            ex.printStackTrace();
+            log.error("Failed to start WebServer", ex);
         }
     }
 
@@ -40,7 +44,7 @@ public class WebServer extends Thread {
         while (!isInterrupted()) {
             try {
                 connectionList.add(new Connection(serverSocket.accept(), configuration));
-            } catch (Throwable ex) {
+            } catch (Exception ex) {
                 // Can be ignored
             }
         }

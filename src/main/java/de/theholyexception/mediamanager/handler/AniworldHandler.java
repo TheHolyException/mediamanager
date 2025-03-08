@@ -2,6 +2,7 @@ package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.AniworldHelper;
+import de.theholyexception.mediamanager.TargetSystem;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
@@ -19,12 +20,13 @@ import static de.theholyexception.mediamanager.webserver.WebSocketUtils.sendPack
 public class AniworldHandler extends Handler {
 
 
-    public AniworldHandler(String targetSystem) {
+    public AniworldHandler(TargetSystem targetSystem) {
         super(targetSystem);
     }
 
     @Override
     public void initialize() {
+        // Not needed
     }
 
     @Override
@@ -38,11 +40,11 @@ public class AniworldHandler extends Handler {
         };
     }
 
+    @SuppressWarnings("unchecked")
     private WebSocketResponse cmdResolve(WebSocketBasic socket, JSONObjectContainer content) {
         try {
             int language = Integer.parseInt(content.get("language", String.class));
             String url = content.get("url", String.class);
-
 
             List<String> links = new ArrayList<>();
             List<Season> seasonList;
@@ -63,19 +65,16 @@ public class AniworldHandler extends Handler {
 
             seasonList.forEach(Season::loadEpisodes);
             seasonList.forEach(s -> s.loadVideoURLs(language));
-            Episode.urlResolver.awaitGroup(1);
+            AniworldHelper.urlResolver.awaitGroup(1);
             seasonList.forEach(s -> links.addAll(s.getEpisodeList().stream().map(Episode::getVideoUrl).toList()));
 
             JSONObject res = new JSONObject();
             JSONArray ds = new JSONArray();
             ds.addAll(links);
             res.put("links", ds);
-            sendPacket("links", "aniworld", res, socket);
+            sendPacket("links", TargetSystem.ANIWORLD, res, socket);
         } catch (Exception ex) {
-            ex.printStackTrace();
-            //JSONObject res = new JSONObject();
-            //res.put("error", ex.getMessage());
-            //sendPacket("links", "aniworld", res, socket);
+            log.error("Failed to resolve anime", ex);
             return WebSocketResponse.ERROR.setMessage(ex.getMessage());
         }
         return null;
