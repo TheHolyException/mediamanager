@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONObject;
 
 import java.io.File;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,7 +48,7 @@ public class Anime {
         return ++currentID;
     }
 
-    public static List<Anime> loadFromDB(DataBaseInterface db) throws SQLException {
+    public static List<Anime> loadFromDB(DataBaseInterface db) {
         List<Anime> result = new ArrayList<>();
 
         Result rs = db.getResult("select * from anime");
@@ -70,7 +69,7 @@ public class Anime {
         this.url = url;
         isDirty = true;
         this.id = Anime.getAndAddCurrentID();
-        setDirectoryPath(null);
+        setDirectoryPath(null, false);
     }
 
     public Anime(Row row) {
@@ -81,13 +80,13 @@ public class Anime {
         String overridePath = row.get("szCustomDirectory", String.class);
         if (overridePath == null || overridePath.isEmpty()) overridePath = null;
         this.isDirty = false;
-        setDirectoryPath(overridePath);
+        setDirectoryPath(overridePath, false);
     }
 
-    public void setDirectoryPath(String overridePath) {
+    public void setDirectoryPath(String overridePath, boolean markDirty) {
         if (overridePath != null) {
             customDirectory = overridePath;
-            isDirty = true;
+            if (markDirty) isDirty = true;
             directory = new File(baseDirectory, overridePath);
         } else {
             String[] segments = url.split("/");
@@ -104,10 +103,19 @@ public class Anime {
         return cnt;
     }
 
-    public int getUnloadedEpisodeCount() {
+    public int getUnloadedEpisodeCount(boolean filterLanguage) {
         int cnt = 0;
-        for (Season season : seasonList)
-            cnt += (int) season.getEpisodeList().stream().filter(e -> !e.isDownloaded()).count();
+        for (Season season : seasonList) {
+            for (Episode episode : season.getEpisodeList()) {
+                if (episode.isDownloaded()) continue;
+                if (filterLanguage) {
+                    if (episode.getLanguageIds().contains(languageId))
+                        cnt++;
+                } else {
+                    cnt++;
+                }
+            }
+        }
         return cnt;
     }
 
@@ -116,6 +124,7 @@ public class Anime {
         for (Season season : seasonList) {
             for (Episode episode : season.getEpisodeList()) {
                 if (episode.isDownloaded() || episode.isDownloading()) continue; // We do not need to download already downloaded episodes xD
+                if (!episode.getLanguageIds().contains(languageId)) continue; // We also do not want any episodes that are not in the selected language
                 result.add(episode);
             }
         }
@@ -191,13 +200,13 @@ public class Anime {
 
     public void writeToDB(DataBaseInterface db) {
         if (isDirty) {
-            log.debug("Writing season to db: " + this);
+            log.debug("Writing anime to db: " + this);
             db.executeSafe("call addAnime(?, ?, ?, ?, ?)",
                     id,
                     languageId,
                     title,
                     url,
-                    customDirectory);
+                    customDirectory == null ?"" : customDirectory);
             isDirty = false;
         }
 
@@ -210,7 +219,7 @@ public class Anime {
         object.put("languageId", languageId);
         object.put("title", title);
         object.put("url", url);
-        object.put("unloaded", getUnloadedEpisodeCount());
+        object.put("unloaded", getUnloadedEpisodeCount(true) + "("+getUnloadedEpisodeCount(false)+")");
         object.put("lastScan", lastUpdate);
         object.put("directory", getDirectory().toString().replace(baseDirectory.toString(), ""));
         return new JSONObject(object);

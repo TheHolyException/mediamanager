@@ -3,19 +3,16 @@ package de.theholyexception.mediamanager.models.aniworld;
 import de.theholyexception.holyapi.datastorage.sql.Result;
 import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
-import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.AniworldHelper;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
-import java.util.concurrent.Executors;
+import java.util.ArrayList;
+import java.util.List;
 
 @ToString
 @Slf4j
@@ -25,14 +22,17 @@ public class Episode {
     private final int id;
     private final int episodeNumber;
     private String url;
+    @Setter
     private String videoUrl;
     private final String title;
     private boolean downloaded = false;
     @Setter
     private boolean downloading = false;
+    @Getter @Setter
+    private List<Integer> languageIds = new ArrayList<>();
     private boolean isDirty;
 
-    public static final ExecutorHandler urlResolver = new ExecutorHandler(Executors.newFixedThreadPool(50));
+
 
     private Episode(int episodeNumber, int id, String url, String title, boolean isDirty) {
         this.episodeNumber = episodeNumber;
@@ -41,6 +41,7 @@ public class Episode {
         else this.url = url;
         this.title = title;
         this.isDirty = isDirty;
+        AniworldHelper.resolveEpisodeLanguages(this);
     }
 
     public static void loadFromDB(DataBaseInterface db, Season season) {
@@ -103,22 +104,9 @@ public class Episode {
             log.error("Cant load videoURL because url is null");
             return;
         }
-        urlResolver.putTask(new ExecutorTask(() -> {
-            try {
-                Document document = Jsoup.connect(url).get();
-                Elements list = document.select(".row > li");
-                for (Element element : list) {
-                    if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
-                    this.videoUrl = AniworldHelper.getRedirectedURL(AniworldHelper.ANIWORLD_URL+element.attr("data-link-target"));
-                    break;
-                }
-
-                if (then != null)
-                    then.run();
-            } catch (Exception ex) {
-                log.error("Failed to load video url", ex);
-            }
-        }), 1);
+        ExecutorTask task = AniworldHelper.resolveVideoURL(this, languageId);
+        if (then != null)
+            task.onComplete(then);
         isDirty = true;
     }
 

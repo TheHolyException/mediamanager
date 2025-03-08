@@ -65,7 +65,7 @@ public class AniworldHandler extends Handler {
 
             seasonList.forEach(Season::loadEpisodes);
             seasonList.forEach(s -> s.loadVideoURLs(language));
-            Episode.urlResolver.awaitGroup(1);
+            AniworldHelper.urlResolver.awaitGroup(1);
             seasonList.forEach(s -> links.addAll(s.getEpisodeList().stream().map(Episode::getVideoUrl).toList()));
 
             JSONObject res = new JSONObject();

@@ -25,15 +25,22 @@
     <dependencies>
         <dependency>
             <groupId>me.kaigermany</groupId>
-            <artifactId>ultimateutils</artifactId>
-            <version>1.2.2</version>
+            <artifactId>downloaders</artifactId>
+            <version>1.1.84</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>junit</groupId>
+                    <artifactId>junit</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
-            <groupId>me.kaigermany</groupId>
-            <artifactId>downloaders</artifactId>
-            <version>1.1.80</version>
+            <groupId>de.theholyexception</groupId>
+            <artifactId>HolyAPI</artifactId>
+            <version>1.3</version>
         </dependency>
+
         <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -42,24 +49,6 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.googlecode.json-simple/json-simple -->
-        <dependency>
-            <groupId>com.googlecode.json-simple</groupId>
-            <artifactId>json-simple</artifactId>
-            <version>1.1.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>de.theholyexception</groupId>
-            <artifactId>HolyAPI</artifactId>
-            <version>1.2.5.4</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.wsojka</groupId>
-            <artifactId>cute-json</artifactId>
-            <version>0.2</version>
-        </dependency>
         <!-- https://mvnrepository.com/artifact/org.jsoup/jsoup -->
         <dependency>
             <groupId>org.jsoup</groupId>
@@ -71,6 +60,13 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <version>1.5.17</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/mysql/mysql-connector-java -->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
         </dependency>
 
     </dependencies>
@@ -113,7 +109,6 @@
                                         <exclude>org/bouncycastle/**</exclude>
                                         <exclude>org/hamcrest/**</exclude>
                                         <exclude>org/junit/**</exclude>
-                                        <exclude>org/neo4j/**</exclude>
                                         <exclude>org/reactivestreams/**</exclude>
                                         <exclude>org/scijava/**</exclude>
                                         <exclude>org/sqlite/**</exclude>
@@ -122,6 +117,10 @@
                                         <exclude>net/lingala/**</exclude>
                                         <exclude>com/google/gson/**</exclude>
                                         <exclude>me/kaigermany/downloaders/ffmpeg/**</exclude>
+                                        <exclude>README.md</exclude>
+                                        <exclude>pom.xml</exclude>
+                                        <exclude>logging-properties</exclude>
+                                        <exclude>.**</exclude>
                                     </excludes>
                                 </filter>
                             </filters>

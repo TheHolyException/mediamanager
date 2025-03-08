@@ -3,16 +3,21 @@ package de.theholyexception.mediamanager.handler;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
-import de.theholyexception.mediamanager.*;
+import de.theholyexception.holyapi.util.DataUtils;
+import de.theholyexception.holyapi.util.ResourceUtilities;
+import de.theholyexception.mediamanager.AniworldHelper;
+import de.theholyexception.mediamanager.MediaManager;
+import de.theholyexception.mediamanager.TargetSystem;
+import de.theholyexception.mediamanager.Utils;
 import de.theholyexception.mediamanager.models.SettingMetadata;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.SettingProperty;
+import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.extern.slf4j.Slf4j;
-import me.kaigermany.ultimateutils.StaticUtils;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 
 import java.io.File;
@@ -26,11 +31,13 @@ public class AutoLoaderHandler extends Handler {
 
     private SettingProperty<Integer> spCheckIntervalMin;
     private SettingProperty<Integer> spCheckDelayMs;
-    private boolean passiveMode;
     private final List<Anime> subscribedAnimes = Collections.synchronizedList(new ArrayList<>());
-    private SettingProperty<Integer> spURLResolverThreads;
     private DataBaseInterface db;
     private DefaultHandler defaultHandler;
+
+    private SettingProperty<Boolean> spAutoDownload;
+    private SettingProperty<Boolean> spEnabled;
+    private final Random random = new Random();
 
     public AutoLoaderHandler(TargetSystem targetSystem) {
         super(targetSystem);
@@ -40,16 +47,18 @@ public class AutoLoaderHandler extends Handler {
     public void loadConfigurations() {
         super.loadConfigurations();
 
-        spURLResolverThreads = new SettingProperty<>(new SettingMetadata("urlResolverThreads", false));
-        spURLResolverThreads.addSubscriber(value -> Episode.urlResolver.updateExecutorService(Executors.newFixedThreadPool(value)));
+        SettingProperty<Integer> spURLResolverThreads = new SettingProperty<>(new SettingMetadata("urlResolverThreads", false));
+        spURLResolverThreads.addSubscriber(value -> AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(value)));
         spURLResolverThreads.setValue(handlerConfiguration.get("urlResolverThreads", 10, Integer.class));
 
         spCheckIntervalMin = new SettingProperty<>(new SettingMetadata("checkIntervalMin", false));
         spCheckIntervalMin.setValue(handlerConfiguration.get("checkIntervalMin", 5, Integer.class));
         spCheckDelayMs = new SettingProperty<>(new SettingMetadata("checkDelayMs", false));
         spCheckDelayMs.setValue(handlerConfiguration.get("checkDelayMs", 5, Integer.class));
+        spEnabled = new SettingProperty<>(new SettingMetadata("enabled", false));
+        spEnabled.setValue(handlerConfiguration.get("enabled", true, Boolean.class));
 
-        passiveMode = handlerConfiguration.get("passiveMode", Boolean.class);
+        spAutoDownload = Settings.getSettingProperty("AUTO_DOWNLOAD", false, "systemSettings");
     }
 
     @Override
@@ -59,23 +68,20 @@ public class AutoLoaderHandler extends Handler {
 
         loadDatabase();
 
-        try {
-            subscribedAnimes.clear();
-            subscribedAnimes.addAll(Anime.loadFromDB(db));
-        } catch (SQLException ex) {
-            log.error(ex.getMessage());
-        }
+        subscribedAnimes.clear();
+        subscribedAnimes.addAll(Anime.loadFromDB(db));
 
         printTableInfo("anime", "season", "episode");
         subscribedAnimes.forEach(Anime::scanDirectoryForExistingEpisodes);
-        subscribedAnimes.forEach(a -> log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount()));
+        subscribedAnimes.forEach(a -> log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false)));
         subscribedAnimes.forEach(a -> {
             if (a.isDeepDirty())
                 a.writeToDB(db);
         });
         db.getExecutorHandler().awaitGroup(-1);
 
-        startThread();
+        if (spEnabled.getValue())
+            startThread();
     }
 
     //region commands
@@ -86,7 +92,6 @@ public class AutoLoaderHandler extends Handler {
             case "subscribe" -> cmdSubscribe(content);
             case "unsubscribe" -> cmdUnsubscribe(content);
             case "runDownload" -> cmdRunDownload(content);
-            case "test" -> WebSocketResponse.ERROR.setMessage("Test Erfolgreich!");
             default -> {
                 log.error("Invalid command " + command);
                 yield WebSocketResponse.ERROR.setMessage("Invalid command " + command);
@@ -116,7 +121,7 @@ public class AutoLoaderHandler extends Handler {
             return WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url +  " cannot parse title!");
 
         Anime anime = new Anime(languageId, title, url);
-        anime.setDirectoryPath(directory);
+        anime.setDirectoryPath(directory, true);
         anime.loadMissingEpisodes();
         anime.scanDirectoryForExistingEpisodes();
         subscribedAnimes.add(anime);
@@ -143,6 +148,8 @@ public class AutoLoaderHandler extends Handler {
     }
 
     private WebSocketResponse cmdRunDownload(JSONObjectContainer content) {
+        if (!spEnabled.getValue()) return WebSocketResponse.ERROR.setMessage("AutoLoader is disabled!");
+
         int animeId = content.get("id", Integer.class);
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(a -> a.getId() == animeId).findFirst();
         if (optAnime.isEmpty()) return WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!");
@@ -162,7 +169,7 @@ public class AutoLoaderHandler extends Handler {
 
                         anime.loadMissingEpisodes();
 
-                        if (!passiveMode) {
+                        if (Boolean.TRUE.equals(spAutoDownload.getValue())) {
                             runDownload(anime);
                         }
 
@@ -170,7 +177,8 @@ public class AutoLoaderHandler extends Handler {
                     }
 
                     long sleepTime = spCheckIntervalMin.getValue()*1000L*60L;
-                    sleepTime = (long)(sleepTime * ((Math.random()*.5D) + .75D));
+
+                    sleepTime = random.nextLong(sleepTime * 3 / 4, sleepTime * 5 / 4);
                     log.info("Scan done, next in " + (sleepTime/1000) + "s");
                     Utils.sleep(sleepTime);
                 } catch (Exception ex) {
@@ -227,7 +235,7 @@ public class AutoLoaderHandler extends Handler {
             db.asyncDataSettings(2);
             db.connect();
 
-            if (handlerConfiguration.get("executeDBScripts", false, Boolean.class)) {
+            if (Boolean.TRUE.equals(handlerConfiguration.get("executeDBScripts", false, Boolean.class))) {
                 executeDatabaseScripts();
             }
 
@@ -239,19 +247,19 @@ public class AutoLoaderHandler extends Handler {
     }
 
 
-    private void executeDatabaseScripts() throws Exception {
+    private void executeDatabaseScripts() {
         try {
-            List<String> files = ResourceHelper.listResourceFilesRecursive("sql/");
+            List<String> files = ResourceUtilities.listResourceFilesRecursive("sql/");
             for (String file : files) {
                 if (!file.endsWith(".sql")) continue;
-                String content = new String(StaticUtils.readAllBytes(ResourceHelper.getResourceAsStream("sql/"+file)));
+                String content = new String(DataUtils.readAllBytes(ResourceUtilities.getResourceAsStream("sql/"+file)));
                 String[] filePath = file.split("/");
-                log.info("Executing SQL Script: " + filePath[filePath.length-1]);
+                log.debug("Executing SQL Script: " + filePath[filePath.length-1]);
                 db.executeAsync(-2, content);
             }
             db.getExecutorHandler().awaitGroup(-2, 20);
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error("Failed to execute SQL Scripts", ex);
         }
     }
 
