@@ -17,14 +17,7 @@
 {
     "cmd": "string",           // Command
     "targetSystem": "string",  // Categorization of the system that should handle the command
-    "content": {}               // Actual data
-}
-```
-```json
-{
-    "cmd": "string",         
-    "targetSystem": "string",
-    "content": {}             
+    "content": {}              // Actual data
 }
 ```
 
@@ -156,9 +149,7 @@ Data for settings
 {
     "cmd": "del-all",
     "targetSystem": "default",
-    "content": {
-        
-    }
+    "content": {} // Empty content
 }
 ```
 ### Responses

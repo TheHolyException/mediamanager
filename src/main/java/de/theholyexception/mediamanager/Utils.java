@@ -1,7 +1,6 @@
 package de.theholyexception.mediamanager;
 
 import lombok.extern.slf4j.Slf4j;
-import me.kaigermany.ultimateutils.StaticUtils;
 
 import java.io.DataInputStream;
 import java.io.File;
@@ -14,7 +13,10 @@ public class Utils {
     public static void saveBytes(String filename, byte[] data) {
         try {
             File file = new File(filename);
-            if (!file.exists()) file.createNewFile();
+            if (!file.exists() && !file.createNewFile()) {
+                log.error("Failed to create file");
+                return;
+            }
             FileOutputStream fos = new FileOutputStream(file);
             fos.write(data);
             fos.flush();

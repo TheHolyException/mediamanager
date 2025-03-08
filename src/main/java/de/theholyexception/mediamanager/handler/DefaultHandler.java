@@ -68,8 +68,8 @@ public class DefaultHandler extends Handler {
         spFFMPEGPath.addSubscriber(FFmpeg::setFFmpegPath);
         spDownloadTempPath.addSubscriber(value -> {
             downloadFolder = new File(value);
-            if (!downloadFolder.exists())
-                downloadFolder.mkdirs();
+            if (!downloadFolder.exists() && !downloadFolder.mkdirs())
+                log.error("Could not create download folder");
         });
         loadTargets();
     }
@@ -140,7 +140,10 @@ public class DefaultHandler extends Handler {
 
         File outputFolder = new File(target.path(), targetPath.replace(targetPath.split("/")[0] + "/", ""));
         log.debug("Output Folder: " + outputFolder.getAbsolutePath());
-        if (!outputFolder.exists()) outputFolder.mkdirs();
+        if (!outputFolder.exists() && outputFolder.mkdirs()) {
+            log.error("Failed to create output folder " + outputFolder.getAbsolutePath());
+            return WebSocketResponse.ERROR.setMessage("Failed to create output folder " + outputFolder.getAbsolutePath());
+        }
 
         TableItemDTO tableItem = new TableItemDTO(content);
         urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
@@ -187,6 +190,7 @@ public class DefaultHandler extends Handler {
         // Start the download task
         ExecutorTask task = new ExecutorTask(() -> {
             try {
+                downloader.onTitleResolved(title -> changeObject(content.getRaw(), "title", title));
                 File file = downloader.start(url, downloadFolder, updateEvent, options);
                 File targetFile = new File(outputFolder, file.getName());
                 log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
@@ -211,7 +215,7 @@ public class DefaultHandler extends Handler {
     private WebSocketResponse cmdDelete(JSONObjectContainer content) {
         UUID uuid = UUID.fromString(content.get("uuid", String.class));
         TableItemDTO toDelete = urls.get(uuid);
-        if (executorHandler.removeTask(toDelete.getTask())) {
+        if (executorHandler.abortTask(toDelete.getTask())) {
             deleteObjectToAll(toDelete);
             urls.remove(uuid);
         } else {

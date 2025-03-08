@@ -5,6 +5,7 @@ import me.kaigermany.ultimateutils.networking.websocket.WebSocketServer;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,7 +17,6 @@ public class Connection implements Runnable {
     private WebSocketServer clientEndpoint;
     private final ByteArrayOutputStream readLineBuffer = new ByteArrayOutputStream(32);
     private final String webroot;
-
     private final WebServer.Configuration webServerConfiguration;
 
     private static final Map<String, String> mediaMap = new HashMap<>();
@@ -61,15 +61,24 @@ public class Connection implements Runnable {
     @Override
     public void run() {
         try {
-            this.is = new DataInputStream(socket.getInputStream());
-            this.os = new DataOutputStream(socket.getOutputStream());
+            is = new DataInputStream(socket.getInputStream());
+            os = new DataOutputStream(socket.getOutputStream());
+        } catch (IOException ex) {
+            log.error("Failed to open streams", ex);
+            return;
+        }
 
-            String[] arguments = readLine().split(" ");
+        try {
+            String firstLine = readLine();
+            if (firstLine == null || firstLine.isEmpty()) {
+                return;
+            }
+
+            String[] arguments = firstLine.split(" ");
             Map<String,String> headers = readHeaders();
 
             // Check if we have a websocket
             if (headers.containsKey("Upgrade") && headers.get("Upgrade").equals("websocket")) {
-
                 // If we don't have a valid handler, then the user is just too early in the initialization phase
                 if (webServerConfiguration.receptionist() == null) {
                     write503();
@@ -77,20 +86,13 @@ public class Connection implements Runnable {
                 }
                 // Upgrading the socket to websocket and handles it in the corresponding handler
                 clientEndpoint = new WebSocketServer(socket, webServerConfiguration.receptionist(), headers);
-            }
-            // Else handle it as normal http request
-            else {
+            } else {
                 handleHttpRequest(arguments);
             }
 
         } catch (IOException ex) {
             log.error("Failed to process web request", ex);
         }
-    }
-
-    public void sendWebsocket(String data) {
-        if (clientEndpoint == null) return;
-        clientEndpoint.send(data);
     }
 
     /**
@@ -201,22 +203,26 @@ public class Connection implements Runnable {
      * @throws IOException if you do something stupid
      */
     private String readLine() throws IOException {
-        int chr;
-        ByteArrayOutputStream baos = this.readLineBuffer;
-        while(((chr = is.read()) != '\n') && chr != -1){
-            baos.write(chr);
+        try {
+            int chr;
+            ByteArrayOutputStream baos = readLineBuffer;
+            while (((chr = is.read()) != '\n') && chr != -1) {
+                baos.write(chr);
+            }
+
+            if (baos.size() == 0)
+                return "";
+
+            String out = baos.toString();
+            baos.reset();
+
+            if (out.charAt(out.length() - 1) == '\r')
+                return out.substring(0, out.length() - 1);
+
+            return out;
+        }catch (SocketTimeoutException ignored){
+            return null;
         }
-
-        if(baos.size() == 0)
-            return "";
-
-        String out = baos.toString();
-        baos.reset();
-
-        if(out.charAt(out.length() - 1) == '\r')
-            return out.substring(0, out.length() - 1);
-
-        return out;
     }
 
     /**

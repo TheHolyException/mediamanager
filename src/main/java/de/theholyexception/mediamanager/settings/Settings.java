@@ -1,11 +1,13 @@
 package de.theholyexception.mediamanager.settings;
 
+import de.theholyexception.holyapi.datastorage.file.ConfigJSON;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.mediamanager.configuration.ConfigJSON;
 import de.theholyexception.mediamanager.models.SettingMetadata;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 @Slf4j
 public class Settings {
@@ -14,9 +16,12 @@ public class Settings {
 
     protected static final Map<String, String> SETTING_DATA = Collections.synchronizedMap(new HashMap<>());
     public static final Map<String, SettingProperty<?>> SETTING_PROPERTIES = Collections.synchronizedMap(new HashMap<>());
+    public static <T> SettingProperty<T> getSettingProperty(String setting, T defaultValue, String configPath) {
+        return getSettingProperty(setting, defaultValue, configPath, null);
+    }
 
     @SuppressWarnings("unchecked")
-    public static <T> SettingProperty<T> getSettingProperty(String setting, T defaultValue, String configPath) {
+    public static <T> SettingProperty<T> getSettingProperty(String setting, T defaultValue, String configPath, Boolean forClient) {
         // Check for duplicates, and returns already registered settings
         if (SETTING_PROPERTIES.containsKey(setting)) {
             SettingProperty<?> property = SETTING_PROPERTIES.get(setting);
@@ -27,19 +32,24 @@ public class Settings {
         
         // Reading data from the configuration file
         JSONObjectContainer settingElement;
-        Boolean forClient = false;
-        if (configPath != null) {
+        if (forClient == null && configPath != null) {
             settingElement = configJSON.getJson()
                     .getObjectContainer(configPath)
                     .getObjectContainer(setting);
+            if (settingElement == null) {
+                log.error("Setting " + setting + " not found in configuration file");
+                return null;
+            }
             forClient = settingElement.get("forClient", Boolean.class);
         } else {
             settingElement = null;
         }
 
+        if (forClient == null) forClient = false;
+
         // Creating metadata for the setting
         // forClient for example indicates if the setting should be provided to the web clients
-        SettingMetadata metadata = new SettingMetadata(setting, forClient != null && forClient);
+        SettingMetadata metadata = new SettingMetadata(setting, forClient);
         SettingProperty<T> property = new SettingProperty<>(metadata) {
             @Override
             public void setValue(T value) {
@@ -61,7 +71,7 @@ public class Settings {
         else
             property.setValue(defaultValue);
         SETTING_PROPERTIES.put(setting, property);
-        log.info("Setting Loaded: " + property);
+        log.debug("Setting Loaded: " + property);
         return property;
     }
 
