@@ -5,7 +5,7 @@
       "checkIntervalMin": 5,
       "dataFile": ".\/autoloader.data.json",
       "mysql": {
-        "password": "2gEoRmJ4uKoSAnrPedbpqMQ3^",
+        "password": "",
         "database": "mediamanager",
         "port": 3306,
         "host": "homelab",
