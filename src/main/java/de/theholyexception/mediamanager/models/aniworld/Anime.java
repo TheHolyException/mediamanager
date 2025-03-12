@@ -133,7 +133,10 @@ public class Anime {
 
     public static final Pattern pattern = Pattern.compile("S\\d{2}E\\d{2}");
     public void scanDirectoryForExistingEpisodes() {
-        if (directory == null) return;
+        if (directory == null) {
+            log.warn("No directory set for " + title);
+            return;
+        }
 
         File[] files = directory.listFiles();
         if (files == null) return;
@@ -150,7 +153,8 @@ public class Anime {
             String sn = String.format("S%02d", season.getSeasonNumber());
             for (Episode episode : season.getEpisodeList().stream().filter(e -> !e.isDownloaded()).toList()) {
                 String en = String.format("E%02d", episode.getEpisodeNumber());
-                episode.setDownloaded(existingFiles.contains(sn + en));
+                boolean exists = existingFiles.contains(sn + en);
+                episode.setDownloaded(exists);
             }
         }
     }

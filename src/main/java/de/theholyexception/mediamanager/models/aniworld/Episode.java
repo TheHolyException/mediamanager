@@ -108,9 +108,13 @@ public class Episode {
         if (then != null)
             task.onComplete(then);
         isDirty = true;
+        System.out.println("loadVideoURL");
     }
 
     public void setDownloaded(boolean downloaded) {
+        if (this.downloaded == downloaded)
+            return;
+
         this.downloaded = downloaded;
         isDirty = true;
     }
