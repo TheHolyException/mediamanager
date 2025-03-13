@@ -11,7 +11,6 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @ToString
@@ -28,8 +27,8 @@ public class Episode {
     private boolean downloaded = false;
     @Setter
     private boolean downloading = false;
-    @Getter @Setter
-    private List<Integer> languageIds = new ArrayList<>();
+    @Setter
+    private List<Integer> languageIds = null;
     private boolean isDirty;
 
 
@@ -41,7 +40,18 @@ public class Episode {
         else this.url = url;
         this.title = title;
         this.isDirty = isDirty;
-        AniworldHelper.resolveEpisodeLanguages(this);
+    }
+
+    public List<Integer> getLanguageIds() {
+        if (languageIds == null) {
+            AniworldHelper.resolveEpisodeLanguages(this);
+        }
+        AniworldHelper.urlResolver.awaitGroup(883855723);
+        return languageIds;
+    }
+
+    public List<Integer> getLanguageIdsRaw() {
+        return languageIds;
     }
 
     public static void loadFromDB(DataBaseInterface db, Season season) {
@@ -108,7 +118,6 @@ public class Episode {
         if (then != null)
             task.onComplete(then);
         isDirty = true;
-        System.out.println("loadVideoURL");
     }
 
     public void setDownloaded(boolean downloaded) {

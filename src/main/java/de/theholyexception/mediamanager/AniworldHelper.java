@@ -5,6 +5,7 @@ import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.holyapi.util.expiringmap.ExpiringMap;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -13,18 +14,17 @@ import org.jsoup.select.Elements;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class AniworldHelper {
 
-    private AniworldHelper() {}
+    @Getter
+    private static final Map<String, AtomicInteger> statistics = Collections.synchronizedMap(new HashMap<>());
 
-    public static final ExecutorHandler urlResolver = new ExecutorHandler(Executors.newFixedThreadPool(20));
+    public static final ExecutorHandler urlResolver = new ExecutorHandler(Executors.newFixedThreadPool(1));
 
     public static final String ANIWORLD_URL = "https://aniworld.to";
 
@@ -39,6 +39,7 @@ public class AniworldHelper {
      * @return List of all Seasons
      */
     public static List<Season> getSeasons(String url) {
+        statistics.computeIfAbsent("Multi-Season Requests", k -> new AtomicInteger(0)).incrementAndGet();
         List<Season> result = new ArrayList<>();
         try {
             Document document = Jsoup.connect(url).get();
@@ -57,6 +58,7 @@ public class AniworldHelper {
     }
 
     public static Season getSeason(String url, int number) {
+        statistics.computeIfAbsent("Season Requests", k -> new AtomicInteger(0)).incrementAndGet();
         try {
             Document document = Jsoup.connect(url).get();
             Element streamDiv = document.selectFirst("#stream");
@@ -85,6 +87,7 @@ public class AniworldHelper {
      * @return List of all Episodes from a season
      */
     public static List<Episode> getEpisodes(String url) {
+        statistics.computeIfAbsent("Episode Requests", k -> new AtomicInteger(0)).incrementAndGet();
         List<Episode> result = new ArrayList<>();
         try {
             Document document = Jsoup.connect(url).get();
@@ -102,6 +105,7 @@ public class AniworldHelper {
     }
 
     public static String getAnimeTitle(String url) {
+        statistics.computeIfAbsent("Title Requests", k -> new AtomicInteger(0)).incrementAndGet();
         try {
             Document document = Jsoup.connect(url).get();
             Element seriesTitle = document.selectFirst(".series-title > h1 > span");
@@ -114,6 +118,7 @@ public class AniworldHelper {
     }
 
     public static String getRedirectedURL(String url) {
+        statistics.computeIfAbsent("Redirect Requests", k -> new AtomicInteger(0)).incrementAndGet();
         try {
             HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
             con.setInstanceFollowRedirects(false); // Disable automatic redirect following
@@ -138,8 +143,12 @@ public class AniworldHelper {
             episode.setLanguageIds(new ArrayList<>(episodeLanguageCache.get(episode.getUrl())));
             return null;
         }
+        statistics.computeIfAbsent("Episode Language Requests", k -> new AtomicInteger(0)).incrementAndGet();
 
-        List<Integer> languageIds = episode.getLanguageIds();
+        List<Integer> ids = episode.getLanguageIdsRaw();
+        if (ids == null) ids = new ArrayList<>();
+        final List<Integer> languageIds = ids;
+
         ExecutorTask task = new ExecutorTask(() -> {
             try {
                 Document document = Jsoup.connect(episode.getUrl()).get();
@@ -154,8 +163,10 @@ public class AniworldHelper {
             }
         });
 
+        episode.setLanguageIds(languageIds);
+
         episodeLanguageCache.put(episode.getUrl(), languageIds);
-        urlResolver.putTask(task);
+        urlResolver.putTask(task, 883855723);
         return task;
     }
 
@@ -167,6 +178,7 @@ public class AniworldHelper {
                 episode.setVideoUrl(videoUrlCache.get(cacheIdentifier));
                 return;
             }
+            statistics.computeIfAbsent("Resolve Video URL Requests", k -> new AtomicInteger(0)).incrementAndGet();
 
             try {
                 Document document = Jsoup.connect(episode.getUrl()).get();
