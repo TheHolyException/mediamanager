@@ -37,3 +37,5 @@ build/
 .DS_Store
 cookies.curr.txt
 cookies.last.txt
+logs/
+tmp/

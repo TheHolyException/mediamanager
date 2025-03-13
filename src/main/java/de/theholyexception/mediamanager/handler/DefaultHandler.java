@@ -4,6 +4,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
+import de.theholyexception.mediamanager.AniworldHelper;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.TargetSystem;
 import de.theholyexception.mediamanager.Utils;
@@ -32,6 +33,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
 
@@ -55,6 +57,7 @@ public class DefaultHandler extends Handler {
         executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
     }
 
+    private AtomicInteger threadCounter = new AtomicInteger(0);
     @Override
     public void loadConfigurations() {
         log.info("Loading Configurations");
@@ -64,7 +67,14 @@ public class DefaultHandler extends Handler {
         SettingProperty<String> spFFMPEGPath = Settings.getSettingProperty("FFMPEG", "ffmpeg", systemSettings);
         SettingProperty<String> spDownloadTempPath = Settings.getSettingProperty("DOWNLOAD_FOLDER", "./tmp", systemSettings);
 
-        spDownloadThreads.addSubscriber(value -> executorHandler.updateExecutorService(Executors.newFixedThreadPool(value)));
+        spDownloadThreads.addSubscriber(value -> {
+            threadCounter.set(0);
+            executorHandler.updateExecutorService(Executors.newFixedThreadPool(value, r -> {
+                Thread thread = new Thread(r);
+                thread.setName( "DownloadThread-" + threadCounter.getAndAdd(1));
+                return thread;
+            }));
+        });
         spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
         spFFMPEGPath.addSubscriber(FFmpeg::setFFmpegPath);
         spDownloadTempPath.addSubscriber(value -> {
@@ -189,18 +199,20 @@ public class DefaultHandler extends Handler {
             public void onLogFile(String s, byte[] bytes) {
                 // Not implemented
             }
+
         };
 
         JSONObject options = content.getObjectContainer("options").getRaw();
 
         // Getting the right downloader
-        Downloader downloader = DownloaderSelector.selectDownloader(url);
+        Downloader downloader = DownloaderSelector.selectDownloader(url, downloadFolder, updateEvent, options);
+        String title = downloader.resolveTitle();
+        changeObject(content.getRaw(), "title", title);
 
         // Start the download task
         ExecutorTask task = new ExecutorTask(() -> {
             try {
-                downloader.onTitleResolved(title -> changeObject(content.getRaw(), "title", title));
-                File file = downloader.start(url, downloadFolder, updateEvent, options);
+                File file = downloader.start();
                 File targetFile = new File(outputFolder, file.getName());
                 log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
                 Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
@@ -260,8 +272,7 @@ public class DefaultHandler extends Handler {
         Target target = targets.get(targetPath.split("/")[0]);
 
         if (!target.subFolders()) {
-            sendWarn(socket, content.get("type", String.class), "No sub-folders are configured for " + target.identifier());
-            return WebSocketResponse.WARN.setMessage("No sub-folders are configured for " + target.identifier());
+            return null;
         }
 
         JSONObject response = new JSONObject();
@@ -311,31 +322,39 @@ public class DefaultHandler extends Handler {
     @SuppressWarnings("unchecked")
     private JSONObject formatSystemInfo() {
         JSONObject response = new JSONObject();
-        response.put("heap", String.format("Java Runtime: %s/%s/%s"
-                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
-                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory())
-                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory())
-        ));
-        if (MediaManager.getInstance().isDockerEnvironment()) {
-            response.put("containerHeap", String.format("Docker Container: %s/%s"
-                    , StaticUtils.toHumanReadableFileSize(dockerMemoryUsage)
-                    , StaticUtils.toHumanReadableFileSize(dockerMemoryLimit)
-            ));
+        {
+            JSONObject memory = new JSONObject();
+            memory.put("current", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory()));
+            memory.put("heap", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()));
+            memory.put("max", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory()));
+            response.put("memory", memory);
+
         }
-        ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) executorHandler.getExecutorService());
-        response.put("handler", String.format("""
-                        Active Count: %s
-                        Core Size: %s
-                        Pool Size: %s
-                        Pool Size (Max): %s
-                        Completed Tasks: %s
-                        """
-                , threadPoolExecutor.getActiveCount()
-                , threadPoolExecutor.getCorePoolSize()
-                , threadPoolExecutor.getPoolSize()
-                , threadPoolExecutor.getMaximumPoolSize()
-                , threadPoolExecutor.getCompletedTaskCount()
-        ));
+
+        {
+            JSONObject docker = new JSONObject();
+            docker.put("memoryLimit", dockerMemoryLimit);
+            docker.put("memoryUsage", dockerMemoryUsage);
+            response.put("docker", docker);
+        }
+
+        {
+            ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) executorHandler.getExecutorService());
+            JSONObject threadPool = new JSONObject();
+            threadPool.put("active", threadPoolExecutor.getActiveCount());
+            threadPool.put("core", threadPoolExecutor.getCorePoolSize());
+            threadPool.put("pool", threadPoolExecutor.getPoolSize());
+            threadPool.put("max", threadPoolExecutor.getMaximumPoolSize());
+            threadPool.put("completed", threadPoolExecutor.getCompletedTaskCount());
+            response.put("threadPool", threadPool);
+        }
+
+        {
+            JSONObject aniworld = new JSONObject();
+            AniworldHelper.getStatistics().forEach((k, v) -> aniworld.put(k, v.get()));
+            response.put("aniworld", aniworld);
+        }
+
         return response;
     }
 

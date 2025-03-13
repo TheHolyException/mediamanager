@@ -104,9 +104,9 @@ public class MediaManager {
         } catch (Exception ex) {
             log.error(ex.getMessage());
         }
+
         isDockerEnvironment = false;
         log.warn("No docker environment!");
-
     }
 
     private static AtomicInteger threadCounter = new AtomicInteger(0);

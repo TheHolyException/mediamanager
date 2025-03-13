@@ -25,6 +25,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class AutoLoaderHandler extends Handler {
@@ -43,12 +44,20 @@ public class AutoLoaderHandler extends Handler {
         super(targetSystem);
     }
 
+    private static AtomicInteger threadCounter = new AtomicInteger(0);
     @Override
     public void loadConfigurations() {
         super.loadConfigurations();
 
         SettingProperty<Integer> spURLResolverThreads = new SettingProperty<>(new SettingMetadata("urlResolverThreads", false));
-        spURLResolverThreads.addSubscriber(value -> AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(value)));
+        spURLResolverThreads.addSubscriber(value -> {
+            threadCounter.set(0);
+            AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(value, r -> {
+                Thread thread = new Thread(r);
+                thread.setName( "URL-Resolver-" + threadCounter.getAndAdd(1));
+                return thread;
+            }));
+        });
         spURLResolverThreads.setValue(handlerConfiguration.get("urlResolverThreads", 10, Integer.class));
 
         spCheckIntervalMin = new SettingProperty<>(new SettingMetadata("checkIntervalMin", false));
