@@ -71,10 +71,13 @@ public class AutoLoaderHandler extends Handler {
         subscribedAnimes.clear();
         subscribedAnimes.addAll(Anime.loadFromDB(db));
 
-        printTableInfo("anime", "season", "episode");
-        subscribedAnimes.forEach(Anime::scanDirectoryForExistingEpisodes);
-        subscribedAnimes.forEach(a -> log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false)));
+        if (log.isDebugEnabled())
+            printTableInfo("anime", "season", "episode");
+
         subscribedAnimes.forEach(a -> {
+            a.loadMissingEpisodes();
+            a.scanDirectoryForExistingEpisodes();
+            log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false));
             if (a.isDeepDirty())
                 a.writeToDB(db);
         });

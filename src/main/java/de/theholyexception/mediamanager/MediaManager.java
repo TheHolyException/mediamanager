@@ -6,6 +6,8 @@ import de.theholyexception.holyapi.datastorage.file.ConfigJSON;
 import de.theholyexception.holyapi.datastorage.file.FileConfiguration;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
+import de.theholyexception.holyapi.util.ExecutorHandler;
+import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.handler.AniworldHandler;
 import de.theholyexception.mediamanager.handler.AutoLoaderHandler;
 import de.theholyexception.mediamanager.handler.DefaultHandler;
@@ -27,6 +29,8 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class MediaManager {
@@ -102,7 +106,15 @@ public class MediaManager {
         }
         isDockerEnvironment = false;
         log.warn("No docker environment!");
+
     }
+
+    private static AtomicInteger threadCounter = new AtomicInteger(0);
+    private static ExecutorHandler executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(10, r -> {
+        Thread thread = new Thread(r);
+        thread.setName( "WS-Executor-" + threadCounter.getAndAdd(1));
+        return thread;
+    }));
 
     private void loadWebServer() {
         new WebServer(new WebServer.Configuration(8080, "0.0.0.0", "./www", new WebSocketEvent() {
@@ -118,17 +130,19 @@ public class MediaManager {
                 if (handler == null)
                     throw new IllegalStateException("Invalid target-system: " + targetSystem);
 
-                WebSocketResponse response;
-                try {
-                    response = handler.handleCommand(socket, cmd, content);
-                } catch (Exception ex) {
-                    response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
-                    log.error("Failed to process command", ex);
-                }
-                if (response != null) {
-                    response.getResponse().set("sourceCommand", cmd);
-                    WebSocketUtils.sendPacket("response", handler.getTargetSystem(),response.getResponse().getRaw(), socket);
-                }
+                executorHandler.putTask(new ExecutorTask(() -> {
+                    WebSocketResponse response;
+                    try {
+                        response = handler.handleCommand(socket, cmd, content);
+                    } catch (Exception ex) {
+                        response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
+                        log.error("Failed to process command", ex);
+                    }
+                    if (response != null) {
+                        response.getResponse().set("sourceCommand", cmd);
+                        WebSocketUtils.sendPacket("response", handler.getTargetSystem(),response.getResponse().getRaw(), socket);
+                    }
+                }));
             }
 
             @Override

@@ -6,6 +6,7 @@ import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.TargetSystem;
+import de.theholyexception.mediamanager.Utils;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
@@ -85,8 +86,10 @@ public class DefaultHandler extends Handler {
             JSONObject target = (JSONObject) object;
             Target tar = new Target(
                     target.get("identifier").toString()
+                    , target.containsKey("displayName") ? target.get("displayName").toString() : target.get("identifier").toString()
                     , target.get("path").toString()
-                    , target.containsKey("subFolders") && Boolean.parseBoolean(target.get("subFolders").toString()));
+                    , target.containsKey("subFolders") && Boolean.parseBoolean(target.get("subFolders").toString())
+            );
             targets.put(target.get("identifier").toString(), tar);
         }
     }
@@ -105,6 +108,11 @@ public class DefaultHandler extends Handler {
             case "setting" -> cmdChangeSetting(content);
 
             case "requestSubfolders" -> cmdRequestSubfolders(socket, content);
+            case "testDelay" -> {
+                log.debug("Test delay");
+                Utils.sleep(5000);
+                yield WebSocketResponse.OK.setMessage("Test delay done!");
+            }
 
             default -> {
                 log.error("Invalid command " + command);
@@ -121,6 +129,7 @@ public class DefaultHandler extends Handler {
         sendObject(socket, jsonData.stream().map(JSONObjectContainer::getRaw).toList());
         sendSettings(socket);
         cmdSendSystemInformation(socket);
+        sendTargetFolders(socket);
         return null;
     }
 
@@ -259,7 +268,7 @@ public class DefaultHandler extends Handler {
         JSONArray array = new JSONArray();
         File subFolder = new File(target.path());
         if (subFolder.listFiles() != null)
-            array.addAll(Arrays.stream(subFolder.listFiles()).map(File::getName).toList());
+            array.addAll(Arrays.stream(subFolder.listFiles()).filter(File::isDirectory).map(File::getName).toList());
         response.put("subfolders", array);
         sendPacket("requestSubfoldersResponse", TargetSystem.DEFAULT, response, socket);
         return null;
@@ -284,6 +293,19 @@ public class DefaultHandler extends Handler {
         } catch (Exception ex) {
             log.error(ex.getMessage());
         }
+    }
+
+    private void sendTargetFolders(WebSocketBasic socket) {
+        JSONObject response = new JSONObject();
+        JSONArray array = new JSONArray();
+        for (Target value : targets.values()) {
+            JSONObject segment = new JSONObject();
+            segment.put("identifier", value.identifier());
+            segment.put("displayName", value.displayName());
+            array.add(segment);
+        }
+        response.put("targets", array);
+        sendPacket("targetFolders", TargetSystem.DEFAULT, response, socket);
     }
 
     @SuppressWarnings("unchecked")

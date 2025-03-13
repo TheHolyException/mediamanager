@@ -92,6 +92,22 @@ Data for settings
     }             
 }
 ```
+Target Data
+```json
+{
+    "cmd": "targetFolders",         
+    "targetSystem": "default",
+    "content": {
+        "targets": [
+          {
+            "identifier": "string",
+            "displayName": "string"
+          },
+          ...
+        ]
+    }             
+}
+```
 
 ---
 
