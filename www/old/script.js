@@ -101,7 +101,6 @@ function onWSResponseDefault(cmd, content) {
                 subfolderSelection.appendChild(option);
             }
             break;
-
     }
 }
 
@@ -237,7 +236,6 @@ function addNewElement() {
         url = document.getElementById("url").value;
     }
     let urlArray = url.split(";");
-
 
     for (let i = 0; i < urlArray.length; i++) {
         let urlElement = urlArray[i];

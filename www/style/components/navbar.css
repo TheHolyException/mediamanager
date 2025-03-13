@@ -1,4 +1,4 @@
-.navbar {
+.main-nav-bar {
     display: flex;
     gap: 15px;
     justify-content: center;
@@ -15,4 +15,12 @@
             box-shadow: var(--selectedBorderColor) 0px -2px inset;
         }
     }
+}
+
+.main-tab-container .tab {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    color: var(--textColor);
+    padding: 50px;
 }

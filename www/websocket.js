@@ -8,7 +8,6 @@ function connect() {
         sendPacket("syn", "default", {});
         sendPacket('getData', 'autoloader');
         setWebSocketStatusFeedback(2);
-        //onTargetSelection(); // Refresh subfolders
     };
 
     ws.onmessage = function (e) {

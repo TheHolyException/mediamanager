@@ -5,9 +5,12 @@
     <title>Mediamanager</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="./frameworks/tabBar/tabBar.js" defer></script>
+    <script src="./scripts/addSourcePopup.js" defer></script>
     <script src="./websocket.js" defer></script>
     <script src="./script.js" defer></script>
     <script src="./aniworld.js" defer></script>
+    <script src="./frameworks/customTags/optionTextfield.js" defer></script>
     <script src="./frameworks/popup/modalLightboxPopup.js" defer></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="stylesheet" type="text/css" href="./style/util/colors.css" />
@@ -21,31 +24,42 @@
 
 <body>
     <header>
-        <nav class="navbar">
-            <a href="" class="active">Downloads</a>
-            <a href="">Settings</a>
-            <a href="">Statistics</a>
-            <a href="">Subscriptions</a>
+        <nav class="main-nav-bar">
+            <a tab-name="downloads" class="">Downloads</a>
+            <a tab-name="settings">Settings</a>
+            <a tab-name="statistics">Statistics</a>
+            <a tab-name="subscriptions">Subscriptions</a>
         </nav>
     </header>
     <div id="statusElement">
         <label id="statusText">Initialisiere</label>
     </div>
     <main class="main-container">
-        <div class="download-tab">
-            <h1>Download Queue</h1>
-            <nav class="queue-action-bar">
-                <a class="add-sources-btn" onclick="openAddSourcePopup()"><i class="fa fa-plus"> Add</i></a>
-                <a class="commit-sources-btn" onclick="onCommit()"><i class="fa fa-paper-plane"></i> Commit</i></a>
-            </nav>
-            <table class="queue-table">
-                <tr>
-                    <th col="actions">Actions</th>
-                    <th col="state">Status</th>
-                    <th col="url">URL</th>
-                    <th col="target">Target</th>
-                </tr>
-            </table>
+        <div class="main-tab-container">
+            <div class="tab" tab-name="downloads">
+                <h1>Download Queue</h1>
+                <nav class="queue-action-bar">
+                    <a class="add-sources-btn" onclick="openAddSourcePopup()"><i class="fa fa-plus"> Add</i></a>
+                    <a class="commit-sources-btn" onclick="onCommit()"><i class="fa fa-paper-plane"></i> Commit</i></a>
+                </nav>
+                <table class="queue-table">
+                    <tr>
+                        <th col="actions">Actions</th>
+                        <th col="state">Status</th>
+                        <th col="url">URL</th>
+                        <th col="target">Target</th>
+                    </tr>
+                </table>
+            </div>
+            <div class="tab" tab-name="settings">
+                <h1>Global Settings</h1>
+            </div>
+            <div class="tab" tab-name="statistics">
+                <h1>Statistics</h1>
+            </div>
+            <div class="tab" tab-name="subscriptions">
+                <h1>Subscriptions</h1>
+            </div>
         </div>
     </main>
 </body>
