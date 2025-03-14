@@ -67,9 +67,12 @@ public class WebSocketUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static void deleteObjectToAll(TableItemDTO object) {
+    public static void deleteObjectToAll(List<TableItemDTO> objects) {
         JSONObject body = new JSONObject();
-        body.put("uuid", object.getUuid().toString());
+        JSONArray list = new JSONArray();
+        for (TableItemDTO object : objects)
+            list.add(object.getUrl());
+        body.put("list", list);
         sendPacket("del", TargetSystem.DEFAULT, body, null);
     }
 

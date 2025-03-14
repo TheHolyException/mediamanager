@@ -4,6 +4,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import lombok.Getter;
 import lombok.Setter;
+import me.kaigermany.downloaders.Downloader;
 
 import java.util.UUID;
 
@@ -17,6 +18,10 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     private final JSONObjectContainer jsonObject;
     @Setter
     private ExecutorTask task;
+    @Setter
+    private Downloader downloader;
+    @Setter
+    private boolean isDeleted = false;
 
 
     public TableItemDTO(JSONObjectContainer content) {

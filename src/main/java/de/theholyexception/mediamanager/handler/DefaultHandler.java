@@ -2,6 +2,7 @@ package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.AniworldHelper;
@@ -134,6 +135,10 @@ public class DefaultHandler extends Handler {
                 Utils.sleep(5000);
                 yield WebSocketResponse.OK.setMessage("Test delay done!");
             }
+            case "ping" -> {
+                sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), socket);
+                yield null;
+            }
 
             default -> {
                 log.error("Invalid command " + command);
@@ -155,8 +160,8 @@ public class DefaultHandler extends Handler {
     }
 
     protected WebSocketResponse cmdPutData(WebSocketBasic socket, JSONObjectContainer content) {
-        for (Object data : content.get("data", JSONArrayContainer.class).getRaw()) {
-            JSONObjectContainer item = (JSONObjectContainer) data;
+        for (Object data : content.getArrayContainer("list").getRaw()) {
+            JSONObjectContainer item = (JSONObjectContainer) JSONReader.readString(data.toString());
             WebSocketResponse response = scheduleDownload(item);
             if (socket != null && response != null)
                 WebSocketUtils.sendWebsSocketResponse(socket, response, TargetSystem.DEFAULT, "put");
@@ -166,19 +171,33 @@ public class DefaultHandler extends Handler {
 
     private WebSocketResponse cmdDelete(JSONObjectContainer content) {
         UUID uuid = UUID.fromString(content.get("uuid", String.class));
-        TableItemDTO toDelete = urls.get(uuid);
-        if (toDelete.getTask().isCompleted() || downloadHandler.abortTask(toDelete.getTask())) {
-            deleteObjectToAll(toDelete);
-            urls.remove(uuid);
-        } else {
-            return WebSocketResponse.WARN.setMessage("Cannot remove task, already downloading!");
-        }
+
+        List<TableItemDTO> toDelete = new ArrayList<>();
+        TableItemDTO item = urls.get(uuid);
+        if (item == null)
+            return WebSocketResponse.ERROR.setMessage("Failed to find object, is it already deleted?");
+
+        WebSocketResponse response = deleteObject(item, toDelete);
+        if (response != null)
+            return response;
+
+        if (toDelete.isEmpty())
+            return null;
+
+        deleteObjectToAll(toDelete);
+        urls.remove(uuid);
         return null;
     }
 
     private WebSocketResponse cmdDeleteAll() {
-        urls.values().forEach(WebSocketUtils::deleteObjectToAll);
-        urls.clear();
+        List<TableItemDTO> toDelete = new ArrayList<>();
+        new HashMap<>(urls).values().forEach(object -> deleteObject(object, toDelete));
+        if (toDelete.isEmpty())
+            return null;
+
+        deleteObjectToAll(toDelete);
+        for (TableItemDTO tableItemDTO : toDelete)
+            urls.remove(tableItemDTO.getUuid());
         return null;
     }
 
@@ -248,6 +267,8 @@ public class DefaultHandler extends Handler {
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
             public void onProgressUpdate(double v) {
+                if (tableItem.isDeleted())
+                    return;
                 if (v >= 1) {
                     changeObject(content.getRaw(), "state", "Completed");
                 } else {
@@ -267,7 +288,7 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onError(String s) {
-                if (isRunning.get()) {
+                if (isRunning.get() && !tableItem.isDeleted()) {
                     changeObject(content.getRaw(), "state", "Error: " + s);
                 }
             }
@@ -283,12 +304,17 @@ public class DefaultHandler extends Handler {
 
         // Getting the right downloader
         Downloader downloader = DownloaderSelector.selectDownloader(url, downloadFolder, updateEvent, options);
+        tableItem.setDownloader(downloader);
 
         // Start the download
         // This task is only running when the titleTask is completed
         ExecutorTask downloadTask = new ExecutorTask(() -> {
             try {
                 File file = downloader.start();
+                if (downloader.isCanceled()) {
+                    return;
+                }
+
                 File targetFile = new File(outputFolder, file.getName());
                 log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
                 Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
@@ -355,6 +381,21 @@ public class DefaultHandler extends Handler {
         }
         response.put("targets", array);
         sendPacket("targetFolders", TargetSystem.DEFAULT, response, socket);
+    }
+
+    private WebSocketResponse deleteObject(TableItemDTO toDelete, List<TableItemDTO> removed) {
+        if (toDelete.getTask().isRunning()) {
+            if (!toDelete.getDownloader().cancel()) {
+                return WebSocketResponse.WARN.setMessage("Already running, download cannot be canceled!");
+            }
+        } else {
+            if (!downloadHandler.abortTask(toDelete.getTask())) {
+                return WebSocketResponse.WARN.setMessage("Failed to abort task! internal error!");
+            }
+        }
+        removed.add(toDelete);
+        toDelete.setDeleted(true);
+        return null;
     }
 
     @SuppressWarnings("unchecked")
