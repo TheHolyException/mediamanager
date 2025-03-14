@@ -95,6 +95,11 @@ public class WebSocketUtils {
         }
     }
 
+    public static void sendWebsSocketResponse(WebSocketBasic socket, WebSocketResponse response, TargetSystem targetSystem, String sourceCommand) {
+        if (sourceCommand != null) response.getResponse().set("sourceCommand", sourceCommand);
+        sendPacket("response", targetSystem, response.getResponse().getRaw(), socket);
+    }
+
     /**
      * Builds an object to send as response when a client is requesting
      * @param code 2 = OK, 4 = Error

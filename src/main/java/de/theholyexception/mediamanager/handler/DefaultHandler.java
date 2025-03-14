@@ -33,6 +33,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
@@ -46,7 +47,9 @@ public class DefaultHandler extends Handler {
 
     private long dockerMemoryLimit;
     private long dockerMemoryUsage;
-    private final ExecutorHandler executorHandler;
+    private final AtomicInteger downloadHandlerFactoryCounter = new AtomicInteger(0);
+    private final ExecutorHandler downloadHandler;
+    private final ExecutorHandler titleResolverHandler;
     private File downloadFolder;
 
     private SettingProperty<Integer> spDownloadThreads;
@@ -54,29 +57,36 @@ public class DefaultHandler extends Handler {
 
     public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
-        executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
+        downloadHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
+        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(1, r -> {
+            Thread thread = new Thread(r);
+            thread.setName("TitleResolverThread");
+            return thread;
+        }));
     }
 
-    private AtomicInteger threadCounter = new AtomicInteger(0);
     @Override
     public void loadConfigurations() {
         log.info("Loading Configurations");
         String systemSettings = "systemSettings";
-        spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
-        spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
-        SettingProperty<String> spFFMPEGPath = Settings.getSettingProperty("FFMPEG", "ffmpeg", systemSettings);
-        SettingProperty<String> spDownloadTempPath = Settings.getSettingProperty("DOWNLOAD_FOLDER", "./tmp", systemSettings);
 
+        spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
         spDownloadThreads.addSubscriber(value -> {
-            threadCounter.set(0);
-            executorHandler.updateExecutorService(Executors.newFixedThreadPool(value, r -> {
+            downloadHandlerFactoryCounter.set(0);
+            downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value, r -> {
                 Thread thread = new Thread(r);
-                thread.setName( "DownloadThread-" + threadCounter.getAndAdd(1));
+                thread.setName( "DownloadThread-" + downloadHandlerFactoryCounter.getAndAdd(1));
                 return thread;
             }));
         });
+
+        spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
         spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
+
+        SettingProperty<String> spFFMPEGPath = Settings.getSettingProperty("FFMPEG", "ffmpeg", systemSettings);
         spFFMPEGPath.addSubscriber(FFmpeg::setFFmpegPath);
+
+        SettingProperty<String> spDownloadTempPath = Settings.getSettingProperty("DOWNLOAD_FOLDER", "./tmp", systemSettings);
         spDownloadTempPath.addSubscriber(value -> {
             downloadFolder = new File(value);
             if (!downloadFolder.exists() && !downloadFolder.mkdirs())
@@ -87,7 +97,7 @@ public class DefaultHandler extends Handler {
 
     @Override
     public void initialize() {
-        cmdStartSystemDataFetcher();
+        startSystemDataFetcher();
     }
 
     private void loadTargets() {
@@ -104,12 +114,13 @@ public class DefaultHandler extends Handler {
         }
     }
 
+    // region commands
     @Override
     public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
         return switch (command) {
             case "syn" -> cmdSyncData(socket);
 
-            case "put" -> cmdPutData(content);
+            case "put" -> cmdPutData(socket, content);
 
             case "del" -> cmdDelete(content);
 
@@ -138,105 +149,25 @@ public class DefaultHandler extends Handler {
                 .toList();
         sendObject(socket, jsonData.stream().map(JSONObjectContainer::getRaw).toList());
         sendSettings(socket);
-        cmdSendSystemInformation(socket);
+        sendSystemInformation(socket);
         sendTargetFolders(socket);
         return null;
     }
 
-    @SuppressWarnings("unchecked")
-    protected WebSocketResponse cmdPutData(JSONObjectContainer content) {
-        String url = content.get("url", String.class);
-        if (url == null || url.isEmpty())
-            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
-
-        String targetPath = content.get("target", String.class);
-        log.debug("Resolving target: " + targetPath.split("/")[0]);
-        Target target = targets.get(targetPath.split("/")[0]);
-        log.debug("Target resolved!: " + target);
-
-        if (target == null || target.path() == null)
-            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
-
-        File outputFolder = new File(target.path(), targetPath.replace(targetPath.split("/")[0] + "/", ""));
-        log.debug("Output Folder: " + outputFolder.getAbsolutePath());
-        if (!outputFolder.exists() && outputFolder.mkdirs()) {
-            log.error("Failed to create output folder " + outputFolder.getAbsolutePath());
-            return WebSocketResponse.ERROR.setMessage("Failed to create output folder " + outputFolder.getAbsolutePath());
+    protected WebSocketResponse cmdPutData(WebSocketBasic socket, JSONObjectContainer content) {
+        for (Object data : content.get("data", JSONArrayContainer.class).getRaw()) {
+            JSONObjectContainer item = (JSONObjectContainer) data;
+            WebSocketResponse response = scheduleDownload(item);
+            if (socket != null && response != null)
+                WebSocketUtils.sendWebsSocketResponse(socket, response, TargetSystem.DEFAULT, "put");
         }
-
-        TableItemDTO tableItem = new TableItemDTO(content);
-        urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
-        changeObject(content.getRaw(), "state", "Committed");
-
-        int animeId = content.get("animeId", -1, Integer.class);
-
-        var updateEvent = new DownloadStatusUpdateEvent() {
-            @Override
-            public void onProgressUpdate(double v) {
-                if (v >= 1) {
-                    changeObject(content.getRaw(), "state", "Completed");
-                } else {
-                    changeObject(content.getRaw(), "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
-                }
-            }
-
-            @Override
-            public void onInfo(String s) {
-                // Not implemented
-            }
-
-            @Override
-            public void onWarn(String s) {
-                log.warn(s);
-            }
-
-            @Override
-            public void onError(String s) {
-                changeObject(content.getRaw(), "state", "Error: " + s);
-            }
-
-            @Override
-            public void onLogFile(String s, byte[] bytes) {
-                // Not implemented
-            }
-
-        };
-
-        JSONObject options = content.getObjectContainer("options").getRaw();
-
-        // Getting the right downloader
-        Downloader downloader = DownloaderSelector.selectDownloader(url, downloadFolder, updateEvent, options);
-        String title = downloader.resolveTitle();
-        changeObject(content.getRaw(), "title", title);
-
-        // Start the download task
-        ExecutorTask task = new ExecutorTask(() -> {
-            try {
-                File file = downloader.start();
-                File targetFile = new File(outputFolder, file.getName());
-                log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
-                Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-                if (animeId != -1) {
-                    Anime anime = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER)).getAnimeByID(animeId);
-                    anime.scanDirectoryForExistingEpisodes();
-                    WebSocketUtils.sendAutoLoaderItem(null, anime);
-                }
-            } catch (Exception ex) {
-                log.error("Failed to download", ex);
-                if (!ex.getMessage().contains("File.getName()"))
-                    updateEvent.onError(ex.getMessage());
-            }
-        });
-        tableItem.setTask(task);
-        executorHandler.putTask(task);
         return null;
     }
 
     private WebSocketResponse cmdDelete(JSONObjectContainer content) {
         UUID uuid = UUID.fromString(content.get("uuid", String.class));
         TableItemDTO toDelete = urls.get(uuid);
-        if (executorHandler.abortTask(toDelete.getTask())) {
+        if (toDelete.getTask().isCompleted() || downloadHandler.abortTask(toDelete.getTask())) {
             deleteObjectToAll(toDelete);
             urls.remove(uuid);
         } else {
@@ -284,17 +215,124 @@ public class DefaultHandler extends Handler {
         sendPacket("requestSubfoldersResponse", TargetSystem.DEFAULT, response, socket);
         return null;
     }
+    // endregion commands
 
-    private void cmdStartSystemDataFetcher() {
+    @SuppressWarnings("unchecked")
+    private WebSocketResponse scheduleDownload(JSONObjectContainer content) {
+        String url = content.get("url", String.class);
+        if (url == null || url.isEmpty())
+            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
+
+        String targetPath = content.get("target", String.class);
+        log.debug("Resolving target: " + targetPath.split("/")[0]);
+        Target target = targets.get(targetPath.split("/")[0]);
+        log.debug("Target resolved!: " + target);
+
+        if (target == null || target.path() == null)
+            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
+
+        File outputFolder = new File(target.path(), targetPath.replace(targetPath.split("/")[0] + "/", ""));
+        log.debug("Output Folder: " + outputFolder.getAbsolutePath());
+        if (!outputFolder.exists() && outputFolder.mkdirs()) {
+            log.error("Failed to create output folder " + outputFolder.getAbsolutePath());
+            return WebSocketResponse.ERROR.setMessage("Failed to create output folder " + outputFolder.getAbsolutePath());
+        }
+
+        TableItemDTO tableItem = new TableItemDTO(content);
+        urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
+        changeObject(content.getRaw(), "state", "Committed");
+
+        int animeId = content.get("animeId", -1, Integer.class);
+
+        AtomicBoolean isRunning = new AtomicBoolean(false);
+        var updateEvent = new DownloadStatusUpdateEvent() {
+            @Override
+            public void onProgressUpdate(double v) {
+                if (v >= 1) {
+                    changeObject(content.getRaw(), "state", "Completed");
+                } else {
+                    changeObject(content.getRaw(), "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
+                }
+            }
+
+            @Override
+            public void onInfo(String s) {
+                // Not implemented
+            }
+
+            @Override
+            public void onWarn(String s) {
+                log.warn(s);
+            }
+
+            @Override
+            public void onError(String s) {
+                if (isRunning.get()) {
+                    changeObject(content.getRaw(), "state", "Error: " + s);
+                }
+            }
+
+            @Override
+            public void onLogFile(String s, byte[] bytes) {
+                // Not implemented
+            }
+
+        };
+
+        JSONObject options = content.getObjectContainer("options").getRaw();
+
+        // Getting the right downloader
+        Downloader downloader = DownloaderSelector.selectDownloader(url, downloadFolder, updateEvent, options);
+
+        // Start the download
+        // This task is only running when the titleTask is completed
+        ExecutorTask downloadTask = new ExecutorTask(() -> {
+            try {
+                File file = downloader.start();
+                File targetFile = new File(outputFolder, file.getName());
+                log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
+                Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                // Check if we have an animeId
+                // the animeId is intended to only be used for AutoLoader
+                // it is used to rescan existing anime and send the count of missing episodes to the client
+                if (animeId != -1) {
+                    Anime anime = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER)).getAnimeByID(animeId);
+                    anime.scanDirectoryForExistingEpisodes();
+                    WebSocketUtils.sendAutoLoaderItem(null, anime);
+                }
+            } catch (Exception ex) {
+                log.error("Failed to download", ex);
+                if (!ex.getMessage().contains("File.getName()"))
+                    updateEvent.onError(ex.getMessage());
+            }
+        });
+
+        // Resolve the title
+        // After the title is resolved, the download task is scheduled
+        titleResolverHandler.putTask(() -> {
+            String title = downloader.resolveTitle();
+            changeObject(content.getRaw(), "title", title);
+        }).onComplete(() -> {
+            // Schedule the download task
+            isRunning.set(true);
+            tableItem.setTask(downloadTask);
+            downloadHandler.putTask(downloadTask);
+        });
+
+        return null;
+    }
+
+    private void startSystemDataFetcher() {
         new Timer().schedule(new TimerTask() {
             @Override
             public void run() {
-                cmdSendSystemInformation(null);
+                sendSystemInformation(null);
             }
         }, 0, 5000);
     }
 
-    private void cmdSendSystemInformation(WebSocketBasic target) {
+    private void sendSystemInformation(WebSocketBasic target) {
         try {
             if (MediaManager.getInstance().isDockerEnvironment()) {
                 dockerMemoryLimit = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.max").start().getInputStream())).trim());
@@ -324,9 +362,9 @@ public class DefaultHandler extends Handler {
         JSONObject response = new JSONObject();
         {
             JSONObject memory = new JSONObject();
-            memory.put("current", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory()));
-            memory.put("heap", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()));
-            memory.put("max", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory()));
+            memory.put("current", Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory());
+            memory.put("heap", Runtime.getRuntime().totalMemory());
+            memory.put("max", Runtime.getRuntime().maxMemory());
             response.put("memory", memory);
 
         }
@@ -339,7 +377,7 @@ public class DefaultHandler extends Handler {
         }
 
         {
-            ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) executorHandler.getExecutorService());
+            ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) downloadHandler.getExecutorService());
             JSONObject threadPool = new JSONObject();
             threadPool.put("active", threadPoolExecutor.getActiveCount());
             threadPool.put("core", threadPoolExecutor.getCorePoolSize());

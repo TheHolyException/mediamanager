@@ -223,7 +223,7 @@ public class AutoLoaderHandler extends Handler {
 
                     data.set("options", options.getRaw());
                     log.debug("Starting download of " + unloadedEpisode.getTitle());
-                    defaultHandler.cmdPutData(data);
+                    defaultHandler.cmdPutData(null, data);
                 });
             } catch (Exception ex) {
                 log.error("", ex);
