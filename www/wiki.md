@@ -22,9 +22,30 @@
 ```
 
 ---
----
 
 # TargetSystem: Default
+
+## Command: "ping"
+```json
+{
+    "cmd": "ping",         
+    "targetSystem": "default",
+    "content": {
+      "id": "string"        // Custom string that gets returned in the response
+    }
+}
+```
+
+### Response
+```json
+{
+  "cmd": "pong",
+  "targetSystem": "default",
+  "content": {
+    "id": "string"        // Data from the ping packet
+  }
+}
+```
 
 ## Command: "syn"
 This command requests all relevant data from the server
@@ -87,8 +108,13 @@ Data for settings
     "cmd": "setting",         
     "targetSystem": "default",
     "content": {
-        "key": "string",    // Setting key/identifier
-        "value": "string"   // Setting value
+      "settings": [
+        {
+          "key": "string",   // Setting key
+          "value": "string"  // Setting value
+        },
+        ...
+      ]
     }             
 }
 ```
@@ -117,15 +143,20 @@ Target Data
     "cmd": "put",         
     "targetSystem": "default",
     "content": {
-        "uuid": "string",     // Unique identifier for the episode
-        "state": "string",    // Download status of the object
-        "target": "string",   // Target folder (uses the targets from the config ex: "stream-series")
-        "url": "string",      // Download URL
-        "options": {
+      "list": [
+        {
+          "uuid": "string",     // Unique identifier for the episode
+          "state": "string",    // Download status of the object
+          "target": "string",   // Target folder (uses the targets from the config ex: "stream-series")
+          "url": "string",      // Download URL
+          "options": {
             "enableSeasonAndEpisodeRenaming": "true|false",
             "enableSessionRecovery": "true|false",
             "useDirectMemory": "true|false"
-        }
+          }
+        },
+        ...
+      ]
     }
 }
 ```
@@ -153,7 +184,9 @@ Target Data
     "cmd": "del",
     "targetSystem": "default",
     "content": {
-        "uuid": "string"    // UUID of the item to be deleted
+        "list": [
+          "string"     // UUID of the item to be deleted
+        ]
     }
 }
 ```
@@ -175,7 +208,11 @@ Target Data
     "cmd": "del",
     "targetSystem": "default",
     "content": {
-        "uuid": "string"    // UUID of the item to be deleted
+        "list": [
+          "string",    // UUID of the item to be deleted
+          "string",    // UUID of the item to be deleted
+          "string"     // UUID of the item to be deleted
+        ]
     }
 }
 ```
@@ -199,12 +236,17 @@ Target Data
 **Broadcast**
 ```json
 {
-    "cmd": "setting",         
+    "cmd": "setting",
     "targetSystem": "default",
     "content": {
-        "key": "string",    // Setting key/identifier
-        "value": "string"   // Setting value
-    }             
+    "settings": [
+      {
+        "key": "string",   // Setting key
+        "value": "string"  // Setting value
+      },
+      ...
+    ]
+  }
 }
 ```
 
