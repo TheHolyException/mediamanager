@@ -44,7 +44,7 @@ public class AutoLoaderHandler extends Handler {
         super(targetSystem);
     }
 
-    private static AtomicInteger threadCounter = new AtomicInteger(0);
+    private static final AtomicInteger threadCounter = new AtomicInteger(0);
     @Override
     public void loadConfigurations() {
         super.loadConfigurations();

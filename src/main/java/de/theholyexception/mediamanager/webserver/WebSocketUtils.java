@@ -6,6 +6,7 @@ import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.TargetSystem;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
+import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
@@ -15,6 +16,7 @@ import org.json.simple.JSONObject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class WebSocketUtils {
@@ -40,14 +42,18 @@ public class WebSocketUtils {
 
     @SuppressWarnings("unchecked")
     public static void sendSettings(WebSocketBasic socket) {
-        Settings.SETTING_PROPERTIES.entrySet().stream()
-                .filter(entry -> entry.getValue().getMetadata().forClient())
-                .forEach(entry -> {
-                    JSONObject dataset = new JSONObject();
-                    dataset.put("key", entry.getKey());
-                    dataset.put("val", entry.getValue().getValue());
-                    sendPacket("setting", TargetSystem.DEFAULT, dataset, socket);
-                });
+        JSONObject dataset = new JSONObject();
+        JSONArray array = new JSONArray();
+        for (Map.Entry<String, SettingProperty<?>> entry : Settings.SETTING_PROPERTIES.entrySet()) {
+            if (entry.getValue().getMetadata().forClient()) {
+                JSONObject data = new JSONObject();
+                data.put("key", entry.getKey());
+                data.put("val", entry.getValue().getValue());
+                array.add(data);
+            }
+        }
+        dataset.put("settings", array);
+        sendPacket("setting", TargetSystem.DEFAULT, dataset, socket);
     }
 
     public static void sendObjectToAll(JSONObject... objects) {
