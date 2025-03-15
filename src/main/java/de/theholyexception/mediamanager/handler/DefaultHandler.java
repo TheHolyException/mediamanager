@@ -202,15 +202,17 @@ public class DefaultHandler extends Handler {
     }
 
     private WebSocketResponse cmdChangeSetting(JSONObjectContainer content) {
-        String key = content.get("key", String.class);
-        String val = content.get("val", String.class);
-
-        log.info("Change setting " + key + " to: " + val);
-
-        switch (key) {
-            case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
-            case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
-            default -> WebSocketResponse.ERROR.setMessage("Unsupported setting: " + key);
+        JSONArrayContainer settings = content.getArrayContainer("settings");
+        for (Object o : settings.getRaw()) {
+            JSONObject setting = (JSONObject) o;
+            String key = (String) setting.get("key");
+            String val = (String) setting.get("val");
+            log.info("Change setting " + key + " to: " + val);
+            switch (key) {
+                case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
+                case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
+                default -> WebSocketResponse.ERROR.setMessage("Unsupported setting: " + key);
+            }
         }
         sendSettings(null);
         return null;
