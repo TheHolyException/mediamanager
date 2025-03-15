@@ -1,3 +1,4 @@
+const yeti = new Yeti();
 let indexes = new Map();
 let targetFolders = [];
 
@@ -23,10 +24,56 @@ const settings = [
 $(document).ready(function () {
     connect(); // Connect WebSocket
     addUiEvents();
+    $('.embeded-widget').html(new DownloadsWidget().render());
 });
 
 function addUiEvents(){
-    let mainTabBar = new TabBar($('.main-nav-bar'), $('.main-tab-container'));
+    let mainTabBar = new TabBar($('.embeded-widget-toolbar'), $('.embeded-widget'), true, {
+        downloads: function(){$('.embeded-widget').html(new DownloadsWidget().render());},
+        settings: function(){$('.embeded-widget').html(new SettingsWidget().render());},
+    });
+
+    setupGridstack();
+}
+
+function setupGridstack(){
+    GridStack.renderCB = function (el, w) {
+        el.innerHTML = w.content;
+    };
+
+    let insert = [{ h: 2, content: 'new item' }];
+
+    let grid = GridStack.init({
+        cellHeight: 70,
+        minRow: 1,
+        acceptWidgets: true,
+        float: true
+    });
+    GridStack.setupDragIn('.grid-stack-item', {/* appendTo: 'body',  */helper: 'clone'}, insert);
+
+    let isAdded = false;
+    grid.on('added', function(event, items) {
+        console.log(items);
+        if(!isAdded){
+            let o = items[0];
+            let addedElem = $(o.el);
+            let widgetName = addedElem.attr('widget-name');
+            isAdded = true;
+            addedElem.remove();
+            grid.addWidget({
+                x: o.x, 
+                y: o.y, 
+                w: o.w, 
+                h: o.h,
+                //content: `<img src="https://coding-garden.de/resources/images/Icon.svg">`
+                //content: $('<span>').text("THIS IS A TEST").get(0).outerHTML
+                content: WidgetManager.getWidget(widgetName, "").render()
+            });
+        }
+        else{
+            isAdded = false;
+        }
+    });
 }
 
 function onWSResponseDefault(cmd, content) {
@@ -166,13 +213,24 @@ function addObjectToTable(entry) {
             subPath = '?';
 
         let target = $('<td>')
+            .attr("id", "target-" + entry.uuid)
             .attr('col', 'target')
             .text(dirPath + subPath);
         row.append(target);
 
     } else {
+        let dirPath = entry.target;
+        let subPath = entry.title;
+        if(!dirPath.endsWith('/'))
+            dirPath += '/';
+        if(!subPath)
+            subPath = '?';
+
         let statusColumn = $('#status-' + entry.uuid);
         statusColumn.text(entry.state.split('\n')[0]);
+        
+        let targetColumn = $('#target-' + entry.uuid);
+        targetColumn.text(dirPath + subPath);
 
         let btnResent = $('#resent-' + entry.uuid);
         let displayMode = entry.state.startsWith('Error') ? 'block' : 'none';
@@ -295,4 +353,23 @@ function addNewElement(urls, settings, targetSelection, subfolder) {
     }
 
     //txtURL.value = ""; // reset input field
+}
+
+
+
+
+
+
+
+
+
+function saveGlobalSettings() {
+    let settings = $('[setting]');
+    let settingPacket = {};
+    for (let s of settings) {
+        let setting = $(s);
+        settingPacket[setting.attr('setting')] = setting.val();
+    }
+
+    sendPacket("setting", "default", settingPacket);
 }

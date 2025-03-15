@@ -1,0 +1,42 @@
+[widget-name="SettingsWidget"] {
+    .save-settings-btn{
+        background-color: var(--committed);
+    }
+
+    .settings {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .setting {
+        display: flex;
+        width: 400px;
+
+        span {
+            background-color: var(--darkBGColor2);
+            border-top-left-radius: 50px;
+            border-bottom-left-radius: 50px;
+            font-weight: bold;
+            line-height: 56px;
+            padding: 0px 20px;
+            padding-right: 10px;
+        }
+
+        :is(input){
+            text-align: right;
+        }
+
+        :is(input, select, textarea) {
+            flex-grow: 1;
+            background-color: var(--darkBGColor2);
+            border-top-right-radius: 50px;
+            border-bottom-right-radius: 50px;
+            font-size: 1.2em;
+            border: 2px solid var(--darkBGColor2);
+            outline: none;
+            padding: 15px;
+            color: var(--textColor);
+        }
+    }
+}

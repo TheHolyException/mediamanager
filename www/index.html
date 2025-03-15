@@ -5,6 +5,14 @@
     <title>Mediamanager</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <script src="./frameworks/widgets/baseWidget.js"></script>
+    <script src="./frameworks/widgets/downloads/downloadsWidget.js"></script>
+    <script src="./frameworks/widgets/settings/settingsWidget.js"></script>
+    <script src="./frameworks/widgets/widgetManager.js"></script>
+    <link rel="stylesheet" href="./frameworks/widgets/widget.css">
+
+    <script src="./frameworks/yeti/yeti-alerts.js"></script>
     <script src="./frameworks/tabBar/tabBar.js" defer></script>
     <script src="./scripts/addSourcePopup.js" defer></script>
     <script src="./websocket.js" defer></script>
@@ -12,55 +20,72 @@
     <script src="./aniworld.js" defer></script>
     <script src="./frameworks/customTags/optionTextfield.js" defer></script>
     <script src="./frameworks/popup/modalLightboxPopup.js" defer></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
     <link rel="stylesheet" type="text/css" href="./style/util/colors.css" />
     <link rel="stylesheet" type="text/css" href="./style/general.css" />
     <link rel="stylesheet" type="text/css" href="./style/components/navbar.css" />
-    <link rel="stylesheet" type="text/css" href="./style/downloadTab/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/downloads/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/settings/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/yeti/yeti-alerts.css" />
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack-all.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack.min.css" rel="stylesheet">
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 </head>
 
 <body>
     <header>
-        <nav class="main-nav-bar">
-            <a tab-name="downloads" class="">Downloads</a>
-            <a tab-name="settings">Settings</a>
-            <a tab-name="statistics">Statistics</a>
-            <a tab-name="subscriptions">Subscriptions</a>
-        </nav>
+        <div></div>
+        <div>
+            <nav class="nav-bar embeded-widget-toolbar">
+                <a tab-name="downloads">Downloads</a>
+                <a tab-name="settings">Settings</a>
+                <a tab-name="statistics">Statistics</a>
+                <a tab-name="subscriptions">Subscriptions</a>
+            </nav>
+            <nav class="nav-bar widget-toolbar-bar">
+                <a class="grid-stack-item" widget-name="downloads">Downloads</a>
+                <a class="grid-stack-item" widget-name="settings">Settings</a>
+                <a class="grid-stack-item" widget-name="statistics">Statistics</a>
+                <a class="grid-stack-item" widget-name="subscriptions">Subscriptions</a>
+            </nav>
+        </div>
+        <div class="action-bar">
+            <div class="slide-checkbox">
+                <label>
+                    <span class="slider"></span>
+                    <span class="opt off"><i class="fas fa-stream"></i></span>
+                    <span class="opt on"><i class="fas fa-grip-horizontal"></i></span>
+                    <input type="checkbox">
+                </label>
+            </div>
+        </div>
     </header>
     <div id="statusElement">
         <label id="statusText">Initialisiere</label>
     </div>
     <main class="main-container">
-        <div class="main-tab-container">
-            <div class="tab" tab-name="downloads">
-                <h1>Download Queue</h1>
-                <nav class="queue-action-bar">
-                    <a class="add-sources-btn" onclick="openAddSourcePopup()"><i class="fa fa-plus"> Add</i></a>
-                    <a class="commit-sources-btn" onclick="onCommit()"><i class="fa fa-paper-plane"></i> Commit</i></a>
-                </nav>
-                <table class="queue-table">
-                    <tr>
-                        <th col="actions">Actions</th>
-                        <th col="state">Status</th>
-                        <th col="url">URL</th>
-                        <th col="target">Target</th>
-                    </tr>
-                </table>
-            </div>
-            <div class="tab" tab-name="settings">
+        <div class="embeded-widget">
+
+            <div class="widget">
                 <h1>Global Settings</h1>
+                <div class="settings">
+                    <label class="setting">
+                        <span>VOE Threads</span>
+                        <input type="number" value="4" max="10" min="1">
+                    </label>
+                    <label class="setting">
+                        <span>Parallel Downloads</span>
+                        <input type="number" value="4" max="10" min="1">
+                    </label>
+                </div>
             </div>
-            <div class="tab" tab-name="statistics">
-                <h1>Statistics</h1>
-            </div>
-            <div class="tab" tab-name="subscriptions">
-                <h1>Subscriptions</h1>
-            </div>
+
         </div>
+        <div class="grid-stack"></div>
     </main>
 </body>
 
