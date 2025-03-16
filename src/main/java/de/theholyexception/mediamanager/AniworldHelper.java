@@ -29,6 +29,7 @@ public class AniworldHelper {
     public static final String ANIWORLD_URL = "https://aniworld.to";
 
     public static boolean isSeasonLink(String url) {
+        urlResolver.setThreadNameFactory(cnt -> "AW-URLResolver-" + cnt);
         return url.contains("staffel");
     }
 

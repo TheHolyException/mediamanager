@@ -25,7 +25,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class AutoLoaderHandler extends Handler {
@@ -44,20 +43,12 @@ public class AutoLoaderHandler extends Handler {
         super(targetSystem);
     }
 
-    private static final AtomicInteger threadCounter = new AtomicInteger(0);
     @Override
     public void loadConfigurations() {
         super.loadConfigurations();
 
         SettingProperty<Integer> spURLResolverThreads = new SettingProperty<>(new SettingMetadata("urlResolverThreads", false));
-        spURLResolverThreads.addSubscriber(value -> {
-            threadCounter.set(0);
-            AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(value, r -> {
-                Thread thread = new Thread(r);
-                thread.setName( "URL-Resolver-" + threadCounter.getAndAdd(1));
-                return thread;
-            }));
-        });
+        spURLResolverThreads.addSubscriber(value -> AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(value)));
         spURLResolverThreads.setValue(handlerConfiguration.get("urlResolverThreads", 10, Integer.class));
 
         spCheckIntervalMin = new SettingProperty<>(new SettingMetadata("checkIntervalMin", false));
@@ -155,6 +146,7 @@ public class AutoLoaderHandler extends Handler {
             Anime anime = optAnime.get();
             db.executeSafe("delete from anime where id = ?", id);
             subscribedAnimes.remove(anime);
+            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
         } else {
             return WebSocketResponse.ERROR.setMessage("Tried to remove anime with id " + id + " but this does not exist.");
         }

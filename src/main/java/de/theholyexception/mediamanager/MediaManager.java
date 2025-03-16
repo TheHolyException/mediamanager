@@ -30,7 +30,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
 public class MediaManager {
@@ -56,6 +55,13 @@ public class MediaManager {
     private ConfigJSON configuration;
     @Getter
     private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
+
+    private static final ExecutorHandler executorHandler;
+
+    static {
+        executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(10));
+        executorHandler.setThreadNameFactory(cnt -> "WS-Executor-" + cnt);
+    }
 
     public MediaManager() {
         MediaManager.instance = this;
@@ -108,13 +114,6 @@ public class MediaManager {
         isDockerEnvironment = false;
         log.warn("No docker environment!");
     }
-
-    private static AtomicInteger threadCounter = new AtomicInteger(0);
-    private static ExecutorHandler executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(10, r -> {
-        Thread thread = new Thread(r);
-        thread.setName( "WS-Executor-" + threadCounter.getAndAdd(1));
-        return thread;
-    }));
 
     private void loadWebServer() {
         new WebServer(new WebServer.Configuration(8080, "0.0.0.0", "./www", new WebSocketEvent() {

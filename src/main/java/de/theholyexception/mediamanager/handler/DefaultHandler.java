@@ -48,7 +48,6 @@ public class DefaultHandler extends Handler {
     private long dockerMemoryLimit;
     private long dockerMemoryUsage;
     private final AtomicInteger downloadHandlerFactoryCounter = new AtomicInteger(0);
-    private final List<Thread> downloadThreads = new ArrayList<>();
     private final ExecutorHandler downloadHandler;
     private final ExecutorHandler titleResolverHandler;
     private Thread watchDog;
@@ -61,11 +60,9 @@ public class DefaultHandler extends Handler {
     public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
         downloadHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
-        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(2, r -> {
-            Thread thread = new Thread(r);
-            thread.setName("TitleResolverThread");
-            return thread;
-        }));
+        downloadHandler.setThreadNameFactory(cnt -> "DownloadThread-" + cnt);
+        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(2));
+        titleResolverHandler.setThreadNameFactory(cnt -> "TitleResolver-" + cnt);
     }
 
     @Override
@@ -76,13 +73,7 @@ public class DefaultHandler extends Handler {
         spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
         spDownloadThreads.addSubscriber(value -> {
             downloadHandlerFactoryCounter.set(0);
-            downloadThreads.clear();
-            downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value, r -> {
-                Thread thread = new Thread(r);
-                thread.setName( "DownloadThread-" + downloadHandlerFactoryCounter.getAndAdd(1));
-                downloadThreads.add(thread);
-                return thread;
-            }));
+            downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value));
         });
 
         spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
@@ -448,7 +439,7 @@ public class DefaultHandler extends Handler {
             JSONObject threadPool = new JSONObject();
 
             Map<String, AtomicInteger> map = new HashMap<>();
-            for (Thread downloadThread : downloadThreads)
+            for (Thread downloadThread : downloadHandler.getThreadList())
                 map.computeIfAbsent(downloadThread.getState().toString(), k -> new AtomicInteger(0)).incrementAndGet();
 
             for (Map.Entry<String, AtomicInteger> entry : map.entrySet()) {
