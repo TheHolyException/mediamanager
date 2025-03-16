@@ -61,11 +61,9 @@ public class DefaultHandler extends Handler {
     public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
         downloadHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
-        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(2, r -> {
-            Thread thread = new Thread(r);
-            thread.setName("TitleResolverThread");
-            return thread;
-        }));
+        downloadHandler.setThreadNameFactory(cnt -> "DownloadThread-" + cnt);
+        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(2));
+        titleResolverHandler.setThreadNameFactory(cnt -> "TitleResolverThread-" + cnt);
     }
 
     @Override
@@ -324,6 +322,7 @@ public class DefaultHandler extends Handler {
         // Start the download
         // This task is only running when the titleTask is completed
         ExecutorTask downloadTask = new ExecutorTask(() -> {
+            tableItem.setRunning(true);
             tableItem.setExecutingThread(Thread.currentThread());
             try {
                 File file = downloader.start();
@@ -349,6 +348,7 @@ public class DefaultHandler extends Handler {
                 if (!ex.getMessage().contains("File.getName()"))
                     updateEvent.onError(ex.getMessage());
             }
+            tableItem.setRunning(true);
         });
 
         // Resolve the title
@@ -363,7 +363,6 @@ public class DefaultHandler extends Handler {
             if (tableItem.isDeleted())
                 return;
             // Schedule the download task
-            tableItem.setRunning(true);
             tableItem.setTask(downloadTask);
             downloadHandler.putTask(downloadTask);
         });
