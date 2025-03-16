@@ -61,9 +61,11 @@ public class DefaultHandler extends Handler {
     public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
         downloadHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
-        downloadHandler.setThreadNameFactory(cnt -> "DownloadThread-" + cnt);
-        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(2));
-        titleResolverHandler.setThreadNameFactory(cnt -> "TitleResolverThread-" + cnt);
+        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(2, r -> {
+            Thread thread = new Thread(r);
+            thread.setName("TitleResolverThread");
+            return thread;
+        }));
     }
 
     @Override
@@ -348,7 +350,7 @@ public class DefaultHandler extends Handler {
                 if (!ex.getMessage().contains("File.getName()"))
                     updateEvent.onError(ex.getMessage());
             }
-            tableItem.setRunning(true);
+            tableItem.setRunning(false);
         });
 
         // Resolve the title
