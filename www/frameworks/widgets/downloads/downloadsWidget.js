@@ -13,6 +13,7 @@ class DownloadsWidget extends BaseWidget {
                 <a class="add-sources-btn" onclick="openAddSourcePopup()"><i class="fa fa-plus"></i> Add</a>
                 <a class="commit-sources-btn"><i class="fas fa-paper-plane"></i> Commit</a>
                 <a class="retry-all-btn"><i class="fa-solid fa-rotate-right"></i> Retry All Failed</a>
+                <a class="delete-all-btn"><i class="fa fa-trash"></i> Delete All</a>
             </nav>
             <table class="queue-table">
                 <tr>
@@ -31,6 +32,10 @@ class DownloadsWidget extends BaseWidget {
 
         widget.find('.retry-all-btn').click(function(){
             widget.find('.failed [action="resend"]').click();
+        });
+
+        widget.find('.delete-all-btn').click(function(){
+            sendPacket("del-all", "default");
         });
 
         sendPacket("syn", "default");
