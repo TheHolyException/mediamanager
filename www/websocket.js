@@ -62,6 +62,9 @@ function connect() {
 }
 
 function sendPacket(cmd, targetSystem, content) {
+    if(ws.readyState  !== WebSocket.OPEN)
+        return;
+
     let request = {
         cmd: cmd,
         targetSystem: targetSystem,
