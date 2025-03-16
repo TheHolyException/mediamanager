@@ -139,6 +139,10 @@ public class DefaultHandler extends Handler {
                 sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), socket);
                 yield null;
             }
+            case "systemInfo" -> {
+                sendSystemInformation(socket);
+                yield null;
+            }
 
             default -> {
                 log.error("Invalid command " + command);
