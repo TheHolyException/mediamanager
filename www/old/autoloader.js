@@ -1,15 +1,16 @@
 
 
 function onWSResponseAutoloader(cmd, content) {
-
+    console.log("HANDLING");
     switch (cmd) {
         case "syn":
             for (let index in content.items) {
-                autoloaderAddTableItem(content.items[index]);
+                console.log("LOOPING");
+                //autoloaderAddTableItem(content.items[index]);
+                //SubscriptionsWidget.addAutoloaderItem(content.items[index]);
             }
             break;
     }
-
 }
 
 

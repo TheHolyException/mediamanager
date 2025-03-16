@@ -9,6 +9,8 @@
     <script src="./frameworks/widgets/baseWidget.js"></script>
     <script src="./frameworks/widgets/downloads/downloadsWidget.js"></script>
     <script src="./frameworks/widgets/settings/settingsWidget.js"></script>
+    <script src="./frameworks/widgets/statistics/statisticsWidget.js"></script>
+    <script src="./frameworks/widgets/subscriptions/subscriptionsWidget.js"></script>
     <script src="./frameworks/widgets/widgetManager.js"></script>
     <link rel="stylesheet" href="./frameworks/widgets/widget.css">
 
@@ -28,6 +30,8 @@
     <link rel="stylesheet" type="text/css" href="./style/components/navbar.css" />
     <link rel="stylesheet" type="text/css" href="./frameworks/widgets/downloads/style.css" />
     <link rel="stylesheet" type="text/css" href="./frameworks/widgets/settings/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/statistics/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/subscriptions/style.css" />
     <link rel="stylesheet" type="text/css" href="./frameworks/yeti/yeti-alerts.css" />
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack-all.js"></script>
@@ -68,23 +72,7 @@
         <label id="statusText">Initialisiere</label>
     </div>
     <main class="main-container">
-        <div class="embeded-widget">
-
-            <div class="widget">
-                <h1>Global Settings</h1>
-                <div class="settings">
-                    <label class="setting">
-                        <span>VOE Threads</span>
-                        <input type="number" value="4" max="10" min="1">
-                    </label>
-                    <label class="setting">
-                        <span>Parallel Downloads</span>
-                        <input type="number" value="4" max="10" min="1">
-                    </label>
-                </div>
-            </div>
-
-        </div>
+        <div class="embeded-widget"></div>
         <div class="grid-stack"></div>
     </main>
 </body>

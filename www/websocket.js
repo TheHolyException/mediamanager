@@ -13,7 +13,7 @@ function connect() {
     ws.onmessage = function (e) {
         let data = JSON.parse(e.data);
 
-        if (data.cmd != "systemInfo") {
+        if (data.cmd != "systemInfo" || true) {
             console.log("<-")
             console.log(data)
         }
@@ -40,9 +40,9 @@ function connect() {
             case "aniworld":
                 Aniworld.onWSResponseAniworldParser(cmd, content);
                 break;
-            /* case "autoloader":
-                onWSResponseAutoloader(cmd, content);
-                break; */
+            case "autoloader":
+                SubscriptionsWidget.onWSResponse(cmd, content);
+                break;
         }
     };
 

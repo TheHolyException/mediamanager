@@ -1,0 +1,24 @@
+[widget-name="StatisticsWidget"] {
+    .statistics {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .statistic-group {
+        h2 {
+            text-transform: capitalize;
+            margin-bottom: 5px;
+        }
+
+        table {
+            border-collapse: collapse;
+
+            td {
+                border: 1px solid #dddddd;
+                text-align: left;
+                padding: 8px;
+            }
+        }
+    }
+}

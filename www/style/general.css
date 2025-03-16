@@ -71,10 +71,9 @@ header {
     display: none;
     width: 100%;
     height: 100%!important;
-    /* Full width of the screen */
     position: relative;
     overflow: hidden;
-    /* Prevent grid overflow */
+    border: 2px solid var(--darkBGColor3);
 }
 
 .grid-stack-item-content {

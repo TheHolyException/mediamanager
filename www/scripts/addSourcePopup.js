@@ -109,7 +109,7 @@ function openAddSourcePopup() {
 
     popup.addNavbarButton({
         func: function () {
-            addNewElement(
+            DownloadsWidget.addNewElement(
                 getUrls($('.tab-btn.active').attr('tab-name')), 
                 getSettings($('.settings-container').find('[config]')),
                 $('.targetfolder').val(),
