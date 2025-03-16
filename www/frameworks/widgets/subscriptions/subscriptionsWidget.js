@@ -75,6 +75,7 @@ class SubscriptionsWidget extends BaseWidget {
             {
                 let btnDownload = $('<i>')
                     .addClass('fa fa-download')
+                    .attr('title', 'Start Download')
                     .click(function(){
                         sendPacket("runDownload", "autoloader", { id: item.id })
                     });
@@ -85,6 +86,7 @@ class SubscriptionsWidget extends BaseWidget {
             {
                 let btnUnsubscribe = $('<i>')
                     .addClass('fa-solid fa-ban')
+                    .attr('title', 'Unsubscribe')
                     .click(function(){
                         sendPacket("unsubscribe", "autoloader", { id: item.id })
                     });
@@ -151,6 +153,9 @@ class SubscriptionsWidget extends BaseWidget {
                 for (let index in content.items) {
                     SubscriptionsWidget.addAutoloaderItem(content.items[index]);
                 }
+                break;
+            case "del":
+                $('[autoloader="' + content.id + '"]').remove();
                 break;
         }
     }    

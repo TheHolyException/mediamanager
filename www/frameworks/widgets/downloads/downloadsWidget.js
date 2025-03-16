@@ -12,6 +12,7 @@ class DownloadsWidget extends BaseWidget {
             <nav class="queue-action-bar">
                 <a class="add-sources-btn" onclick="openAddSourcePopup()"><i class="fa fa-plus"></i> Add</a>
                 <a class="commit-sources-btn"><i class="fas fa-paper-plane"></i> Commit</a>
+                <a class="retry-all-btn"><i class="fa-solid fa-rotate-right"></i> Retry All Failed</a>
             </nav>
             <table class="queue-table">
                 <tr>
@@ -26,6 +27,10 @@ class DownloadsWidget extends BaseWidget {
 
         widget.find('.commit-sources-btn').click(function () {
             DownloadsWidget.commit();
+        });
+
+        widget.find('.retry-all-btn').click(function(){
+            widget.find('.failed [action="resend"]').click();
         });
 
         sendPacket("syn", "default");
@@ -115,6 +120,7 @@ class DownloadsWidget extends BaseWidget {
         //Column - toolbar - delete
         let deleteBtn = $('<i>')
             .attr('action', 'delete')
+            .attr('title', 'Delete from List')
             .addClass('fa fa-trash')
             .click(function () {
                 row.remove();
@@ -129,6 +135,7 @@ class DownloadsWidget extends BaseWidget {
         //Column - toolbar - resend
         let resentBtn = $('<i>')
             .attr('action', 'resend')
+            .attr('title', 'Restart Download')
             .addClass('fa fa-rotate-right')
             .css('display', item.state.startsWith('Error') ? 'block' : 'none')
             .click(function () {

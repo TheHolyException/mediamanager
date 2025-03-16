@@ -115,23 +115,21 @@ function onWSResponseDefault(cmd, content) {
 }
 
 function setWebSocketStatusFeedback(status) {
-    let statusElement = document.getElementById('statusElement');
-    for (i = 0; i < statusElement.classList.length; i++) {
-        if (statusElement.classList[i].startsWith('statusElement-status'))
-            statusElement.classList.remove(statusElement.classList[i]);
-    }
-    statusElement.classList.add('statusElement-status' + status);
+    let statusElement = $('#ws-state');
+    let statusIcon = $('#ws-state-icon');
 
-    let statusText = document.getElementById("statusText");
     switch (status) {
         case 1:
-            statusText.innerText = "Connecting...";
+            statusElement.attr('class', 'connecting');
+            statusIcon.attr('class', 'fa-solid fa-spinner fa-spin');
             break;
         case 2:
-            statusText.innerText = "Connected";
+            statusElement.attr('class', 'connected');
+            statusIcon.attr('class', 'fa-solid fa-plug');
             break;
         case 4:
-            statusText.innerText = "WebSocket connection failed";
+            statusElement.attr('class', 'failed');
+            statusIcon.attr('class', 'fa-solid fa-plug-circle-xmark');
             break;
     }
 }

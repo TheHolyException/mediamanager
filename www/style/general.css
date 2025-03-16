@@ -63,6 +63,30 @@ header {
     }
 }
 
+.ws-state-container {
+    display: flex;
+    padding-left: 50px;
+    height: 100%;
+    align-items: center;
+}
+
+#ws-state {
+    text-align: center;
+    color: var(--textColor);
+
+    &.connecting{
+        color: var(--processing);
+    }
+    
+    &.connected{
+        color: var(--success);
+    }
+
+    &.failed{
+        color: var(--error);
+    }
+}
+
 .main-container {
     padding: 50px;
 }

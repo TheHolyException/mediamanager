@@ -82,7 +82,17 @@
 
             [col="actions"] {
                 width: 150px;
-                text-align: center;
+                max-width: 150px;
+
+                &:is(td){
+                    display: flex;
+                    justify-content: center;
+                    gap: 15px;
+
+                    i {
+                        cursor: pointer;
+                    }
+                }
             }
 
             [col="url"] {

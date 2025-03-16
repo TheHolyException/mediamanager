@@ -42,7 +42,13 @@
 
 <body>
     <header>
-        <div></div>
+        <div>
+            <div class="ws-state-container">
+                <p id="ws-state">
+                    <i id="ws-state-icon" class="fa-solid fa-spinner"></i>
+                </p>
+            </div>
+        </div>
         <div>
             <nav class="nav-bar embeded-widget-toolbar">
                 <a tab-name="downloads">Downloads</a>
@@ -68,9 +74,7 @@
             </div>
         </div>
     </header>
-    <div id="statusElement">
-        <label id="statusText">Initialisiere</label>
-    </div>
+    <div id="statusText" class="statusText"></div>
     <main class="main-container">
         <div class="embeded-widget"></div>
         <div class="grid-stack"></div>
