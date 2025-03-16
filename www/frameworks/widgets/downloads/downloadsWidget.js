@@ -28,6 +28,7 @@ class DownloadsWidget extends BaseWidget {
             DownloadsWidget.commit();
         });
 
+        sendPacket("syn", "default");
         return widget.get(0);
     }
 
@@ -44,83 +45,179 @@ class DownloadsWidget extends BaseWidget {
         });
     }
 
-    static addDownloaderItem_v2(item) {
+    static addDownloaderItem(item) {
         let index = DownloadsWidget.indexes.get(item.uuid);
+        let tables = $('.queue-table');
         let row = undefined;
 
         if (index == undefined) {//its a new item and can be aded to all existing tables at once
-            let table = $('.queue-table');
-
-            //Row
-            row = $('<tr>')
-                .attr('uuid', entry.uuid);
-
-            //==============================Column - toolbar===============================
-            //Column - toolbar
-            let toolbar = $('<td>')
-                .addClass('toolbar')
-                .attr('col', 'actions');
-
-            //Column - toolbar - delete
-            let deleteBtn = $('<i>')
-                .addClass('fa fa-trash')
-                .click(function () {
-                    row.remove();
-
-                    let data = DownloadsWidget.indexes.get(index.uuid);
-                    if (data.state != "new") {
-                        sendPacket("del", "default", { "uuid": index.uuid });
-                    }
-                    DownloadsWidget.indexes.delete(index.uuid);
-                });
-
-            //Column - toolbar - resend
-            let resentBtn = $('<i>')
-                .addClass('fa fa-rotate-right')
-                .css('display', index.state.startsWith('Error') ? 'block' : 'none')
-                .click(function () {
-                    let data = DownloadsWidget.indexes.get(index.uuid);
-                    if (!data.state.startsWith("Error")) return;
-                    data.state = "new";
-                    sendPacket("put", "default", {
-                        "list": [data]
-                    });
-                });
-
-            toolbar.append(deleteBtn, resentBtn);
-            //===============================================================================
-            //==============================Column - State===============================
-            let state = $('<td>')
-                .text(index.state.split('\n')[0])
-                .attr('col', 'state')
-                .click(() => navigator.clipboard.writeText(index.state));
-            //===============================================================================
-            //==============================Column - URL===============================
-            let url = $('<td>')
-                .attr('col', 'url')
-                .append($('<a>').text(index.url).attr('href', index.url));
-            //===============================================================================
-            //==============================Column - Target===============================
-            let dirPath = index.target;
-            let subPath = index.title;
+            row = DownloadsWidget.createNewRow(item);
+            DownloadsWidget.setStatusAndTooltip(row, item);
+            tables.append(row);
+        }
+        else {//its an existing item and needs to be added to each table seperatly to update already existing rows
+            let dirPath = item.target;
+            let subPath = item.title;
             if (!dirPath.endsWith('/'))
                 dirPath += '/';
             if (!subPath)
                 subPath = '?';
 
-            let target = $('<td>')
-                .attr('col', 'target')
-                .text(dirPath + subPath);
-            //===============================================================================
-            row.append(toolbar, state, url, target);
-            table.append(row);
-        }
-        else {//its an existing item and needs to be added to each table seperatly to update already existing rows
+            for(let t of tables){
+                let table = $(t);
+                row = table.find('[uuid="' + item.uuid + '"]');
 
+                if(row.length == 0){
+                    row = DownloadsWidget.createNewRow(item);
+                    table.append(row);
+                }
+                else{
+                    let stateCol = row.find('[col="state"]');
+                    stateCol.text(item.state.split('\n')[0]);
+
+                    let targetCol = row.find('[col="target"]');
+                    targetCol.text(dirPath + subPath);
+
+                    let btnResent = row.find('[action="resend"]');
+                    btnResent.css('display', item.state.startsWith('Error') ? 'block' : 'none');
+                }
+
+                DownloadsWidget.setStatusAndTooltip(row, item);
+            }
+        }
+
+
+        DownloadsWidget.indexes.set(item.uuid, item);
+    }
+
+    static setStatusAndTooltip(row, item) {
+        let tooltip = "Status:\n" + item.state + "\n";
+        tooltip += "Options:\n";
+        for (let key in item.options) {
+            tooltip += "\t" + key + ": " + item.options[key] + "\n"
+        }
+        row.attr('title', tooltip);
+
+        row.attr('class', DownloadsWidget.getStatusClass(item.state));
+    }
+
+    static createNewRow(item) {
+        //Row
+        let row = $('<tr>')
+            .attr('uuid', item.uuid);
+
+        //==============================Column - toolbar===============================
+        //Column - toolbar
+        let toolbar = $('<td>')
+            .addClass('toolbar')
+            .attr('col', 'actions');
+
+        //Column - toolbar - delete
+        let deleteBtn = $('<i>')
+            .attr('action', 'delete')
+            .addClass('fa fa-trash')
+            .click(function () {
+                row.remove();
+
+                let data = DownloadsWidget.indexes.get(item.uuid);
+                if (data.state != "new") {
+                    sendPacket("del", "default", { "uuid": item.uuid });
+                }
+                DownloadsWidget.indexes.delete(item.uuid);
+            });
+
+        //Column - toolbar - resend
+        let resentBtn = $('<i>')
+            .attr('action', 'resend')
+            .addClass('fa fa-rotate-right')
+            .css('display', item.state.startsWith('Error') ? 'block' : 'none')
+            .click(function () {
+                let data = DownloadsWidget.indexes.get(item.uuid);
+                if (!data.state.startsWith("Error")) return;
+                data.state = "new";
+                sendPacket("put", "default", {
+                    "list": [data]
+                });
+            });
+
+        toolbar.append(deleteBtn, resentBtn);
+        //===============================================================================
+        //==============================Column - State===============================
+        let state = $('<td>')
+            .text(item.state.split('\n')[0])
+            .attr('col', 'state')
+            .click(() => navigator.clipboard.writeText(item.state));
+        //===============================================================================
+        //==============================Column - URL===============================
+        let url = $('<td>')
+            .attr('col', 'url')
+            .append($('<a>').text(item.url).attr('href', item.url));
+        //===============================================================================
+        //==============================Column - Target===============================
+        let dirPath = item.target;
+        let subPath = item.title;
+        if (!dirPath.endsWith('/'))
+            dirPath += '/';
+        if (!subPath)
+            subPath = '?';
+
+        let target = $('<td>')
+            .attr('col', 'target')
+            .text(dirPath + subPath);
+        //===============================================================================
+        row.append(toolbar, state, url, target);
+        return row;
+    }
+
+    static getStatusClass(statusMessage) {
+        if (statusMessage.includes("rror")) {
+            return 'failed'
+        }
+
+        if (statusMessage.includes("Committed")) {
+            return 'committed'
+        }
+
+        if (statusMessage.includes("Downloading")) {
+            return 'downlading'
+        }
+
+        if (statusMessage.includes("Completed")) {
+            return 'success'
         }
     }
 
-    static addDownloaderItem(entry) {
+    static addNewElement(urls, settings, targetSelection, subfolder) {
+        let urlArray = urls.split(";");
+
+        for (let urlElement of urlArray) {
+            let obj = {
+                uuid: DownloadsWidget.uuidv4(),
+                state: "new",
+                created: new Date().getTime(),
+                url: urlElement,
+                options: settings,
+                target: targetSelection + "/" + subfolder
+            }
+            DownloadsWidget.addDownloaderItem(obj);
+        }
+    }
+
+
+
+    static uuidv4() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
+            .replace(/[xy]/g, function (c) {
+                const r = Math.random() * 16 | 0,
+                    v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+    }
+}
+
+
+
+/* static addDownloaderItem_v1(entry) {
         let uuid = DownloadsWidget.indexes.get(entry.uuid);
         let row = null;
 
@@ -241,54 +338,4 @@ class DownloadsWidget extends BaseWidget {
 
         row.get(0).classList = DownloadsWidget.getStatusClass(entry.state);
         DownloadsWidget.indexes.set(entry.uuid, entry);
-    }
-
-
-
-
-
-    static getStatusClass(statusMessage) {
-        if (statusMessage.includes("rror")) {
-            return 'failed'
-        }
-
-        if (statusMessage.includes("Committed")) {
-            return 'committed'
-        }
-
-        if (statusMessage.includes("Downloading")) {
-            return 'downlading'
-        }
-
-        if (statusMessage.includes("Completed")) {
-            return 'success'
-        }
-    }
-
-    static addNewElement(urls, settings, targetSelection, subfolder) {
-        let urlArray = urls.split(";");
-
-        for (let urlElement of urlArray) {
-            let obj = {
-                uuid: DownloadsWidget.uuidv4(),
-                state: "new",
-                created: new Date().getTime(),
-                url: urlElement,
-                options: settings,
-                target: targetSelection + "/" + subfolder
-            }
-            DownloadsWidget.addDownloaderItem(obj);
-        }
-    }
-
-
-
-    static uuidv4() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
-            .replace(/[xy]/g, function (c) {
-                const r = Math.random() * 16 | 0,
-                    v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-    }
-}
+    } */

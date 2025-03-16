@@ -80,6 +80,17 @@ class SubscriptionsWidget extends BaseWidget {
                     });
                 toolbar.append(btnDownload);
             }
+
+            // Run Unsubscribe
+            {
+                let btnUnsubscribe = $('<i>')
+                    .addClass('fa-solid fa-ban')
+                    .click(function(){
+                        sendPacket("unsubscribe", "autoloader", { id: item.id })
+                    });
+                toolbar.append(btnUnsubscribe);
+            }
+
             row.append(toolbar);
         }
         // Title
