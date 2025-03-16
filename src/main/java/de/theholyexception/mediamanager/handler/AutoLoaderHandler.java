@@ -19,6 +19,7 @@ import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
+import org.json.simple.JSONObject;
 
 import java.io.File;
 import java.sql.ResultSet;
@@ -138,6 +139,7 @@ public class AutoLoaderHandler extends Handler {
         return WebSocketResponse.OK;
     }
 
+    @SuppressWarnings("unchecked")
     private WebSocketResponse cmdUnsubscribe(JSONObjectContainer content) {
         int id = content.get("id", Integer.class);
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
@@ -147,6 +149,10 @@ public class AutoLoaderHandler extends Handler {
             db.executeSafe("delete from anime where id = ?", id);
             subscribedAnimes.remove(anime);
             WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
+
+            JSONObject payload = new JSONObject();
+            payload.put("id", id);
+            WebSocketUtils.sendPacket("del", TargetSystem.AUTOLOADER, payload, null);
         } else {
             return WebSocketResponse.ERROR.setMessage("Tried to remove anime with id " + id + " but this does not exist.");
         }
