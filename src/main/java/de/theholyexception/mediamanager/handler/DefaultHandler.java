@@ -266,7 +266,7 @@ public class DefaultHandler extends Handler {
 
         File outputFolder = new File(target.path(), targetPath.replace(targetPath.split("/")[0] + "/", ""));
         log.debug("Output Folder: " + outputFolder.getAbsolutePath());
-        if (!outputFolder.exists() && outputFolder.mkdirs()) {
+        if (!outputFolder.exists() && !outputFolder.mkdirs()) {
             log.error("Failed to create output folder " + outputFolder.getAbsolutePath());
             return WebSocketResponse.ERROR.setMessage("Failed to create output folder " + outputFolder.getAbsolutePath());
         }
