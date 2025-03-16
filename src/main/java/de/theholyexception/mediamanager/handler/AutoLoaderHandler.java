@@ -146,7 +146,7 @@ public class AutoLoaderHandler extends Handler {
         if (optAnime.isPresent()) {
             spCheckIntervalMin.trigger();
             Anime anime = optAnime.get();
-            db.executeSafe("delete from anime where id = ?", id);
+            db.executeSafe("delete from anime where nKey = ?", id);
             subscribedAnimes.remove(anime);
             WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
 

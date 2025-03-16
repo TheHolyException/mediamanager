@@ -5,10 +5,10 @@
       "checkIntervalMin": 5,
       "dataFile": ".\/autoloader.data.json",
       "mysql": {
-        "password": "",
+        "password": "2gEoRmJ4uKoSAnrPedbpqMQ3^",
         "database": "mediamanager",
         "port": 3306,
-        "host": "homelab",
+        "host": "minebug.de",
         "username": "mediamanager"
       },
       "checkDelayMs": 500,
@@ -19,7 +19,7 @@
       
     }
   },
-  "logLevel": "INFO",
+  "logLevel": "DEBUG",
   "systemSettings": {
     "PARALLEL_DOWNLOADS": {
       "forClient": true,
@@ -47,19 +47,16 @@
     {
       "identifier": "stream-series",
       "path": "\/home\/patrick\/mnt\/series",
-      "subFolders": true,
-      "displayName": "Series"
+      "subFolders": true
     },
     {
       "identifier": "stream-animes",
       "path": "\/home\/patrick\/mnt\/animes",
-      "subFolders": true,
-      "displayName": "Anime"
+      "subFolders": true
     },
     {
       "identifier": "stream-movies",
-      "path": "\/home\/patrick\/mnt\/movies",
-      "displayName": "Movies"
+      "path": "\/home\/patrick\/mnt\/movies"
     }
   ]
 }
