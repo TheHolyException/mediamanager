@@ -139,6 +139,10 @@ public class DefaultHandler extends Handler {
                 sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), socket);
                 yield null;
             }
+            case "systemInfo" -> {
+                sendSystemInformation(socket);
+                yield null;
+            }
 
             default -> {
                 log.error("Invalid command " + command);
@@ -342,6 +346,8 @@ public class DefaultHandler extends Handler {
             String title = downloader.resolveTitle();
             changeObject(content.getRaw(), "title", title);
         }).onComplete(() -> {
+            if (tableItem.isDeleted())
+                return;
             // Schedule the download task
             isRunning.set(true);
             tableItem.setTask(downloadTask);
@@ -386,14 +392,16 @@ public class DefaultHandler extends Handler {
     }
 
     private WebSocketResponse deleteObject(TableItemDTO toDelete, List<TableItemDTO> removed) {
-        if (toDelete.getTask() != null && toDelete.getTask().isRunning()) {
-            if (!toDelete.getDownloader().cancel()) {
-                return WebSocketResponse.WARN.setMessage("Already running, download cannot be canceled!");
-            }
-        } else {
-            if (!downloadHandler.abortTask(toDelete.getTask())) {
-                if (toDelete.getTask() != null && !toDelete.getTask().isCompleted())
-                    return WebSocketResponse.WARN.setMessage("Failed to abort task! internal error!");
+        if (toDelete.getTask() != null) {
+            if (toDelete.getTask().isRunning()) {
+                if (!toDelete.getDownloader().cancel()) {
+                    return WebSocketResponse.WARN.setMessage("Already running, download cannot be canceled!");
+                }
+            } else {
+                if (!downloadHandler.abortTask(toDelete.getTask())) {
+                    if (!toDelete.getTask().isCompleted())
+                        return WebSocketResponse.WARN.setMessage("Failed to abort task! internal error!");
+                }
             }
         }
         removed.add(toDelete);
