@@ -315,6 +315,7 @@ public class DefaultHandler extends Handler {
         // Start the download
         // This task is only running when the titleTask is completed
         ExecutorTask downloadTask = new ExecutorTask(() -> {
+            tableItem.update();
             tableItem.setRunning(true);
             tableItem.setExecutingThread(Thread.currentThread());
             try {
@@ -352,6 +353,7 @@ public class DefaultHandler extends Handler {
             String title = downloader.resolveTitle();
             changeObject(content, "title", title);
         }).onComplete(() -> {
+            tableItem.update();
             tableItem.setResolving(false);
             if (tableItem.isDeleted())
                 return;
@@ -467,7 +469,10 @@ public class DefaultHandler extends Handler {
                 for (TableItemDTO value : urls.values()) {
                     if (!value.isRunning() && !value.isResolving()) continue;
                     if (value.checkForTimeout(requestTimeout)) {
-                        log.warn("Request timed out: {}", value.getJsonObject().get("url", String.class));
+                        if (!log.isDebugEnabled())
+                            log.warn("Request timed out: {}", value.getJsonObject().get("url", String.class));
+                        else
+                            log.debug("Request timed out: {}, isRunning: {}, isResolving: {}", value.getJsonObject().get("url", String.class), value.isRunning(), value.isResolving());
                         if (value.getExecutingThread() != null)
                             value.getExecutingThread().interrupt();
                         changeObject(value.getJsonObject(), "state", "Error: Timeout");
