@@ -152,7 +152,9 @@ public class AutoLoaderHandler extends Handler {
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
         if (optAnime.isPresent()) {
             spCheckIntervalMin.trigger();
-            subscribedAnimes.remove(optAnime.get());
+            Anime anime = optAnime.get();
+            db.executeSafe("delete from anime where id = ?", id);
+            subscribedAnimes.remove(anime);
         } else {
             return WebSocketResponse.ERROR.setMessage("Tried to remove anime with id " + id + " but this does not exist.");
         }

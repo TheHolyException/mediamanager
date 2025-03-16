@@ -1,6 +1,7 @@
 package de.theholyexception.mediamanager.settings;
 
 import de.theholyexception.holyapi.datastorage.file.ConfigJSON;
+import de.theholyexception.holyapi.datastorage.file.FileConfiguration;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.models.SettingMetadata;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +58,7 @@ public class Settings {
                 // Writing the updated setting value to the configuration file
                 if (settingElement != null) {
                     settingElement.set("value", value);
-                    configJSON.saveConfig();
+                    configJSON.saveConfig(FileConfiguration.SaveOption.PRETTY_PRINT);
                 }
                 // Setting the setting object value
                 super.setValue(value);

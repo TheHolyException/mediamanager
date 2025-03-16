@@ -162,7 +162,7 @@ public class Anime {
     public void addSeason(Season season) {
         Optional<Season> optSeason = seasonList.stream().filter(s -> s.getSeasonNumber() == season.getSeasonNumber()).findFirst();
         if (optSeason.isPresent())
-            throw new IllegalStateException("Season already exists locally " + season);
+            log.error("Season already exists locally " + season);
 
         seasonList.add(season);
     }
@@ -174,11 +174,13 @@ public class Anime {
         for (Season onlineSeason : onlineSeasons) {
             Optional<Season> localSeason = seasonList.stream().filter(season -> season.getSeasonNumber() == onlineSeason.getSeasonNumber()).findFirst();
 
+            // If the season does not exist locally, add it
             if (localSeason.isEmpty()) {
                 addSeason(onlineSeason);
                 continue;
             }
 
+            // Add missing episodes
             for (Episode onlineEpisode : onlineSeason.getEpisodeList()) {
                 Optional<Episode> localEpisode = localSeason.get().getEpisodeList().stream().filter(episode -> episode.getEpisodeNumber() == onlineEpisode.getEpisodeNumber()).findFirst();
                 if (localEpisode.isEmpty())

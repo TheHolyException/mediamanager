@@ -386,13 +386,14 @@ public class DefaultHandler extends Handler {
     }
 
     private WebSocketResponse deleteObject(TableItemDTO toDelete, List<TableItemDTO> removed) {
-        if (toDelete.getTask().isRunning()) {
+        if (toDelete.getTask() != null && toDelete.getTask().isRunning()) {
             if (!toDelete.getDownloader().cancel()) {
                 return WebSocketResponse.WARN.setMessage("Already running, download cannot be canceled!");
             }
         } else {
             if (!downloadHandler.abortTask(toDelete.getTask())) {
-                return WebSocketResponse.WARN.setMessage("Failed to abort task! internal error!");
+                if (toDelete.getTask() != null && !toDelete.getTask().isCompleted())
+                    return WebSocketResponse.WARN.setMessage("Failed to abort task! internal error!");
             }
         }
         removed.add(toDelete);
