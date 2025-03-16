@@ -45,7 +45,7 @@ public class Utils {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException ex) {
-            log.error("Interrupted Fail", ex);
+            //log.error("Interrupted Fail", ex);
         }
     }
 

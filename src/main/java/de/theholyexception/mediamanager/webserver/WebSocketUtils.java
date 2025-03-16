@@ -13,10 +13,7 @@ import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 public class WebSocketUtils {
@@ -83,10 +80,10 @@ public class WebSocketUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static void changeObject(JSONObject object, Object key, Object value) {
-        object.put(key, value);
-        object.put("modified", System.currentTimeMillis());
-        sendObjectToAll(object);
+    public static void changeObject(JSONObjectContainer object, Object key, Object value) {
+        object.set(key, value);
+        object.set("modified", System.currentTimeMillis());
+        sendObjectToAll(object.getRaw());
     }
 
     @SuppressWarnings("unchecked")

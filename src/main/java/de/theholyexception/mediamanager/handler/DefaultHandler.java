@@ -34,7 +34,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
@@ -49,17 +48,20 @@ public class DefaultHandler extends Handler {
     private long dockerMemoryLimit;
     private long dockerMemoryUsage;
     private final AtomicInteger downloadHandlerFactoryCounter = new AtomicInteger(0);
+    private final List<Thread> downloadThreads = new ArrayList<>();
     private final ExecutorHandler downloadHandler;
     private final ExecutorHandler titleResolverHandler;
-    private File downloadFolder;
+    private Thread watchDog;
 
+    private File downloadFolder;
     private SettingProperty<Integer> spDownloadThreads;
     private SettingProperty<Integer> spVoeThreads;
+    private SettingProperty<Integer> spRequestTimeout;
 
     public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
         downloadHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
-        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(1, r -> {
+        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(2, r -> {
             Thread thread = new Thread(r);
             thread.setName("TitleResolverThread");
             return thread;
@@ -74,9 +76,11 @@ public class DefaultHandler extends Handler {
         spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
         spDownloadThreads.addSubscriber(value -> {
             downloadHandlerFactoryCounter.set(0);
+            downloadThreads.clear();
             downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value, r -> {
                 Thread thread = new Thread(r);
                 thread.setName( "DownloadThread-" + downloadHandlerFactoryCounter.getAndAdd(1));
+                downloadThreads.add(thread);
                 return thread;
             }));
         });
@@ -93,12 +97,16 @@ public class DefaultHandler extends Handler {
             if (!downloadFolder.exists() && !downloadFolder.mkdirs())
                 log.error("Could not create download folder");
         });
+
+        spRequestTimeout = Settings.getSettingProperty("REQUEST_TIMEOUT", 60000, systemSettings);
+
         loadTargets();
     }
 
     @Override
     public void initialize() {
         startSystemDataFetcher();
+        startWatchdog();
     }
 
     private void loadTargets() {
@@ -210,7 +218,7 @@ public class DefaultHandler extends Handler {
         for (Object o : settings.getRaw()) {
             JSONObject setting = (JSONObject) o;
             String key = (String) setting.get("key");
-            String val = (String) setting.get("val");
+            String val = (String) setting.get("value");
             log.info("Change setting " + key + " to: " + val);
             switch (key) {
                 case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
@@ -265,20 +273,20 @@ public class DefaultHandler extends Handler {
 
         TableItemDTO tableItem = new TableItemDTO(content);
         urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
-        changeObject(content.getRaw(), "state", "Committed");
+        changeObject(content, "state", "Committed");
 
         int animeId = content.get("animeId", -1, Integer.class);
 
-        AtomicBoolean isRunning = new AtomicBoolean(false);
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
             public void onProgressUpdate(double v) {
                 if (tableItem.isDeleted())
                     return;
+                tableItem.update();
                 if (v >= 1) {
-                    changeObject(content.getRaw(), "state", "Completed");
+                    changeObject(content, "state", "Completed");
                 } else {
-                    changeObject(content.getRaw(), "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
+                    changeObject(content, "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
                 }
             }
 
@@ -294,8 +302,9 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onError(String s) {
-                if (isRunning.get() && !tableItem.isDeleted()) {
-                    changeObject(content.getRaw(), "state", "Error: " + s);
+                if (tableItem.isRunning() && !tableItem.isDeleted()) {
+                    tableItem.update();
+                    changeObject(content, "state", "Error: " + s);
                 }
             }
 
@@ -315,11 +324,13 @@ public class DefaultHandler extends Handler {
         // Start the download
         // This task is only running when the titleTask is completed
         ExecutorTask downloadTask = new ExecutorTask(() -> {
+            tableItem.setExecutingThread(Thread.currentThread());
             try {
                 File file = downloader.start();
                 if (downloader.isCanceled()) {
                     return;
                 }
+                tableItem.update();
 
                 File targetFile = new File(outputFolder, file.getName());
                 log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
@@ -343,13 +354,16 @@ public class DefaultHandler extends Handler {
         // Resolve the title
         // After the title is resolved, the download task is scheduled
         titleResolverHandler.putTask(() -> {
+            tableItem.setExecutingThread(Thread.currentThread());
+            tableItem.setResolving(true);
             String title = downloader.resolveTitle();
-            changeObject(content.getRaw(), "title", title);
+            changeObject(content, "title", title);
         }).onComplete(() -> {
+            tableItem.setResolving(false);
             if (tableItem.isDeleted())
                 return;
             // Schedule the download task
-            isRunning.set(true);
+            tableItem.setRunning(true);
             tableItem.setTask(downloadTask);
             downloadHandler.putTask(downloadTask);
         });
@@ -431,9 +445,14 @@ public class DefaultHandler extends Handler {
         {
             ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) downloadHandler.getExecutorService());
             JSONObject threadPool = new JSONObject();
-            threadPool.put("active", threadPoolExecutor.getActiveCount());
-            threadPool.put("core", threadPoolExecutor.getCorePoolSize());
-            threadPool.put("pool", threadPoolExecutor.getPoolSize());
+
+            Map<String, AtomicInteger> map = new HashMap<>();
+            for (Thread downloadThread : downloadThreads)
+                map.computeIfAbsent(downloadThread.getState().toString(), k -> new AtomicInteger(0)).incrementAndGet();
+
+            for (Map.Entry<String, AtomicInteger> entry : map.entrySet()) {
+                threadPool.put(entry.getKey(), entry.getValue());
+            }
             threadPool.put("max", threadPoolExecutor.getMaximumPoolSize());
             threadPool.put("completed", threadPoolExecutor.getCompletedTaskCount());
             response.put("threadPool", threadPool);
@@ -446,6 +465,29 @@ public class DefaultHandler extends Handler {
         }
 
         return response;
+    }
+
+    private void startWatchdog() {
+        watchDog = new Thread(() -> {
+            log.info("Starting watchdog");
+            while (true) {
+                int requestTimeout = spRequestTimeout.getValue();
+                for (TableItemDTO value : urls.values()) {
+                    if (!value.isRunning() && !value.isResolving()) continue;
+                    if (value.checkForTimeout(requestTimeout)) {
+                        log.warn("Request timed out: {}", value.getJsonObject().get("url", String.class));
+                        if (value.getExecutingThread() != null)
+                            value.getExecutingThread().interrupt();
+                        changeObject(value.getJsonObject(), "state", "Error: Timeout");
+                        value.setResolving(false);
+                        value.setRunning(false);
+                    }
+                }
+                Utils.sleep(5000);
+            }
+        });
+        watchDog.setName("Watchdog");
+        watchDog.start();
     }
 
 }

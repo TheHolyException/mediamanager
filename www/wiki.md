@@ -255,11 +255,11 @@ Target Data
 ## Command: "requestSubfolders"
 ```json
 {
-    "cmd": "requestSubfolders",
-    "targetSystem": "default",
-    "content": {
-        "selection": "string"   // Target ex: "stream-series/"
-    }
+  "cmd": "requestSubfolders",
+  "targetSystem": "default",
+  "content": {
+    "selection": "string"   // Target ex: "stream-series/"
+  }
 }
 ```
 ### Responses
@@ -267,15 +267,56 @@ Target Data
 
 ```json
 {
-    "cmd": "requestSubfoldersResponse",
+  "cmd": "requestSubfoldersResponse",
+  "targetSystem": "default",
+  "content": {
+    "subfolders": [
+      "string",
+      "string",
+      ...
+    ]
+  }
+}
+```
+
+## Command: "systemInfo"
+```json
+{
+    "cmd": "systemInfo",
     "targetSystem": "default",
-    "content": {
-        "subfolders": [
-            "string",
-            "string",
-            ...
-        ]
+    "content": {} // Empty content
+}
+```
+### Responses
+
+```json
+{
+  "cmd": "systemInfo",
+  "targetSystem": "default",
+  "content": {
+    "memory": {
+      "current": 0,
+      "heap": 0,
+      "max": 0
+    },
+    "docker": {
+      "memoryLimit": 0,
+      "memoryUsage": 0
+    },
+    "threadPool": {
+      "active": 0,
+      "core": 0,
+      "max": 0,
+      "pool": 0,
+      "completed": 0
+    },
+    "aniworld": {
+      "<key>": 0,
+      "<key>": 0,
+      "<key>": 0,
+      ...
     }
+  }
 }
 ```
 
@@ -370,7 +411,7 @@ Target Data
 ```json
 {
     "cmd": "runDownload",
-    "targetSystem": "default",
+    "targetSystem": "autoloader",
     "content": {
         "id": 0     // Identifier of the anime
     }

@@ -22,6 +22,13 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     private Downloader downloader;
     @Setter
     private boolean isDeleted = false;
+    @Setter
+    private boolean isRunning = false;
+    @Setter
+    private boolean isResolving = false;
+    private long lastInteraction = System.currentTimeMillis();
+    @Setter
+    private Thread executingThread;
 
 
     public TableItemDTO(JSONObjectContainer content) {
@@ -40,5 +47,13 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
         Long l1 = Long.valueOf(created);
         Long l2 = Long.valueOf(o.created);
         return l1.compareTo(l2);
+    }
+
+    public boolean checkForTimeout(int timeout) {
+        return System.currentTimeMillis() - lastInteraction > timeout;
+    }
+
+    public void update() {
+        lastInteraction = System.currentTimeMillis();
     }
 }

@@ -25,6 +25,9 @@
       "forClient": true,
       "value": 9
     },
+    "REQUEST_TIMEOUT": {
+      "value": 10000
+    },
     "AUTO_DOWNLOAD": {
       "forClient": true,
       "value": false
