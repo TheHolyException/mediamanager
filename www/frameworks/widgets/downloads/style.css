@@ -26,6 +26,10 @@
     background-color: var(--error);
 }
 
+.delete-completed-btn {
+    background-color: var(--error);
+}
+
 .queue-table {
     table-layout: auto;
     font-size: 1.2em;

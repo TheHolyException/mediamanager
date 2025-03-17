@@ -48,31 +48,25 @@ function setupGridstack() {
         cellHeight: 70,
         minRow: 1,
         acceptWidgets: true,
-        float: true
+        float: true,
+        handle: '.widget-handle'
     });
     GridStack.setupDragIn('.grid-stack-item', {/* appendTo: 'body',  */helper: 'clone' }, insert);
 
-    let isAdded = false;
     grid.on('added', function (event, items) {
-        console.log(items);
-        if (!isAdded) {
-            let o = items[0];
-            let addedElem = $(o.el);
-            let widgetName = addedElem.attr('widget-name');
-            isAdded = true;
-            addedElem.remove();
-            grid.addWidget(WidgetManager.getWidget(widgetName, "").render(), {
-                x: o.x,
-                y: o.y,
-                w: o.w,
-                h: o.h,
-                //content: `<img src="https://coding-garden.de/resources/images/Icon.svg">`
-                //content: $('<span>').text("THIS IS A TEST").get(0).outerHTML
-            });
-        }
-        else {
-            isAdded = false;
-        }
+        if(items[1] && items[1].own) return;
+        
+        let o = items[0];
+        let addedElem = $(o.el);
+        let widgetName = addedElem.attr('widget-name');
+        addedElem.remove();
+        grid.addWidget(WidgetManager.getWidget(widgetName, "").render(), {
+            x: o.x,
+            y: o.y,
+            w: o.w,
+            h: o.h,
+            own: true
+        });
     });
 }
 

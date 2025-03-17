@@ -8,12 +8,13 @@ class DownloadsWidget extends BaseWidget {
     render() {
         let widget = $(`
         <div class="widget">
-            <h1>Download Queue</h1>
+            <h1 class="widget-handle">Download Queue</h1>
             <nav class="queue-action-bar">
                 <a class="add-sources-btn" onclick="openAddSourcePopup()"><i class="fa fa-plus"></i> Add</a>
                 <a class="commit-sources-btn"><i class="fas fa-paper-plane"></i> Commit</a>
                 <a class="retry-all-btn"><i class="fa-solid fa-rotate-right"></i> Retry All Failed</a>
                 <a class="delete-all-btn"><i class="fa fa-trash"></i> Delete All</a>
+                <a class="delete-completed-btn"><i class="fa fa-trash"></i> Delete Completed</a>
             </nav>
             <table class="queue-table">
                 <tr>
@@ -36,6 +37,10 @@ class DownloadsWidget extends BaseWidget {
 
         widget.find('.delete-all-btn').click(function(){
             sendPacket("del-all", "default");
+        });
+
+        widget.find('.delete-completed-btn').click(function(){
+            widget.find('.success [action="delete"]').click();
         });
 
         sendPacket("syn", "default");

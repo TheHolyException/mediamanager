@@ -6,7 +6,7 @@ class SubscriptionsWidget extends BaseWidget {
     render() {
         let widget = $(`
         <div class="widget" widget-name="SubscriptionsWidget">
-            <h1>Statistics</h1>
+            <h1 class="widget-handle">Statistics</h1>
             <nav class="statistics-action-bar">
                 <a class="add-download-btn"><i class="fa fa-plus"></i> Add</a>
             </nav>

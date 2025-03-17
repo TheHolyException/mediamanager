@@ -6,7 +6,7 @@ class StatisticsWidget extends BaseWidget {
     render() {
         let widget = $(`
         <div class="widget" widget-name="StatisticsWidget">
-            <h1>Statistics</h1>
+            <h1 class="widget-handle">Statistics</h1>
             <div class="statistics">
                 <div class="statistic-group">
                     <h2>aniworld</h2>

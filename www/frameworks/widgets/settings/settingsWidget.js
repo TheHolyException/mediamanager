@@ -8,7 +8,7 @@ class SettingsWidget extends BaseWidget {
     render() {
         let widget = $(`
         <div class="widget" widget-name="SettingsWidget">
-            <h1>Global Settings</h1>
+            <h1 class="widget-handle">Global Settings</h1>
             <nav class="settings-action-bar">
                 <a class="save-settings-btn"><i class="fas fa-save"></i> Save</a>
             </nav>

@@ -3,4 +3,12 @@
     flex-direction: column;
     gap: 15px;
     color: var(--textColor);
+    overflow: auto;
+
+    .widget-handle {
+        cursor: grab;
+        &:hover{
+            background-color: var(--darkBGColor2);
+        }
+    }
 }
