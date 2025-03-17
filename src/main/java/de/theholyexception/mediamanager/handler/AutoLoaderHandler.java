@@ -39,6 +39,7 @@ public class AutoLoaderHandler extends Handler {
     private SettingProperty<Boolean> spAutoDownload;
     private SettingProperty<Boolean> spEnabled;
     private final Random random = new Random();
+    private Boolean initialized = false;
 
     public AutoLoaderHandler(TargetSystem targetSystem) {
         super(targetSystem);
@@ -64,33 +65,55 @@ public class AutoLoaderHandler extends Handler {
 
     @Override
     public void initialize() {
-        defaultHandler = (DefaultHandler) MediaManager.getInstance().getHandlers().get(TargetSystem.DEFAULT);
-        Anime.setBaseDirectory(new File(defaultHandler.getTargets().get("stream-animes").path()));
+        Thread t = new Thread(() -> {
+            defaultHandler = (DefaultHandler) MediaManager.getInstance().getHandlers().get(TargetSystem.DEFAULT);
+            Anime.setBaseDirectory(new File(defaultHandler.getTargets().get("stream-animes").path()));
 
-        loadDatabase();
+            loadDatabase();
 
-        subscribedAnimes.clear();
-        subscribedAnimes.addAll(Anime.loadFromDB(db));
+            subscribedAnimes.clear();
+            subscribedAnimes.addAll(Anime.loadFromDB(db));
 
-        if (log.isDebugEnabled())
-            printTableInfo("anime", "season", "episode");
+            if (log.isDebugEnabled())
+                printTableInfo("anime", "season", "episode");
 
-        subscribedAnimes.forEach(a -> {
-            a.loadMissingEpisodes();
-            a.scanDirectoryForExistingEpisodes();
-            log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false));
-            if (a.isDeepDirty())
-                a.writeToDB(db);
+            subscribedAnimes.forEach(a -> {
+                a.loadMissingEpisodes();
+                a.scanDirectoryForExistingEpisodes();
+                log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false));
+                if (a.isDeepDirty())
+                    a.writeToDB(db);
+            });
+            db.getExecutorHandler().awaitGroup(-1);
+
+            if (spEnabled.getValue())
+                startThread();
+
+            synchronized (this) {
+                initialized = true;
+                this.notifyAll();
+            }
         });
-        db.getExecutorHandler().awaitGroup(-1);
-
-        if (spEnabled.getValue())
-            startThread();
+        t.setName("AutoLoaderInit");
+        t.start();
     }
 
     //region commands
     @Override
     public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+        try {
+            while (!initialized) {
+                synchronized (this) {
+                    this.wait(30000);
+                    if (!initialized) {
+                        return WebSocketResponse.ERROR.setMessage("AutoLoader is not initialized yet");
+                    }
+                }
+            }
+        } catch (InterruptedException ex) {
+            return null;
+        }
+
         return switch (command) {
             case "getData" -> cmdGetData(socket);
             case "subscribe" -> cmdSubscribe(content);

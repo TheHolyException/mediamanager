@@ -61,7 +61,7 @@ public class DefaultHandler extends Handler {
         super(targetSystem);
         downloadHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
         downloadHandler.setThreadNameFactory(cnt -> "DownloadThread-" + cnt);
-        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(2));
+        titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(5));
         titleResolverHandler.setThreadNameFactory(cnt -> "TitleResolver-" + cnt);
     }
 
@@ -315,14 +315,15 @@ public class DefaultHandler extends Handler {
         // Start the download
         // This task is only running when the titleTask is completed
         ExecutorTask downloadTask = new ExecutorTask(() -> {
+            if (tableItem.isDeleted())
+                return;
             tableItem.update();
             tableItem.setRunning(true);
             tableItem.setExecutingThread(Thread.currentThread());
             try {
                 File file = downloader.start();
-                if (downloader.isCanceled()) {
+                if (downloader.isCanceled())
                     return;
-                }
                 tableItem.update();
 
                 File targetFile = new File(outputFolder, file.getName());
@@ -344,22 +345,20 @@ public class DefaultHandler extends Handler {
             }
             tableItem.setRunning(false);
         });
+        tableItem.setTask(downloadTask);
+        downloadHandler.putTask(downloadTask);
 
         // Resolve the title
         // After the title is resolved, the download task is scheduled
         titleResolverHandler.putTask(() -> {
+            if (tableItem.isDeleted())
+                return;
             tableItem.setExecutingThread(Thread.currentThread());
             tableItem.setResolving(true);
             String title = downloader.resolveTitle();
             changeObject(content, "title", title);
-        }).onComplete(() -> {
             tableItem.update();
             tableItem.setResolving(false);
-            if (tableItem.isDeleted())
-                return;
-            // Schedule the download task
-            tableItem.setTask(downloadTask);
-            downloadHandler.putTask(downloadTask);
         });
 
         return null;
