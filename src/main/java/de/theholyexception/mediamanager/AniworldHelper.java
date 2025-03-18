@@ -17,6 +17,8 @@ import java.net.URL;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class AniworldHelper {
@@ -32,7 +34,6 @@ public class AniworldHelper {
         urlResolver.setThreadNameFactory(cnt -> "AW-URLResolver-" + cnt);
         return url.contains("staffel");
     }
-
 
     /**
      * Resolves all Seasons (including the specials section) of an aniworld url
@@ -198,6 +199,29 @@ public class AniworldHelper {
         });
         urlResolver.putTask(task, 1);
         return task;
+    }
+
+
+
+
+    private static final Pattern pattern = Pattern.compile("/https://aniworld\\.to/anime/stream/([^/]+)/");
+    private static final Map<String, String> urlToSubdirectory = new HashMap<>();
+    public static synchronized String getSubdirectoryFromURL(String url) {
+        if (urlToSubdirectory.containsKey(url))
+            return urlToSubdirectory.get(url);
+
+        Matcher matcher = pattern.matcher(url);
+        if (!matcher.find()) {
+            String uuid = UUID.randomUUID().toString();
+            log.error("Failed to obtain anime directory name from url: " + url);
+            log.error("Using alternative directory: ./" + uuid);
+            urlToSubdirectory.put(url, uuid);
+            return uuid;
+        }
+        String match = matcher.group();
+        match = match.replaceAll("[^a-zA-Z0-9-_.]", "_");
+        urlToSubdirectory.put(url, match);
+        return match;
     }
 
 }

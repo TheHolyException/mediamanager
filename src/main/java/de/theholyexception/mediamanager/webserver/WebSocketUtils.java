@@ -86,6 +86,16 @@ public class WebSocketUtils {
         sendObjectToAll(object.getRaw());
     }
 
+    public static void changeObject(JSONObjectContainer object, Object... data) {
+        if (data.length % 2 != 0)
+            throw new IllegalArgumentException("data must be even");
+
+        for (int i = 0 ; i < data.length; i += 2)
+            object.set(data[i], data[i + 1]);
+        object.set("modified", System.currentTimeMillis());
+        sendObjectToAll(object.getRaw());
+    }
+
     @SuppressWarnings("unchecked")
     public static void sendPacket(String cmd, TargetSystem targetSystem, JSONObject content, WebSocketBasic socket) {
         JSONObject packet = new JSONObject();

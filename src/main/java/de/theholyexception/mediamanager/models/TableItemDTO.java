@@ -7,9 +7,12 @@ import lombok.Setter;
 import me.kaigermany.downloaders.Downloader;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Getter
 public class TableItemDTO implements Comparable<TableItemDTO> {
+
+    private static final AtomicInteger counter = new AtomicInteger(0);
 
     private final long created;
     private final String state;
@@ -25,10 +28,10 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     @Setter
     private boolean isRunning = false;
     @Setter
-    private boolean isResolving = false;
-    private long lastInteraction = System.currentTimeMillis();
-    @Setter
     private Thread executingThread;
+    @Setter
+    private boolean isFailed = false;
+    private final int sortIndex = counter.getAndIncrement();
 
 
     public TableItemDTO(JSONObjectContainer content) {
@@ -44,16 +47,8 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
      */
     @Override
     public int compareTo(TableItemDTO o) {
-        Long l1 = Long.valueOf(created);
-        Long l2 = Long.valueOf(o.created);
+        Long l1 = Long.valueOf(sortIndex);
+        Long l2 = Long.valueOf(o.sortIndex);
         return l1.compareTo(l2);
-    }
-
-    public boolean checkForTimeout(int timeout) {
-        return System.currentTimeMillis() - lastInteraction > timeout;
-    }
-
-    public void update() {
-        lastInteraction = System.currentTimeMillis();
     }
 }

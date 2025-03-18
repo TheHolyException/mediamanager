@@ -89,10 +89,7 @@ public class Anime {
             if (markDirty) isDirty = true;
             directory = new File(baseDirectory, overridePath);
         } else {
-            String[] segments = url.split("/");
-            String path = segments[segments.length-1];
-            path = path.replaceAll("[^a-zA-Z0-9-_.]", "_");
-            directory = new File(baseDirectory, path);
+            directory = new File(baseDirectory, AniworldHelper.getSubdirectoryFromURL(url));
         }
     }
 
@@ -225,7 +222,7 @@ public class Anime {
         object.put("languageId", languageId);
         object.put("title", title);
         object.put("url", url);
-        object.put("unloaded", getUnloadedEpisodeCount(true) + "("+getUnloadedEpisodeCount(false)+")");
+        object.put("unloaded", getUnloadedEpisodeCount(true) + " [\uD83C\uDDE9\uD83C\uDDEA]  ("+getUnloadedEpisodeCount(false)+"[\uD83C\uDDEF\uD83C\uDDF5])");
         object.put("lastScan", lastUpdate);
         object.put("directory", getDirectory().toString().replace(baseDirectory.toString(), ""));
         return new JSONObject(object);

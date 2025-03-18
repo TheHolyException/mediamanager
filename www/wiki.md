@@ -72,6 +72,7 @@ Data for the downloads page
                 "state": "string",    // Download status of the object
                 "target": "string",   // Target folder (uses the targets from the config ex: "stream-series")
                 "url": "string",      // Download URL
+                "sortIndex": 0,       // Sort index of the item
                 "options": {
                     "enableSeasonAndEpisodeRenaming": "true|false",
                     "enableSessionRecovery": "true|false",
@@ -83,25 +84,7 @@ Data for the downloads page
     }             
 }
 ```
-Data for the subscriptions
-```json
-{
-    "cmd": "syn",         
-    "targetSystem": "autoloader",
-    "content": [
-        {
-            "id": 0,
-            "directory": "string",  // Download directory, relative to target folder
-            "languageId": 0,        // 1 = German; 2 = German Sub; 3 = English Sub
-            "title": "string",      // Title of the anime
-            "unloaded": 0,          // Number of episodes missing / not downloaded
-            "url": "string",        // Aniworld url
-            "lastScan": 0           // Last active scan for new episodes
-        },
-        ...
-    ]          
-}
-```
+
 Data for settings
 ```json
 {
@@ -149,6 +132,8 @@ Target Data
           "state": "string",    // Download status of the object
           "target": "string",   // Target folder (uses the targets from the config ex: "stream-series")
           "url": "string",      // Download URL
+          "subdirectory": "string", // Ootional: Subdirectory of the target folder
+          "aniworldUrl": "string",  // Optional: Aniworld url
           "options": {
             "enableSeasonAndEpisodeRenaming": "true|false",
             "enableSessionRecovery": "true|false",
