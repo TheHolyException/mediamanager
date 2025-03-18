@@ -50,12 +50,10 @@ public class DefaultHandler extends Handler {
     private final AtomicInteger downloadHandlerFactoryCounter = new AtomicInteger(0);
     private final ExecutorHandler downloadHandler;
     private final ExecutorHandler titleResolverHandler;
-    private Thread watchDog;
 
     private File downloadFolder;
     private SettingProperty<Integer> spDownloadThreads;
     private SettingProperty<Integer> spVoeThreads;
-    private SettingProperty<Integer> spRequestTimeout;
 
     public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
@@ -89,15 +87,12 @@ public class DefaultHandler extends Handler {
                 log.error("Could not create download folder");
         });
 
-        spRequestTimeout = Settings.getSettingProperty("REQUEST_TIMEOUT", 60000, systemSettings);
-
         loadTargets();
     }
 
     @Override
     public void initialize() {
         startSystemDataFetcher();
-        startWatchdog();
     }
 
     private void loadTargets() {
@@ -165,7 +160,7 @@ public class DefaultHandler extends Handler {
     protected WebSocketResponse cmdPutData(WebSocketBasic socket, JSONObjectContainer content) {
         for (Object data : content.getArrayContainer("list").getRaw()) {
             JSONObjectContainer item = (JSONObjectContainer) JSONReader.readString(data.toString());
-            WebSocketResponse response = scheduleDownload(item);
+            WebSocketResponse response = scheduleDownload(socket, item);
             if (socket != null && response != null)
                 WebSocketUtils.sendWebsSocketResponse(socket, response, TargetSystem.DEFAULT, "put");
         }
@@ -242,7 +237,7 @@ public class DefaultHandler extends Handler {
     // endregion commands
 
     @SuppressWarnings("unchecked")
-    private WebSocketResponse scheduleDownload(JSONObjectContainer content) {
+    private WebSocketResponse scheduleDownload(WebSocketBasic socket, JSONObjectContainer content) {
         String url = content.get("url", String.class);
         if (url == null || url.isEmpty())
             return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
@@ -255,7 +250,18 @@ public class DefaultHandler extends Handler {
         if (target == null || target.path() == null)
             return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
 
-        File outputFolder = new File(target.path(), targetPath.replace(targetPath.split("/")[0] + "/", ""));
+        String subDirectory = targetPath.replace(targetPath.split("/")[0] + "/", "");
+        if (subDirectory.isEmpty()) {
+            String aniworldUrl = content.get("aniworld-url", String.class);
+            if (aniworldUrl != null && !aniworldUrl.isEmpty()) {
+                subDirectory = AniworldHelper.getAnimeTitle(aniworldUrl);
+                WebSocketUtils.sendWebsSocketResponse(socket, WebSocketResponse.WARN.setMessage("Subdirectory not specified, using " + subDirectory + " instead"), TargetSystem.DEFAULT, "put");
+            } else {
+                return WebSocketResponse.ERROR.setMessage("No subdirectory specified");
+            }
+        }
+
+        File outputFolder = new File(target.path(), subDirectory);
         log.debug("Output Folder: " + outputFolder.getAbsolutePath());
         if (!outputFolder.exists() && !outputFolder.mkdirs()) {
             log.error("Failed to create output folder " + outputFolder.getAbsolutePath());
@@ -264,7 +270,9 @@ public class DefaultHandler extends Handler {
 
         TableItemDTO tableItem = new TableItemDTO(content);
         urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
-        changeObject(content, "state", "Committed");
+        changeObject(content,
+                "state", "Committed",
+                "sortIndex", tableItem.getSortIndex());
 
         int animeId = content.get("animeId", -1, Integer.class);
 
@@ -273,7 +281,6 @@ public class DefaultHandler extends Handler {
             public void onProgressUpdate(double v) {
                 if (tableItem.isDeleted())
                     return;
-                tableItem.update();
                 if (v >= 1) {
                     changeObject(content, "state", "Completed");
                 } else {
@@ -283,7 +290,9 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onInfo(String s) {
-                // Not implemented
+                if (log.isDebugEnabled()) {
+                    log.debug(s);
+                }
             }
 
             @Override
@@ -294,7 +303,6 @@ public class DefaultHandler extends Handler {
             @Override
             public void onError(String s) {
                 if (tableItem.isRunning() && !tableItem.isDeleted()) {
-                    tableItem.update();
                     changeObject(content, "state", "Error: " + s);
                 }
             }
@@ -304,6 +312,15 @@ public class DefaultHandler extends Handler {
                 // Not implemented
             }
 
+            @Override
+            public void onException(Throwable error) {
+                if (log.isDebugEnabled()) {
+                    log.debug("Download failed!", error);
+                }
+                if (tableItem.isRunning() && !tableItem.isDeleted()) {
+                    tableItem.setFailed(true);
+                }
+            }
         };
 
         JSONObject options = content.getObjectContainer("options").getRaw();
@@ -317,14 +334,20 @@ public class DefaultHandler extends Handler {
         ExecutorTask downloadTask = new ExecutorTask(() -> {
             if (tableItem.isDeleted())
                 return;
-            tableItem.update();
             tableItem.setRunning(true);
             tableItem.setExecutingThread(Thread.currentThread());
             try {
                 File file = downloader.start();
                 if (downloader.isCanceled())
                     return;
-                tableItem.update();
+
+                // Check if an error has occurred during the download
+                // if so, early escape the task so further error won't be overridden the initial error
+                if (tableItem.isFailed()) {
+                    tableItem.setRunning(false);
+                    log.warn("Download failed!");
+                    return;
+                }
 
                 File targetFile = new File(outputFolder, file.getName());
                 log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
@@ -354,11 +377,8 @@ public class DefaultHandler extends Handler {
             if (tableItem.isDeleted())
                 return;
             tableItem.setExecutingThread(Thread.currentThread());
-            tableItem.setResolving(true);
             String title = downloader.resolveTitle();
             changeObject(content, "title", title);
-            tableItem.update();
-            tableItem.setResolving(false);
         });
 
         return null;
@@ -425,7 +445,6 @@ public class DefaultHandler extends Handler {
             memory.put("heap", Runtime.getRuntime().totalMemory());
             memory.put("max", Runtime.getRuntime().maxMemory());
             response.put("memory", memory);
-
         }
 
         {
@@ -458,32 +477,6 @@ public class DefaultHandler extends Handler {
         }
 
         return response;
-    }
-
-    private void startWatchdog() {
-        watchDog = new Thread(() -> {
-            log.info("Starting watchdog");
-            while (true) {
-                int requestTimeout = spRequestTimeout.getValue();
-                for (TableItemDTO value : urls.values()) {
-                    if (!value.isRunning() && !value.isResolving()) continue;
-                    if (value.checkForTimeout(requestTimeout)) {
-                        if (!log.isDebugEnabled())
-                            log.warn("Request timed out: {}", value.getJsonObject().get("url", String.class));
-                        else
-                            log.debug("Request timed out: {}, isRunning: {}, isResolving: {}", value.getJsonObject().get("url", String.class), value.isRunning(), value.isResolving());
-                        if (value.getExecutingThread() != null)
-                            value.getExecutingThread().interrupt();
-                        changeObject(value.getJsonObject(), "state", "Error: Timeout");
-                        value.setResolving(false);
-                        value.setRunning(false);
-                    }
-                }
-                Utils.sleep(5000);
-            }
-        });
-        watchDog.setName("Watchdog");
-        watchDog.start();
     }
 
 }
