@@ -249,7 +249,7 @@ public class DefaultHandler extends Handler {
             return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
 
         String subDirectory = targetPath.replace(targetPath.split("/")[0] + "/", "");
-        if (subDirectory.isEmpty()) {
+        if (target.subFolders() && subDirectory.isEmpty()) {
             String aniworldUrl = content.get("aniworld-url", String.class);
             if (aniworldUrl != null && !aniworldUrl.isEmpty()) {
                 subDirectory = AniworldHelper.getAnimeTitle(aniworldUrl);
@@ -259,7 +259,12 @@ public class DefaultHandler extends Handler {
             }
         }
 
-        File outputFolder = new File(target.path(), subDirectory);
+        final File outputFolder;
+        if (target.subFolders() && subDirectory != null)
+            outputFolder = new File(target.path(), subDirectory);
+        else
+            outputFolder = new File(target.path());
+
         log.debug("Output Folder: " + outputFolder.getAbsolutePath());
         if (!outputFolder.exists() && !outputFolder.mkdirs()) {
             log.error("Failed to create output folder " + outputFolder.getAbsolutePath());
