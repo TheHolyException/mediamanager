@@ -40,10 +40,9 @@ public class FileLogger {
 	public void log(String message) {
 		String time = sdf.format(System.currentTimeMillis());
 		String thread = Thread.currentThread().getName();
-		String caller = Thread.currentThread().getStackTrace()[2].getClassName() + "." + Thread.currentThread().getStackTrace()[2].getMethodName();
 
 		StringBuilder builder = new StringBuilder();
-		builder.append(time).append("\t[").append(thread).append("]\t[").append(caller).append("]\t").append(message).append("\n");
+		builder.append(time).append("\t[").append(thread).append("]\t").append(message).append("\n");
 		try {
 			bos.write(builder.toString().getBytes());
 			bos.flush();
