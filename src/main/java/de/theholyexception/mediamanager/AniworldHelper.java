@@ -204,7 +204,7 @@ public class AniworldHelper {
 
 
 
-    private static final Pattern pattern = Pattern.compile("/https://aniworld\\.to/anime/stream/([^/]+)/");
+    private static final Pattern pattern = Pattern.compile("https:\\/\\/aniworld\\.to\\/anime\\/stream\\/([^\\/]+)");
     private static final Map<String, String> urlToSubdirectory = new HashMap<>();
     public static synchronized String getSubdirectoryFromURL(String url) {
         if (urlToSubdirectory.containsKey(url))
@@ -218,7 +218,7 @@ public class AniworldHelper {
             urlToSubdirectory.put(url, uuid);
             return uuid;
         }
-        String match = matcher.group();
+        String match = matcher.group(1);
         match = match.replaceAll("[^a-zA-Z0-9-_.]", "_");
         urlToSubdirectory.put(url, match);
         return match;

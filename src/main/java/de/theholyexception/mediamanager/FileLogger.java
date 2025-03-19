@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class FileLogger {
 
-	private static Map<String, FileLogger> fileLoggerCache = new HashMap<>();
+	private static final Map<String, FileLogger> fileLoggerCache = new HashMap<>();
 
 	public static synchronized FileLogger getLogger(String name) {
 		return fileLoggerCache.computeIfAbsent(name, k -> new FileLogger(name));
@@ -40,10 +40,9 @@ public class FileLogger {
 	public void log(String message) {
 		String time = sdf.format(System.currentTimeMillis());
 		String thread = Thread.currentThread().getName();
-		String caller = Thread.currentThread().getStackTrace()[2].getClassName() + "." + Thread.currentThread().getStackTrace()[2].getMethodName();
 
 		StringBuilder builder = new StringBuilder();
-		builder.append(time).append("\t[").append(thread).append("]\t[").append(caller).append("]\t").append(message).append("\n");
+		builder.append(time).append("\t[").append(thread).append("]\t").append(message).append("\n");
 		try {
 			bos.write(builder.toString().getBytes());
 			bos.flush();

@@ -25,6 +25,7 @@ public class WebSocketUtils {
 
     private static final Map<String, JSONObject> packetBuffer;
     private static final Map<WebSocketBasic, Map<String, JSONObject>> directPacketBuffer;
+    private static final List<String> deleteBuffer = new ArrayList<>();
 
     static {
         TomlParseResult tpr;
@@ -69,6 +70,19 @@ public class WebSocketUtils {
                                 sendPacket("syn", TargetSystem.DEFAULT, response, socket);
                             }
                             directPacketBuffer.clear();
+                        }
+                    }
+
+                    synchronized (deleteBuffer) {
+                        if (!deleteBuffer.isEmpty()) {
+                            JSONObject body = new JSONObject();
+                            JSONArray list = new JSONArray();
+                            for (String uuid : deleteBuffer) {
+                                list.add(uuid);
+                            }
+                            body.put("list", list);
+                            sendPacket("del", TargetSystem.DEFAULT, body, null);
+                            deleteBuffer.clear();
                         }
                     }
                 } catch (Exception ex) {
@@ -140,14 +154,10 @@ public class WebSocketUtils {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void deleteObjectToAll(List<TableItemDTO> objects) {
-        JSONObject body = new JSONObject();
-        JSONArray list = new JSONArray();
-        for (TableItemDTO object : objects)
-            list.add(object.getUuid());
-        body.put("list", list);
-        sendPacket("del", TargetSystem.DEFAULT, body, null);
+        for (TableItemDTO object : objects) {
+            deleteBuffer.add(object.getUuid().toString());
+        }
     }
 
     @SuppressWarnings("unchecked")
