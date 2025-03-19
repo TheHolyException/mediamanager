@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class FileLogger {
 
-	private static Map<String, FileLogger> fileLoggerCache = new HashMap<>();
+	private static final Map<String, FileLogger> fileLoggerCache = new HashMap<>();
 
 	public static synchronized FileLogger getLogger(String name) {
 		return fileLoggerCache.computeIfAbsent(name, k -> new FileLogger(name));

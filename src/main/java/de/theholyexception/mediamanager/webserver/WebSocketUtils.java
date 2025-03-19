@@ -74,13 +74,16 @@ public class WebSocketUtils {
                     }
 
                     synchronized (deleteBuffer) {
-                        JSONObject body = new JSONObject();
-                        JSONArray list = new JSONArray();
-                        for (String uuid : deleteBuffer) {
-                            list.add(uuid);
+                        if (!deleteBuffer.isEmpty()) {
+                            JSONObject body = new JSONObject();
+                            JSONArray list = new JSONArray();
+                            for (String uuid : deleteBuffer) {
+                                list.add(uuid);
+                            }
+                            body.put("list", list);
+                            sendPacket("del", TargetSystem.DEFAULT, body, null);
+                            deleteBuffer.clear();
                         }
-                        body.put("list", list);
-                        sendPacket("del", TargetSystem.DEFAULT, body, null);
                     }
                 } catch (Exception ex) {
                     log.error("Failed to send bulk packets", ex);

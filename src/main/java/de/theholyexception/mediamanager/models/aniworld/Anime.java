@@ -31,6 +31,8 @@ public class Anime {
     @Getter
     private File directory;
     @Getter
+    private final List<Integer> excludedSeasons;
+    @Getter
     private final List<Season> seasonList = new ArrayList<>();
     private Long lastUpdate = 0L;
 
@@ -63,12 +65,13 @@ public class Anime {
     }
 
 
-    public Anime(int languageId, String title, String url) {
+    public Anime(int languageId, String title, String url, List<Integer> excludedSeasons) {
         this.languageId = languageId;
         this.title = title;
         this.url = url;
         isDirty = true;
         this.id = Anime.getAndAddCurrentID();
+        this.excludedSeasons = excludedSeasons;
         setDirectoryPath(null, false);
     }
 
@@ -79,6 +82,10 @@ public class Anime {
         this.url = row.get("szURL", String.class);
         String overridePath = row.get("szCustomDirectory", String.class);
         if (overridePath == null || overridePath.isEmpty()) overridePath = null;
+        String[] szExcludedSeasons = row.get("szExcludedSeasons", String.class).split(",");
+        this.excludedSeasons = new ArrayList<>();
+        for (String s : szExcludedSeasons)
+            this.excludedSeasons.add(Integer.parseInt(s));
         this.isDirty = false;
         setDirectoryPath(overridePath, false);
     }
@@ -103,6 +110,9 @@ public class Anime {
     public int getUnloadedEpisodeCount(boolean filterLanguage) {
         int cnt = 0;
         for (Season season : seasonList) {
+            if (excludedSeasons.contains(season.getSeasonNumber()))
+                continue;
+
             for (Episode episode : season.getEpisodeList()) {
                 if (episode.isDownloaded()) continue;
                 if (filterLanguage) {
@@ -119,6 +129,9 @@ public class Anime {
     public List<Episode> getUnloadedEpisodes() {
         List<Episode> result = new ArrayList<>();
         for (Season season : seasonList) {
+            if (excludedSeasons.contains(season.getSeasonNumber()))
+                continue;
+
             for (Episode episode : season.getEpisodeList()) {
                 if (episode.isDownloaded() || episode.isDownloading()) continue; // We do not need to download already downloaded episodes xD
                 if (!episode.getLanguageIds().contains(languageId)) continue; // We also do not want any episodes that are not in the selected language
@@ -147,6 +160,9 @@ public class Anime {
         }
 
         for (Season season : seasonList) {
+            if (excludedSeasons.contains(season.getSeasonNumber()))
+                continue;
+
             String sn = String.format("S%02d", season.getSeasonNumber());
             for (Episode episode : season.getEpisodeList().stream().filter(e -> !e.isDownloaded()).toList()) {
                 String en = String.format("E%02d", episode.getEpisodeNumber());
@@ -157,6 +173,9 @@ public class Anime {
     }
 
     public void addSeason(Season season) {
+        if (excludedSeasons.contains(season.getSeasonNumber()))
+            return;
+
         Optional<Season> optSeason = seasonList.stream().filter(s -> s.getSeasonNumber() == season.getSeasonNumber()).findFirst();
         if (optSeason.isPresent())
             log.error("Season already exists locally " + season);
@@ -169,6 +188,9 @@ public class Anime {
         onlineSeasons.forEach(Season::loadEpisodes);
 
         for (Season onlineSeason : onlineSeasons) {
+            if (excludedSeasons.contains(onlineSeason.getSeasonNumber()))
+                continue;
+
             Optional<Season> localSeason = seasonList.stream().filter(season -> season.getSeasonNumber() == onlineSeason.getSeasonNumber()).findFirst();
 
             // If the season does not exist locally, add it
@@ -204,16 +226,26 @@ public class Anime {
     public void writeToDB(DataBaseInterface db) {
         if (isDirty) {
             log.debug("Writing anime to db: " + this);
-            db.executeSafe("call addAnime(?, ?, ?, ?, ?)",
+            db.executeSafe("call addAnime(?, ?, ?, ?, ?, ?)",
                     id,
                     languageId,
                     title,
                     url,
-                    customDirectory == null ?"" : customDirectory);
+                    customDirectory == null ?"" : customDirectory,
+                    intergerListToString(excludedSeasons));
             isDirty = false;
         }
 
         seasonList.forEach(season -> season.writeToDB(db, id));
+    }
+
+    private String intergerListToString(List<Integer> list) {
+        StringBuilder sb = new StringBuilder();
+        for (Integer i : list) {
+            sb.append(i);
+            sb.append(",");
+        }
+        return sb.toString();
     }
 
     public JSONObject toJSONObject() {
@@ -225,6 +257,7 @@ public class Anime {
         object.put("unloaded", getUnloadedEpisodeCount(true) + " [\uD83C\uDDE9\uD83C\uDDEA]  ("+getUnloadedEpisodeCount(false)+"[\uD83C\uDDEF\uD83C\uDDF5])");
         object.put("lastScan", lastUpdate);
         object.put("directory", getDirectory().toString().replace(baseDirectory.toString(), ""));
+        object.put("excludedSeasons", intergerListToString(excludedSeasons));
         return new JSONObject(object);
     }
 

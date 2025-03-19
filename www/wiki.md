@@ -343,12 +343,13 @@ Target Data
         "items": [
             {
                 "id": 0,
-                "languageId": 0,        // 1 = German; 2 = German Sub; 3 = English Sub
-                "title": "string",      // Title of the anime
-                "url": "string",        // Aniworld url
-                "unloaded": 0,          // Number of episodes missing / not downloaded
-                "lastScan": 0,          // Last active scan for new episodes
-                "directory": "string"   // Download directory, relative to target folder
+                "languageId": 0,              // 1 = German; 2 = German Sub; 3 = English Sub
+                "title": "string",            // Title of the anime
+                "url": "string",              // Aniworld url
+                "unloaded": 0,                // Number of episodes missing / not downloaded
+                "lastScan": 0,                // Last active scan for new episodes
+                "directory": "string",        // Download directory, relative to target folder
+                "excludedSeasons": "0,1,2,3"  // Comma separated list of seasons to exclude
             },
             ...
         ]
@@ -364,9 +365,10 @@ Target Data
     "cmd": "subscribe",
     "targetSystem": "autoloader",
     "content": {
-        "url": "string",        // Aniworld anime url
-        "languageId": 0,        // 1 = German; 2 = German Sub; 3 = English Sub
-        "directory": "string"   // Local directory
+        "url": "string",              // Aniworld anime url
+        "languageId": 0,              // 1 = German; 2 = German Sub; 3 = English Sub
+        "directory": "string",        // Local directory
+        "excludedSeasons": "0,1,2,3"  // Comma separated list of seasons to exclude
     }
 }
 ```

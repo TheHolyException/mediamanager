@@ -1,5 +1,6 @@
 package de.theholyexception.mediamanager.handler;
 
+import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
@@ -144,7 +145,17 @@ public class AutoLoaderHandler extends Handler {
         if (title == null)
             return WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url +  " cannot parse title!");
 
-        Anime anime = new Anime(languageId, title, url);
+        List<Integer> excludedSeasonList = new ArrayList<>();
+        String _excludedSeasons = content.get("excludedSeasons", String.class);
+        if (_excludedSeasons != null && !_excludedSeasons.isEmpty()) {
+            String[] excludedSeasons = content.get("excludedSeasons", String.class).split(",");
+            for (String excludedSeason : excludedSeasons)
+                excludedSeasonList.add(Integer.parseInt(excludedSeason));
+        }
+
+
+
+        Anime anime = new Anime(languageId, title, url, excludedSeasonList);
         anime.setDirectoryPath(directory, true);
         anime.loadMissingEpisodes();
         anime.scanDirectoryForExistingEpisodes();
@@ -241,7 +252,12 @@ public class AutoLoaderHandler extends Handler {
 
                     data.set("options", options.getRaw());
                     log.debug("Starting download of " + unloadedEpisode.getTitle());
-                    defaultHandler.cmdPutData(null, data);
+
+                    JSONObjectContainer payload = new JSONObjectContainer();
+                    JSONArrayContainer list = new JSONArrayContainer();
+                    list.add(data);
+                    payload.set("list", list);
+                    defaultHandler.cmdPutData(null, payload);
                 });
             } catch (Exception ex) {
                 log.error("", ex);
