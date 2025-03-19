@@ -40,3 +40,4 @@ cookies.last.txt
 logs/
 tmp/
 config.json
+config/

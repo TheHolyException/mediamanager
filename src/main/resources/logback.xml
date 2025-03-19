@@ -13,7 +13,7 @@
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- Dateiname direkt mit Datum -->
-            <fileNamePattern>logs/app-%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>logs/MediaManager-%d{yyyy-MM-dd}.log</fileNamePattern>
             <!-- Alte Log-Dateien nach 30 Tagen löschen -->
             <maxHistory>30</maxHistory>
         </rollingPolicy>

@@ -77,6 +77,7 @@ public class Connection implements Runnable {
             String[] arguments = firstLine.split(" ");
             Map<String,String> headers = readHeaders();
 
+
             // Check if we have a websocket
             if (headers.containsKey("Upgrade") && headers.get("Upgrade").equals("websocket")) {
                 // If we don't have a valid handler, then the user is just too early in the initialization phase

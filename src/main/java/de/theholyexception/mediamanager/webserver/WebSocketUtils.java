@@ -4,6 +4,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.TargetSystem;
+import de.theholyexception.mediamanager.Utils;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.settings.SettingProperty;
@@ -12,20 +13,96 @@ import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.tomlj.TomlParseResult;
 
 import java.util.*;
+
+import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
 
 @Slf4j
 public class WebSocketUtils {
     private WebSocketUtils() {}
 
+    private static final Map<String, JSONObject> packetBuffer;
+    private static final Map<WebSocketBasic, Map<String, JSONObject>> directPacketBuffer;
+
+    static {
+        TomlParseResult tpr;
+        int cnt = 0;
+        while ((tpr = getTomlConfig()) == null) {
+            log.warn("Tried to load config but failed, retrying in 1s");
+            Utils.sleep(1000);
+            cnt ++;
+            if (cnt >= 5) {
+                throw new RuntimeException("Could not load config");
+            }
+        }
+        final TomlParseResult result = tpr;
+
+        packetBuffer = new HashMap<>();
+        directPacketBuffer = new HashMap<>();
+        Thread packetThread = new Thread(() -> {
+            while (true) {
+                try {
+                    Utils.sleep(result.getLong("general.packetPufferSleep"));
+                    synchronized (packetBuffer) {
+                        if (!packetBuffer.isEmpty()) {
+                            JSONObject response = new JSONObject();
+                            JSONArray dataset = new JSONArray();
+                            for (Map.Entry<String, JSONObject> entry : packetBuffer.entrySet()) {
+                                dataset.add(entry.getValue());
+                            }
+                            response.put("data", dataset);
+                            sendPacket("syn", TargetSystem.DEFAULT, response, null);
+                            packetBuffer.clear();
+                        }
+                    }
+                    synchronized (directPacketBuffer) {
+                        if (!directPacketBuffer.isEmpty()) {
+                            for (WebSocketBasic socket : directPacketBuffer.keySet()) {
+                                JSONObject response = new JSONObject();
+                                JSONArray dataset = new JSONArray();
+                                for (JSONObject value : directPacketBuffer.get(socket).values()) {
+                                    dataset.add(value);
+                                }
+                                response.put("data", dataset);
+                                sendPacket("syn", TargetSystem.DEFAULT, response, socket);
+                            }
+                            directPacketBuffer.clear();
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.error("Failed to send bulk packets", ex);
+                    synchronized (directPacketBuffer) {
+                        directPacketBuffer.clear();
+                    }
+                    synchronized (packetBuffer) {
+                        packetBuffer.clear();
+                    }
+                }
+            }
+        });
+        packetThread.setName("PacketThread");
+        packetThread.start();
+    }
+
     @SuppressWarnings("unchecked")
     public static void sendObject(WebSocketBasic socket, List<JSONObject> objects) {
-        JSONObject response = new JSONObject();
-        JSONArray dataset = new JSONArray();
-        dataset.addAll(objects);
-        response.put("data", dataset);
-        sendPacket("syn", TargetSystem.DEFAULT, response, socket);
+        synchronized (packetBuffer) {
+            for (JSONObject object : objects) {
+                String uuid = object.get("uuid").toString();
+                packetBuffer.put(uuid, object);
+            }
+        }
+        if (socket != null) {
+            synchronized (directPacketBuffer) {
+                Map<String, JSONObject> map1 = directPacketBuffer.computeIfAbsent(socket, k -> new HashMap<>());
+                for (JSONObject object : objects) {
+                    String uuid = object.get("uuid").toString();
+                    map1.put(uuid, object);
+                }
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -42,12 +119,10 @@ public class WebSocketUtils {
         JSONObject dataset = new JSONObject();
         JSONArray array = new JSONArray();
         for (Map.Entry<String, SettingProperty<?>> entry : Settings.SETTING_PROPERTIES.entrySet()) {
-            if (entry.getValue().getMetadata().forClient()) {
-                JSONObject data = new JSONObject();
-                data.put("key", entry.getKey());
-                data.put("val", entry.getValue().getValue());
-                array.add(data);
-            }
+            JSONObject data = new JSONObject();
+            data.put("key", entry.getKey());
+            data.put("val", entry.getValue().getValue());
+            array.add(data);
         }
         dataset.put("settings", array);
         sendPacket("setting", TargetSystem.DEFAULT, dataset, socket);
@@ -58,14 +133,10 @@ public class WebSocketUtils {
     }
 
     public static void sendObjectToAll(List<JSONObject> objects) {
-        for (WebSocketBasic webSocketBasic : new ArrayList<>(MediaManager.getInstance().getClientList())) {
-            try {
-                sendObject(webSocketBasic, objects);
-            } catch (Exception ex) {
-                log.error(ex.getMessage());
-                webSocketBasic.close();
-                MediaManager.getInstance().getClientList().remove(webSocketBasic);
-            }
+        try {
+            sendObject(null, objects);
+        } catch (Exception ex) {
+            log.error(ex.getMessage());
         }
     }
 
@@ -74,7 +145,7 @@ public class WebSocketUtils {
         JSONObject body = new JSONObject();
         JSONArray list = new JSONArray();
         for (TableItemDTO object : objects)
-            list.add(object.getUrl());
+            list.add(object.getUuid());
         body.put("list", list);
         sendPacket("del", TargetSystem.DEFAULT, body, null);
     }
@@ -95,6 +166,7 @@ public class WebSocketUtils {
         object.set("modified", System.currentTimeMillis());
         sendObjectToAll(object.getRaw());
     }
+
 
     @SuppressWarnings("unchecked")
     public static void sendPacket(String cmd, TargetSystem targetSystem, JSONObject content, WebSocketBasic socket) {

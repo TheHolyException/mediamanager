@@ -5,10 +5,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
-import de.theholyexception.mediamanager.AniworldHelper;
-import de.theholyexception.mediamanager.MediaManager;
-import de.theholyexception.mediamanager.TargetSystem;
-import de.theholyexception.mediamanager.Utils;
+import de.theholyexception.mediamanager.*;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
@@ -27,6 +24,8 @@ import me.kaigermany.ultimateutils.StaticUtils;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.tomlj.TomlArray;
+import org.tomlj.TomlTable;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -36,6 +35,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
 
 @Slf4j
@@ -54,6 +54,8 @@ public class DefaultHandler extends Handler {
     private File downloadFolder;
     private SettingProperty<Integer> spDownloadThreads;
     private SettingProperty<Integer> spVoeThreads;
+    private final FileLogger fLogger = new FileLogger("DefaultHandler");
+
 
     public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
@@ -77,15 +79,12 @@ public class DefaultHandler extends Handler {
         spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
         spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
 
-        SettingProperty<String> spFFMPEGPath = Settings.getSettingProperty("FFMPEG", "ffmpeg", systemSettings);
-        spFFMPEGPath.addSubscriber(FFmpeg::setFFmpegPath);
+        FFmpeg.setFFmpegPath(getTomlConfig().getString("general.ffmpeg"));
 
-        SettingProperty<String> spDownloadTempPath = Settings.getSettingProperty("DOWNLOAD_FOLDER", "./tmp", systemSettings);
-        spDownloadTempPath.addSubscriber(value -> {
-            downloadFolder = new File(value);
-            if (!downloadFolder.exists() && !downloadFolder.mkdirs())
-                log.error("Could not create download folder");
-        });
+
+        downloadFolder = new File(getTomlConfig().getString("general.tmpDownloadFolder"));
+        if (!downloadFolder.exists() && !downloadFolder.mkdirs())
+            log.error("Could not create download folder");
 
         loadTargets();
     }
@@ -96,16 +95,15 @@ public class DefaultHandler extends Handler {
     }
 
     private void loadTargets() {
-        JSONArrayContainer targetsConfig = MediaManager.getInstance().getConfiguration().getJson().getArrayContainer("targets");
-        for (Object object : targetsConfig.getRaw()) {
-            JSONObject target = (JSONObject) object;
+        TomlArray targetArray = getTomlConfig().getArray("target");
+        for (int i = 0; i < targetArray.size(); i ++) {
+            TomlTable x = targetArray.getTable(i);
             Target tar = new Target(
-                    target.get("identifier").toString()
-                    , target.containsKey("displayName") ? target.get("displayName").toString() : target.get("identifier").toString()
-                    , target.get("path").toString()
-                    , target.containsKey("subFolders") && Boolean.parseBoolean(target.get("subFolders").toString())
-            );
-            targets.put(target.get("identifier").toString(), tar);
+                    x.getString("identifier"),
+                    x.getString("displayName"),
+                    x.getString("path"),
+					Boolean.TRUE.equals(x.getBoolean("subFolders")));
+            targets.put(tar.identifier(), tar);
         }
     }
 
@@ -276,6 +274,8 @@ public class DefaultHandler extends Handler {
 
         int animeId = content.get("animeId", -1, Integer.class);
 
+        if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("PUT,"+url+","+tableItem.getSortIndex());}}
+
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
             public void onProgressUpdate(double v) {
@@ -290,9 +290,9 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onInfo(String s) {
-                if (log.isDebugEnabled()) {
-                    log.debug(s);
-                }
+                //if (log.isDebugEnabled()) {
+                //    log.debug(s);
+                //}
             }
 
             @Override
@@ -319,6 +319,7 @@ public class DefaultHandler extends Handler {
                 }
                 if (tableItem.isRunning() && !tableItem.isDeleted()) {
                     tableItem.setFailed(true);
+                    changeObject(content, "state", "Error: " + error.getMessage());
                 }
             }
         };
@@ -332,26 +333,34 @@ public class DefaultHandler extends Handler {
         // Start the download
         // This task is only running when the titleTask is completed
         ExecutorTask downloadTask = new ExecutorTask(() -> {
-            if (tableItem.isDeleted())
+            if (tableItem.isDeleted()) {
+                if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DELETED,"+url+","+tableItem.getSortIndex());}}
                 return;
+            }
             tableItem.setRunning(true);
             tableItem.setExecutingThread(Thread.currentThread());
             try {
+                if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("START,"+url+","+tableItem.getSortIndex());}}
                 File file = downloader.start();
-                if (downloader.isCanceled())
+                if (downloader.isCanceled()) {
+                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("CANCELED,"+url+","+tableItem.getSortIndex());}}
                     return;
+                }
 
                 // Check if an error has occurred during the download
                 // if so, early escape the task so further error won't be overridden the initial error
                 if (tableItem.isFailed()) {
                     tableItem.setRunning(false);
                     log.warn("Download failed!");
+                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("FAILED,"+url+","+tableItem.getSortIndex());}}
                     return;
                 }
+                if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DONE,"+url+","+tableItem.getSortIndex());}}
 
                 File targetFile = new File(outputFolder, file.getName());
                 log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
                 Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("MOVED,"+url+","+tableItem.getSortIndex());}}
 
                 // Check if we have an animeId
                 // the animeId is intended to only be used for AutoLoader

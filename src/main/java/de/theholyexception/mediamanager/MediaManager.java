@@ -22,12 +22,13 @@ import me.kaigermany.ultimateutils.StaticUtils;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketEvent;
 import org.slf4j.LoggerFactory;
+import org.tomlj.Toml;
+import org.tomlj.TomlParseResult;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Executors;
 
@@ -41,8 +42,12 @@ public class MediaManager {
         new MediaManager();
     }
 
+    public static TomlParseResult getTomlConfig() {
+        return instance.tomlConfig;
+    }
+
     public void changeLogLevel() {
-        Level level = Level.valueOf(configuration.getJson().get("logLevel", String.class));
+        Level level = Level.valueOf(tomlConfig.getString("general.logLevel"));
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         context.getLogger("ROOT").setLevel(level);
     }
@@ -52,14 +57,15 @@ public class MediaManager {
     @Getter
     private final List<WebSocketBasic> clientList = Collections.synchronizedList(new ArrayList<>());
     @Getter
-    private ConfigJSON configuration;
+    private ConfigJSON systemSettings;
     @Getter
     private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
-
+    @Getter
+    private TomlParseResult tomlConfig;
     private static final ExecutorHandler executorHandler;
 
     static {
-        executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(10));
+        executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
         executorHandler.setThreadNameFactory(cnt -> "WS-Executor-" + cnt);
     }
 
@@ -69,7 +75,6 @@ public class MediaManager {
         loadConfiguration();
         checkForDockerEnvironment();
         loadWebServer();
-
         handlers.values().forEach(Handler::initialize);
     }
 
@@ -84,22 +89,23 @@ public class MediaManager {
     }
 
     private void loadConfiguration() {
-        configuration = new ConfigJSON(new File("./config.json"));
-        configuration.loadConfig();
-        changeLogLevel();
-        if (!configuration.getFile().exists()) {
-            URL url = MediaManager.class.getClassLoader().getResource("config-template.json");
-            if (url == null) throw new IllegalStateException("URL is null");
-            try (FileInputStream fis = new FileInputStream(new File(url.toURI()))) {
-                boolean result = configuration.createNewIfNotExists(fis);
-                if (result) log.info("New configuration created");
-            } catch (IOException | URISyntaxException ex) {
-                log.error(ex.getMessage());
-            }
+        try {
+            Path path = Paths.get(("./config/config.toml"));
+            tomlConfig = Toml.parse(path);
+            tomlConfig.errors().forEach(error -> System.out.println(error.toString()));
+        } catch (IOException ex) {
+            ex.printStackTrace();
         }
-        Settings.init(configuration);
+
+        systemSettings = new ConfigJSON(new File("./config/systemsettings.json"));
+        systemSettings.loadConfig();
+        changeLogLevel();
+        Settings.init(systemSettings);
         handlers.values().forEach(Handler::loadConfigurations);
-        configuration.saveConfig(FileConfiguration.SaveOption.PRETTY_PRINT);
+        systemSettings.saveConfig(FileConfiguration.SaveOption.PRETTY_PRINT);
+
+        int webSocketThreads = Math.toIntExact(getTomlConfig().getLong("webserver.webSocketThreads"));
+        executorHandler.updateExecutorService(Executors.newFixedThreadPool(webSocketThreads));
     }
 
     private void checkForDockerEnvironment() {
@@ -116,7 +122,11 @@ public class MediaManager {
     }
 
     private void loadWebServer() {
-        new WebServer(new WebServer.Configuration(8080, "0.0.0.0", "./www", new WebSocketEvent() {
+        new WebServer(new WebServer.Configuration(
+                Math.toIntExact(tomlConfig.getLong("webserver.port")),
+                tomlConfig.getString("webserver.host"),
+                tomlConfig.getString("webserver.webroot")
+                , new WebSocketEvent() {
             @Override
             public void onMessage(String data, WebSocketBasic socket) {
                 JSONObjectContainer dataset = (JSONObjectContainer) JSONReader.readString(data);

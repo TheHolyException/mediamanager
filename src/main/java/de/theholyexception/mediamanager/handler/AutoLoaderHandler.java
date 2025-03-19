@@ -9,7 +9,6 @@ import de.theholyexception.mediamanager.AniworldHelper;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.TargetSystem;
 import de.theholyexception.mediamanager.Utils;
-import de.theholyexception.mediamanager.models.SettingMetadata;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
@@ -27,19 +26,22 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.Executors;
 
+import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
+
 @Slf4j
 public class AutoLoaderHandler extends Handler {
 
-    private SettingProperty<Integer> spCheckIntervalMin;
-    private SettingProperty<Integer> spCheckDelayMs;
     private final List<Anime> subscribedAnimes = Collections.synchronizedList(new ArrayList<>());
     private DataBaseInterface db;
     private DefaultHandler defaultHandler;
 
     private SettingProperty<Boolean> spAutoDownload;
-    private SettingProperty<Boolean> spEnabled;
     private final Random random = new Random();
     private Boolean initialized = false;
+
+    private long checkIntervalMin;
+    private long checkDelayMs;
+    private boolean enabled;
 
     public AutoLoaderHandler(TargetSystem targetSystem) {
         super(targetSystem);
@@ -48,17 +50,12 @@ public class AutoLoaderHandler extends Handler {
     @Override
     public void loadConfigurations() {
         super.loadConfigurations();
+        int urlResolverThreads = Math.toIntExact(getTomlConfig().getLong("autoloader.urlResolverThreads"));
+        AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(urlResolverThreads));
 
-        SettingProperty<Integer> spURLResolverThreads = new SettingProperty<>(new SettingMetadata("urlResolverThreads", false));
-        spURLResolverThreads.addSubscriber(value -> AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(value)));
-        spURLResolverThreads.setValue(handlerConfiguration.get("urlResolverThreads", 10, Integer.class));
-
-        spCheckIntervalMin = new SettingProperty<>(new SettingMetadata("checkIntervalMin", false));
-        spCheckIntervalMin.setValue(handlerConfiguration.get("checkIntervalMin", 5, Integer.class));
-        spCheckDelayMs = new SettingProperty<>(new SettingMetadata("checkDelayMs", false));
-        spCheckDelayMs.setValue(handlerConfiguration.get("checkDelayMs", 5, Integer.class));
-        spEnabled = new SettingProperty<>(new SettingMetadata("enabled", false));
-        spEnabled.setValue(handlerConfiguration.get("enabled", true, Boolean.class));
+        checkIntervalMin = getTomlConfig().getLong("autoloader.checkIntervalMin");
+        checkDelayMs = getTomlConfig().getLong("autoloader.checkDelayMs");
+        enabled = Boolean.TRUE.equals(getTomlConfig().getBoolean("autoloader.enabled"));
 
         spAutoDownload = Settings.getSettingProperty("AUTO_DOWNLOAD", false, "systemSettings");
     }
@@ -86,7 +83,7 @@ public class AutoLoaderHandler extends Handler {
             });
             db.getExecutorHandler().awaitGroup(-1);
 
-            if (spEnabled.getValue())
+            if (enabled)
                 startThread();
 
             synchronized (this) {
@@ -152,7 +149,6 @@ public class AutoLoaderHandler extends Handler {
         anime.loadMissingEpisodes();
         anime.scanDirectoryForExistingEpisodes();
         subscribedAnimes.add(anime);
-        spCheckIntervalMin.trigger();
         anime.writeToDB(db);
 
         db.getExecutorHandler().awaitGroup(-1);
@@ -167,7 +163,6 @@ public class AutoLoaderHandler extends Handler {
         int id = content.get("id", Integer.class);
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
         if (optAnime.isPresent()) {
-            spCheckIntervalMin.trigger();
             Anime anime = optAnime.get();
             db.executeSafe("delete from anime where nKey = ?", id);
             subscribedAnimes.remove(anime);
@@ -183,7 +178,7 @@ public class AutoLoaderHandler extends Handler {
     }
 
     private WebSocketResponse cmdRunDownload(JSONObjectContainer content) {
-        if (!spEnabled.getValue()) return WebSocketResponse.ERROR.setMessage("AutoLoader is disabled!");
+        if (!enabled) return WebSocketResponse.ERROR.setMessage("AutoLoader is disabled!");
 
         int animeId = content.get("id", Integer.class);
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(a -> a.getId() == animeId).findFirst();
@@ -208,10 +203,10 @@ public class AutoLoaderHandler extends Handler {
                             runDownload(anime);
                         }
 
-                        Utils.sleep(spCheckDelayMs.getValue());
+                        Utils.sleep(checkDelayMs);
                     }
 
-                    long sleepTime = spCheckIntervalMin.getValue()*1000L*60L;
+                    long sleepTime = checkIntervalMin*1000L*60L;
 
                     sleepTime = random.nextLong(sleepTime * 3 / 4, sleepTime * 5 / 4);
                     log.info("Scan done, next in " + (sleepTime/1000) + "s");
@@ -260,17 +255,16 @@ public class AutoLoaderHandler extends Handler {
 
     private void loadDatabase() {
         try {
-            JSONObjectContainer mysqlConfig = handlerConfiguration.getObjectContainer("mysql");
             db = new MySQLInterface(
-                    mysqlConfig.get("host", String.class),
-                    mysqlConfig.get("port", Integer.class),
-                    mysqlConfig.get("username", String.class),
-                    mysqlConfig.get("password", String.class),
-                    mysqlConfig.get("database", String.class));
+                    getTomlConfig().getString("mysql.host"),
+                    Math.toIntExact(getTomlConfig().getLong("mysql.port")),
+                    getTomlConfig().getString("mysql.username"),
+                    getTomlConfig().getString("mysql.password"),
+                    getTomlConfig().getString("mysql.database"));
             db.asyncDataSettings(2);
             db.connect();
 
-            if (Boolean.TRUE.equals(handlerConfiguration.get("executeDBScripts", false, Boolean.class))) {
+            if (Boolean.TRUE.equals(getTomlConfig().getBoolean("autoloader.executeDBScripts"))) {
                 executeDatabaseScripts();
             }
 
