@@ -63,7 +63,9 @@ class SubscriptionsWidget extends BaseWidget {
             existing.remove();
         }
         
-        let row = $('<tr>').attr('autoloader', itemId);
+        let row = $('<tr>')
+            .attr('autoloader', itemId)
+            .attr('title', SubscriptionsWidget.getTooltip(item));
 
         // Toolbar
         {
@@ -133,6 +135,18 @@ class SubscriptionsWidget extends BaseWidget {
         }
 
         table.append(row);
+    }
+
+    static getTooltip(item){
+        let tooltip = "Download Directory:\n\t" + item.directory + "\n";
+        tooltip += "Excluded Seasons:\n";
+
+        let excludedList = item.excludedSeasons.split(',');
+        for (let excluded in excludedList) {
+            tooltip += "\t" + excluded + "\n"
+        }
+
+        return tooltip;
     }
 
     static autoloaderSave(subfolder, url, languageId) {    
