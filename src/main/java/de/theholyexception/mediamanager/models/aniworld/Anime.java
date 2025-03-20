@@ -82,10 +82,12 @@ public class Anime {
         this.url = row.get("szURL", String.class);
         String overridePath = row.get("szCustomDirectory", String.class);
         if (overridePath == null || overridePath.isEmpty()) overridePath = null;
-        String[] szExcludedSeasons = row.get("szExcludedSeasons", String.class).split(",");
         this.excludedSeasons = new ArrayList<>();
-        for (String s : szExcludedSeasons)
-            this.excludedSeasons.add(Integer.parseInt(s));
+        String szExcludedSeasonsString = row.get("szExcludedSeasons", String.class);
+        if (szExcludedSeasonsString != null && !szExcludedSeasonsString.isEmpty()) {
+            for (String s : szExcludedSeasonsString.split(","))
+                this.excludedSeasons.add(Integer.parseInt(s));
+        }
         this.isDirty = false;
         setDirectoryPath(overridePath, false);
     }
