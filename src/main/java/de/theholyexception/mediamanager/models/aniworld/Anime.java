@@ -4,7 +4,7 @@ import de.theholyexception.holyapi.datastorage.sql.Result;
 import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.mediamanager.AniworldHelper;
-import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import de.theholyexception.mediamanager.Utils;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -100,13 +100,6 @@ public class Anime {
         } else {
             directory = new File(baseDirectory, AniworldHelper.getSubdirectoryFromURL(url));
         }
-    }
-
-    public int getEpisodeCount() {
-        int cnt = 0;
-        for (Season season : seasonList)
-            cnt += season.getEpisodeList().size();
-        return cnt;
     }
 
     public int getUnloadedEpisodeCount(boolean filterLanguage) {
@@ -210,7 +203,7 @@ public class Anime {
         }
 
         lastUpdate = System.currentTimeMillis();
-        WebSocketUtils.sendAutoLoaderItem(null, this);
+        //WebSocketUtils.sendAutoLoaderItem(null, this);
     }
 
 
@@ -234,21 +227,14 @@ public class Anime {
                     title,
                     url,
                     customDirectory == null ?"" : customDirectory,
-                    intergerListToString(excludedSeasons));
+                    Utils.intergerListToString(excludedSeasons));
             isDirty = false;
         }
 
         seasonList.forEach(season -> season.writeToDB(db, id));
     }
 
-    private String intergerListToString(List<Integer> list) {
-        StringBuilder sb = new StringBuilder();
-        for (Integer i : list) {
-            sb.append(i);
-            sb.append(",");
-        }
-        return sb.toString();
-    }
+
 
     public JSONObject toJSONObject() {
         Map<String, Object> object = new HashMap<>();
@@ -259,7 +245,7 @@ public class Anime {
         object.put("unloaded", getUnloadedEpisodeCount(true) + " [\uD83C\uDDE9\uD83C\uDDEA]  ("+getUnloadedEpisodeCount(false)+"[\uD83C\uDDEF\uD83C\uDDF5])");
         object.put("lastScan", lastUpdate);
         object.put("directory", getDirectory().toString().replace(baseDirectory.toString(), ""));
-        object.put("excludedSeasons", intergerListToString(excludedSeasons));
+        object.put("excludedSeasons", Utils.intergerListToString(excludedSeasons));
         return new JSONObject(object);
     }
 

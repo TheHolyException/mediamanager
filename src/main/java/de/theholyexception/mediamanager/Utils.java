@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 @Slf4j
 public class Utils {
@@ -47,6 +49,26 @@ public class Utils {
         } catch (InterruptedException ex) {
             //log.error("Interrupted Fail", ex);
         }
+    }
+
+    public static String intergerListToString(List<Integer> list) {
+        if (list.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder();
+        for (Integer i : list) {
+            sb.append(i);
+            sb.append(",");
+        }
+        return sb.substring(0, sb.length() - 1);
+    }
+
+    public static List<Integer> stringToIntgerList(String string) {
+        String[] split = string.split(",");
+        List<Integer> list = new ArrayList<>();
+        for (String s : split) {
+            if (s.isEmpty()) continue;
+            list.add(Integer.parseInt(s));
+        }
+        return list;
     }
 
 }

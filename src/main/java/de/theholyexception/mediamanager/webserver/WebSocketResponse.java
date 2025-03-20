@@ -17,6 +17,7 @@ public enum WebSocketResponse {
     }
 
     public WebSocketResponse setMessage(String message) {
+        if (message == null) return this;
         response.set("message", message);
         return this;
     }

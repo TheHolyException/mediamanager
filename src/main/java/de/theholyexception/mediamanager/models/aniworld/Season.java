@@ -6,7 +6,6 @@ import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.mediamanager.AniworldHelper;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
 
@@ -16,7 +15,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-@ToString
 @Slf4j
 public class Season {
 
@@ -31,12 +29,31 @@ public class Season {
 
     @Getter
     protected boolean isDirty;
+    @Getter
+    private Anime anime;
 
     @Getter @Setter
     private static int currentID;
 
     private static int getAndAddCurrentID() {
         return ++currentID;
+    }
+
+
+    public Season(Element element) {
+        this.seasonNumber = Integer.parseInt(isNumeric(element.text()) ? element.text() : "0");
+        this.url = "https://aniworld.to" + element.attr("href");
+        this.isDirty = true;
+        this.id = Season.getAndAddCurrentID();
+    }
+
+    public Season(Row row, Anime anime) {
+        this.id = row.get("nKey", Integer.class);
+        this.url = row.get("szURL", String.class);
+        this.seasonNumber = row.get("nSeasonNumber", Integer.class);
+        this.isDirty = false;
+
+        this.anime = anime;
     }
 
     public static void loadFromDB(DataBaseInterface db, Anime anime) {
@@ -46,31 +63,10 @@ public class Season {
                         where nAnimeLink = %s
                         """, anime.getId()));
         for (Row row : rs.getTable(0).getRows()) {
-            Season season = new Season(row);
+            Season season = new Season(row, anime);
             Episode.loadFromDB(db, season);
             anime.addSeason(season);
         }
-    }
-
-    public Season(int seasonNumber, String url, boolean isDirty) {
-        this.seasonNumber = seasonNumber;
-        this.url = url;
-        this.isDirty = isDirty;
-        this.id = Season.getAndAddCurrentID();
-    }
-
-    public static Season parseFromElement(Element element) {
-        return new Season(
-                Integer.parseInt(isNumeric(element.text()) ? element.text() : "0"),
-                "https://aniworld.to" + element.attr("href"),
-                true);
-    }
-
-    public Season(Row row) {
-        this.id = row.get("nKey", Integer.class);
-        this.url = row.get("szURL", String.class);
-        this.seasonNumber = row.get("nSeasonNumber", Integer.class);
-        this.isDirty = false;
     }
 
     public void addEpisode(Episode episode) {

@@ -87,6 +87,7 @@ public class AutoLoaderHandler extends Handler {
             if (enabled)
                 startThread();
 
+            log.info("AutoLoader initialized");
             synchronized (this) {
                 initialized = true;
                 this.notifyAll();
@@ -204,15 +205,29 @@ public class AutoLoaderHandler extends Handler {
         Thread t = new Thread(() -> {
             while (!Thread.interrupted()) {
                 try {
-
+                    boolean autoLoad = Boolean.TRUE.equals(spAutoDownload.getValue());
                     for (Anime anime : subscribedAnimes) {
                         log.info("Scanning anime: " + anime.getTitle());
 
+                        // Checks the episodes that do not have the requested language
+                        // for an update of the language
+                        for (Season season : anime.getSeasonList()) {
+                            for (Episode episode : season.getEpisodeList()) {
+                                if (episode.getLanguageIds().contains(anime.getLanguageId()))
+                                    continue;
+                                episode.activeScanLanguageIDs();
+                            }
+                        }
+
+                        // Scans for new episodes that are not in our data structure
                         anime.loadMissingEpisodes();
 
-                        if (Boolean.TRUE.equals(spAutoDownload.getValue())) {
+                        // Actually runs the download
+                        if (autoLoad)
                             runDownload(anime);
-                        }
+
+                        if (anime.isDeepDirty())
+                            anime.writeToDB(db);
 
                         Utils.sleep(checkDelayMs);
                     }
@@ -295,7 +310,7 @@ public class AutoLoaderHandler extends Handler {
     private void executeDatabaseScripts() {
         try {
             List<String> files = ResourceUtilities.listResourceFilesRecursive("sql/");
-            for (String file : files) {
+            for (String file : files.stream().sorted().toList()) {
                 if (!file.endsWith(".sql")) continue;
                 String content = new String(DataUtils.readAllBytes(ResourceUtilities.getResourceAsStream("sql/"+file)));
                 String[] filePath = file.split("/");

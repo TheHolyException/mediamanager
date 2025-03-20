@@ -51,7 +51,7 @@ public class AniworldHelper {
                 if (!listElement.html().contains("href")) continue;
                 if (listElement.html().contains("Episode")) break;
                 Element domSeason = listElement.selectFirst("a");
-                result.add(Season.parseFromElement(domSeason));
+                result.add(new Season(domSeason));
             }
         } catch (Exception ex) {
             log.error("Failed to obtain seasons", ex);
@@ -71,7 +71,7 @@ public class AniworldHelper {
                 Element domSeason = listElement.selectFirst("a");
                 if (Integer.parseInt(Season.isNumeric(domSeason.text()) ? domSeason.text() : "0") != number)
                     continue;
-                return Season.parseFromElement(domSeason);
+                return new Season(domSeason);
             }
         } catch (Exception ex) {
             log.error("Failed to obtain season", ex);
@@ -98,7 +98,7 @@ public class AniworldHelper {
             for (Element listElement : listElements) {
                 if (!listElement.html().contains("data-season-id")) continue;
                 Element domEpisode = listElement.selectFirst("a");
-                result.add(Episode.parseFromElement(domEpisode));
+                result.add(new Episode(domEpisode));
             }
         } catch (Exception ex) {
             log.error("Failed to obtain episodes", ex);

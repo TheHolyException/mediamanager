@@ -5,6 +5,7 @@ import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.AniworldHelper;
+import de.theholyexception.mediamanager.Utils;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -30,28 +31,34 @@ public class Episode {
     @Setter
     private List<Integer> languageIds = null;
     private boolean isDirty;
+    @Getter
+    private Season season;
 
-
-
-    private Episode(int episodeNumber, int id, String aniworldUrl, String videoUrl, String title, boolean isDirty) {
-        this.episodeNumber = episodeNumber;
-        this.id = id;
-        this.videoUrl = videoUrl;
-        this.aniworldUrl = aniworldUrl;
-        this.title = title;
-        this.isDirty = isDirty;
+    public Episode(Element element) {
+        this.episodeNumber = Integer.parseInt(element.text());
+        this.id = Integer.parseInt(element.attr("data-episode-id"));
+        this.videoUrl = AniworldHelper.ANIWORLD_URL + element.attr("href");
+        this.aniworldUrl = null;
+        this.title = element.attr("title");
+        this.isDirty = true;
     }
 
-    public List<Integer> getLanguageIds() {
-        if (languageIds == null) {
-            AniworldHelper.resolveEpisodeLanguages(this);
-        }
-        AniworldHelper.urlResolver.awaitGroup(883855723);
-        return languageIds;
-    }
+    public Episode(Row row, Season season) {
+        this.episodeNumber = row.get("nEpisodeNumber", Integer.class);
+        this.id = row.get("nKey", Integer.class);
+        this.aniworldUrl = row.get("szAniworldURL", String.class);
+        this.videoUrl = row.get("szVideoURL", String.class);
+        this.title = row.get("szTitle", String.class);
+        this.downloaded = row.get("bLoaded", Integer.class) == 1;
+        this.isDirty = false;
+        String szLanguageIDs = row.get("szLanguageIds", String.class);
+        if (szLanguageIDs != null && !szLanguageIDs.isEmpty())
+            this.languageIds = Utils.stringToIntgerList(szLanguageIDs);
 
-    public List<Integer> getLanguageIdsRaw() {
-        return languageIds;
+        if (aniworldUrl != null && aniworldUrl.isEmpty()) aniworldUrl = null;
+        if (videoUrl != null && videoUrl.isEmpty()) videoUrl = null;
+
+        this.season = season;
     }
 
     public static void loadFromDB(DataBaseInterface db, Season season) {
@@ -61,33 +68,36 @@ public class Episode {
                         where nSeasonLink = %s
                         """, season.getId()));
         for (Row row : rs.getTable(0).getRows()) {
-            Episode e = new Episode(row);
+            Episode e = new Episode(row, season);
             season.addEpisode(e);
         }
     }
 
-    public static Episode parseFromElement(Element element) {
-        return new Episode(
-                Integer.parseInt(element.text()),
-                Integer.parseInt(element.attr("data-episode-id")),
-                AniworldHelper.ANIWORLD_URL + element.attr("href"),
-                null,
-                element.attr("title"),
-                true
-        );
+    public List<Integer> getLanguageIdsRaw() {
+        return languageIds;
     }
 
-    public Episode(Row row) {
-        this.episodeNumber = row.get("nEpisodeNumber", Integer.class);
-        this.id = row.get("nKey", Integer.class);
-        this.aniworldUrl = row.get("szAniworldURL", String.class);
-        this.videoUrl = row.get("szVideoURL", String.class);
-        this.title = row.get("szTitle", String.class);
-        this.downloaded = row.get("bLoaded", Integer.class) == 1;
-        this.isDirty = false;
+    public List<Integer> getLanguageIds() {
+        if (languageIds == null) {
+            AniworldHelper.resolveEpisodeLanguages(this);
+            AniworldHelper.urlResolver.awaitGroup(883855723);
+            this.isDirty = true;
+        }
+        return languageIds;
+    }
 
-        if (aniworldUrl != null && aniworldUrl.isEmpty()) aniworldUrl = null;
-        if (videoUrl != null && videoUrl.isEmpty()) videoUrl = null;
+    public void activeScanLanguageIDs() {
+        if (languageIds != null && season != null) {
+            Anime a = season.getAnime();
+            if (a == null)
+                throw new IllegalStateException("Season has no anime");
+            log.debug("Episode " + a.getTitle() + " - " + title + " scans for language");
+
+            AniworldHelper.resolveEpisodeLanguages(this);
+            AniworldHelper.urlResolver.awaitGroup(883855723);
+            this.isDirty = true;
+        }
+
     }
 
     public void writeToDB(DataBaseInterface db, int seasonLink) {
@@ -95,14 +105,15 @@ public class Episode {
             return;
 
         log.debug("Writing episode to db: " + this);
-        db.executeSafe("call addEpisode(?, ?, ?, ?, ?, ?, ?)",
+        db.executeSafe("call addEpisode(?, ?, ?, ?, ?, ?, ?, ?)",
                 id,
                 seasonLink,
                 episodeNumber,
                 title,
                 aniworldUrl == null ? "" : aniworldUrl,
                 videoUrl == null ? "" : videoUrl,
-                downloaded ? 1 : 0);
+                downloaded ? 1 : 0,
+                Utils.intergerListToString(languageIds));
         isDirty = false;
     }
 

@@ -144,8 +144,8 @@ public class MediaManager {
                     try {
                         response = handler.handleCommand(socket, cmd, content);
                     } catch (Exception ex) {
-                        response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
                         log.error("Failed to process command", ex);
+                        response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
                     }
                     if (response != null) {
                         response.getResponse().set("sourceCommand", cmd);
