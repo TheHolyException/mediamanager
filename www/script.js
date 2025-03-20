@@ -44,6 +44,19 @@ function initUI() {
         }
     })
 
+    let slideCheckbox = $('.slide-checkbox');
+    if(localStorage.getItem('show-dashboard') == 'true'){
+        slideCheckbox.find('[type="checkbox"]').prop('checked', true);
+    }
+    
+    slideCheckbox.click(function(){
+        let self = $(this);
+        let showDashboard = self.find('[type="checkbox"]').prop('checked');
+        localStorage.setItem('show-dashboard', showDashboard);
+    })
+
+
+
     setupGridstack();
 }
 
