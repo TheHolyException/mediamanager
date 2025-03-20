@@ -368,7 +368,7 @@ Target Data
         "url": "string",              // Aniworld anime url
         "languageId": 0,              // 1 = German; 2 = German Sub; 3 = English Sub
         "directory": "string",        // Local directory
-        "excludedSeasons": "0,1,2,3"  // Comma separated list of seasons to exclude
+        "excludedSeasons": "0,1,2,3"  // Optional: Comma separated list of seasons to exclude
     }
 }
 ```
