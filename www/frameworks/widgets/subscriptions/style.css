@@ -29,9 +29,10 @@
 
     .setting {
         display: flex;
-        width: 400px;
+        width: 600px;
 
         span {
+            white-space: nowrap;
             background-color: var(--darkBGColor2);
             border-top-left-radius: 50px;
             border-bottom-left-radius: 50px;
