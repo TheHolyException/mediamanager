@@ -21,6 +21,10 @@ class SubscriptionsWidget extends BaseWidget {
                             <span>Subfolder</span>
                             <input class="input" type="text">
                         </label>
+                        <label class="setting excluded-seasons">
+                            <span>Excluded Seasons</span>
+                            <input class="input" type="text">
+                        </label>
                     </div>
                 </div>
                 <table class="auto-downloader-table">
@@ -40,11 +44,13 @@ class SubscriptionsWidget extends BaseWidget {
             let widget = $(this).closest('[widget-name="SubscriptionsWidget"]');
             let subfolderInput = widget.find('.setting.subfolder input');
             let urlInput = widget.find('.setting.url input');
+            let excludedSeasonsInput = widget.find('.setting.excluded-seasons input');
 
             SubscriptionsWidget.autoloaderSave(
                 subfolderInput.val(),
                 urlInput.val(),
-                1
+                1,
+                excludedSeasonsInput.val()
             );
 
             subfolderInput.val('');
@@ -63,7 +69,9 @@ class SubscriptionsWidget extends BaseWidget {
             existing.remove();
         }
         
-        let row = $('<tr>').attr('autoloader', itemId);
+        let row = $('<tr>')
+            .attr('autoloader', itemId)
+            .attr('title', SubscriptionsWidget.getTooltip(item));
 
         // Toolbar
         {
@@ -135,11 +143,24 @@ class SubscriptionsWidget extends BaseWidget {
         table.append(row);
     }
 
-    static autoloaderSave(subfolder, url, languageId) {    
+    static getTooltip(item){
+        let tooltip = "Download Directory:\n\t" + item.directory + "\n";
+        tooltip += "Excluded Seasons:\n";
+
+        let excludedList = item.excludedSeasons.split(',');
+        for (let excluded of excludedList) {
+            tooltip += "\t" + excluded + "\n"
+        }
+
+        return tooltip;
+    }
+
+    static autoloaderSave(subfolder, url, languageId, excludedSeasons) {    
         let request = {
             url: url,
             languageId: languageId,
-            directory: subfolder
+            directory: subfolder,
+            excludedSeasons: excludedSeasons
         }
         
         sendPacket('subscribe', 'autoloader', request);

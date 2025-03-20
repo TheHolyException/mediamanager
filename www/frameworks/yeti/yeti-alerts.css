@@ -17,7 +17,7 @@
 /* Container for all alerts */
 .yeti-container {
     position: fixed;
-    top: 10px;
+    bottom: 10px;
     right: 10px;
     display: flex;
     flex-direction: column;
@@ -122,6 +122,6 @@
 
 .yeti.fade-out {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(10px);
     transition: opacity 0.5s ease, transform 0.5s ease;
 }

@@ -25,12 +25,17 @@ body:has(.slide-checkbox [type="checkbox"]:checked){
     .grid-stack {
         display: block;
     }
+
+    .action-bar-buttons {
+        display: flex;
+    }
 }
 
 header {
+    --middle : 690px;
+    --sides: calc(50% - calc(var(--middle) / 2));
     display: grid;
-    grid-template-columns: 15% 70% 15%;
-    grid-template-columns: auto auto auto;
+    grid-template-columns: var(--sides) var(--middle) var(--sides);
     background-color: var(--darkBGColor2);
     color: var(--darkerTextColor);
     font-size: 2em;
@@ -57,9 +62,23 @@ header {
 
     .action-bar {
         display: flex;
+        gap: 15px;
         justify-content: flex-end;
         align-items: center;
         padding-right: 50px;
+    }
+
+    .action-bar-buttons{
+        display: none;
+        gap: 15px;
+
+        a {
+            cursor: pointer;
+
+            :hover {
+                color: var(--hover-color);
+            }
+        }
     }
 }
 
@@ -172,5 +191,31 @@ header {
         bottom: 0;
         width: 50%;
         transition: right 0.25s;
+    }
+}
+
+
+
+
+
+.toggle-icon {
+    cursor: pointer;
+
+    [type="checkbox"] {
+        display: none;
+    }
+
+    .on {
+        display: none;
+    }
+
+    &:has([type="checkbox"]:checked) {
+        .on {
+            display: block;
+        }
+
+        .off {
+            display: none;
+        }
     }
 }

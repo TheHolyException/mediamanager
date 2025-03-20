@@ -1,5 +1,5 @@
 const yeti = new Yeti();
-//let indexes = new Map();
+let grid = undefined;
 let targetFolders = [];
 
 const settings = [
@@ -34,6 +34,29 @@ function initUI() {
         subscriptions: function () { $('.embeded-widget').html(new SubscriptionsWidget().render()); },
     });
 
+    $('.toggle-icon.edit-save').click(function(){
+        let self = $(this);
+        let isEditing = self.find('[type="checkbox"]').prop('checked');
+        grid.setStatic(!isEditing);
+
+        if(!isEditing){
+            localStorage.setItem('dashboard-content', JSON.stringify(grid.save()));
+        }
+    })
+
+    let slideCheckbox = $('.slide-checkbox');
+    if(localStorage.getItem('show-dashboard') == 'true'){
+        slideCheckbox.find('[type="checkbox"]').prop('checked', true);
+    }
+    
+    slideCheckbox.click(function(){
+        let self = $(this);
+        let showDashboard = self.find('[type="checkbox"]').prop('checked');
+        localStorage.setItem('show-dashboard', showDashboard);
+    })
+
+
+
     setupGridstack();
 }
 
@@ -44,30 +67,52 @@ function setupGridstack() {
 
     let insert = [{ h: 2, content: 'new item' }];
 
-    let grid = GridStack.init({
+    grid = GridStack.init({
         cellHeight: 70,
         minRow: 1,
         acceptWidgets: true,
         float: true,
-        handle: '.widget-handle'
+        handle: '.widget-handle',
+        staticGrid: true
     });
+    
     GridStack.setupDragIn('.grid-stack-item', {/* appendTo: 'body',  */helper: 'clone' }, insert);
 
     grid.on('added', function (event, items) {
         if(items[1] && items[1].own) return;
-        
+
         let o = items[0];
         let addedElem = $(o.el);
-        let widgetName = addedElem.attr('widget-name');
+        let widgetName = o.widgetName;
+
+        if(!widgetName){
+            widgetName = addedElem.attr('widget-name');
+        }
+
         addedElem.remove();
         grid.addWidget(WidgetManager.getWidget(widgetName, "").render(), {
             x: o.x,
             y: o.y,
             w: o.w,
             h: o.h,
-            own: true
+            own: true,
+            widgetName: widgetName
         });
     });
+
+    let dashboardData = localStorage.getItem('dashboard-content');
+    if(dashboardData){
+        dashboardItems = JSON.parse(dashboardData);
+        for(let item of dashboardItems){
+            grid.addWidget(WidgetManager.getWidget(item.widgetName, "").render(), {
+                x: item.x,
+                y: item.y,
+                w: item.w,
+                h: item.h,
+                widgetName: item.widgetName
+            })
+        }
+    }
 }
 
 function onWSResponseDefault(cmd, content) {
