@@ -20,7 +20,7 @@ public class Episode {
 
     private final int id;
     private final int episodeNumber;
-    private String url;
+    private String aniworldUrl;
     @Setter
     private String videoUrl;
     private final String title;
@@ -33,11 +33,11 @@ public class Episode {
 
 
 
-    private Episode(int episodeNumber, int id, String url, String title, boolean isDirty) {
+    private Episode(int episodeNumber, int id, String aniworldUrl, String videoUrl, String title, boolean isDirty) {
         this.episodeNumber = episodeNumber;
         this.id = id;
-        if (url.startsWith("https://voe")) this.videoUrl = url;
-        else this.url = url;
+        this.videoUrl = videoUrl;
+        this.aniworldUrl = aniworldUrl;
         this.title = title;
         this.isDirty = isDirty;
     }
@@ -71,6 +71,7 @@ public class Episode {
                 Integer.parseInt(element.text()),
                 Integer.parseInt(element.attr("data-episode-id")),
                 AniworldHelper.ANIWORLD_URL + element.attr("href"),
+                null,
                 element.attr("title"),
                 true
         );
@@ -79,14 +80,14 @@ public class Episode {
     public Episode(Row row) {
         this.episodeNumber = row.get("nEpisodeNumber", Integer.class);
         this.id = row.get("nKey", Integer.class);
-        String szURL = row.get("szURL", String.class);
-        if (szURL.startsWith(AniworldHelper.ANIWORLD_URL))
-            this.url = szURL;
-        else
-            this.videoUrl = szURL;
+        this.aniworldUrl = row.get("szAniworldURL", String.class);
+        this.videoUrl = row.get("szVideoURL", String.class);
         this.title = row.get("szTitle", String.class);
         this.downloaded = row.get("bLoaded", Integer.class) == 1;
         this.isDirty = false;
+
+        if (aniworldUrl != null && aniworldUrl.isEmpty()) aniworldUrl = null;
+        if (videoUrl != null && videoUrl.isEmpty()) videoUrl = null;
     }
 
     public void writeToDB(DataBaseInterface db, int seasonLink) {
@@ -94,12 +95,13 @@ public class Episode {
             return;
 
         log.debug("Writing episode to db: " + this);
-        db.executeSafe("call addEpisode(?, ?, ?, ?, ?, ?)",
+        db.executeSafe("call addEpisode(?, ?, ?, ?, ?, ?, ?)",
                 id,
                 seasonLink,
                 episodeNumber,
                 title,
-                videoUrl == null ? url : videoUrl,
+                aniworldUrl == null ? "" : aniworldUrl,
+                videoUrl == null ? "" : videoUrl,
                 downloaded ? 1 : 0);
         isDirty = false;
     }
@@ -110,7 +112,7 @@ public class Episode {
 
     public void loadVideoURL(int languageId, Runnable then) {
         if (videoUrl != null) return; // No need to parse, already parsed
-        if (url == null) {
+        if (aniworldUrl == null) {
             log.error("Cant load videoURL because url is null");
             return;
         }

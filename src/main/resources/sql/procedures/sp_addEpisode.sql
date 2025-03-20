@@ -3,7 +3,8 @@ CREATE OR REPLACE PROCEDURE `mediamanager`.`addEpisode`(
 	IN _nSeasonLink int,
 	IN _nEpisodeNumber int,
 	IN _szTitle varchar(200),
-	IN _szURL varchar(200),
+	IN _szAniworldURL varchar(200),
+	IN _szVideoURL varchar(200),
 	IN _bLoaded varchar(200)
 )
 BEGIN
@@ -14,15 +15,17 @@ BEGIN
 			nSeasonLink,
 			nEpisodeNumber,
 			szTitle,
-			szURL,
-			bLoaded
+			bLoaded,
+			szAniworldURL,
+			szVideoURL
 		) values (
 			_nKey,
 			_nSeasonLink,
 			_nEpisodeNumber,
 			_szTitle,
-			_szURL,
-			case when bLoaded = '1' then 1 else 0 end
+			case when bLoaded = '1' then 1 else 0 end,
+			_szAniworldURL,
+			szVideoURL
 		);
 	else
 	    select 'update';
@@ -30,8 +33,9 @@ BEGIN
 		set nSeasonLink = _nSeasonLink,
 			nEpisodeNumber = _nEpisodeNumber,
 			szTitle = _szTitle,
-			szURL = _szURL,
-			bLoaded = case when _bLoaded = '1' then 1 else 0 end
+			bLoaded = case when _bLoaded = '1' then 1 else 0 end,
+			szAniworldURL = _szAniworldURL,
+			szVideoURL = _szVideoURL
 		where nKey = _nKey;
 	end if;
 END

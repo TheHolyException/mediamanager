@@ -141,8 +141,13 @@ public class AniworldHelper {
 
     private static final ExpiringMap<String, List<Integer>> episodeLanguageCache = new ExpiringMap<>(1000L*60L*30L, false);
     public static ExecutorTask resolveEpisodeLanguages(Episode episode) {
-        if (episodeLanguageCache.containsKey(episode.getUrl())) {
-            episode.setLanguageIds(new ArrayList<>(episodeLanguageCache.get(episode.getUrl())));
+        if (episode.getAniworldUrl() == null) {
+            log.error("Episode has no aniworld-url " + episode.getTitle());
+            return null;
+        }
+
+        if (episodeLanguageCache.containsKey(episode.getAniworldUrl())) {
+            episode.setLanguageIds(new ArrayList<>(episodeLanguageCache.get(episode.getAniworldUrl())));
             return null;
         }
         statistics.computeIfAbsent("Episode Language Requests", k -> new AtomicInteger(0)).incrementAndGet();
@@ -153,7 +158,7 @@ public class AniworldHelper {
 
         ExecutorTask task = new ExecutorTask(() -> {
             try {
-                Document document = Jsoup.connect(episode.getUrl()).get();
+                Document document = Jsoup.connect(episode.getAniworldUrl()).get();
                 Elements list = document.select(".row > li");
                 for (Element element : list) {
                     int langId = Integer.parseInt(element.attr("data-lang-key"));
@@ -167,7 +172,7 @@ public class AniworldHelper {
 
         episode.setLanguageIds(languageIds);
 
-        episodeLanguageCache.put(episode.getUrl(), languageIds);
+        episodeLanguageCache.put(episode.getAniworldUrl(), languageIds);
         urlResolver.putTask(task, 883855723);
         return task;
     }
@@ -175,7 +180,7 @@ public class AniworldHelper {
     private static final Map<String, String> videoUrlCache = Collections.synchronizedMap(new ExpiringMap<>(1000L*60L*30L, false)); // 30 min
     public static ExecutorTask resolveVideoURL(Episode episode, int languageId) {
         ExecutorTask task = new ExecutorTask(() -> {
-            String cacheIdentifier = episode.getUrl() + languageId;
+            String cacheIdentifier = episode.getAniworldUrl() + languageId;
             if (videoUrlCache.containsKey(cacheIdentifier)) {
                 episode.setVideoUrl(videoUrlCache.get(cacheIdentifier));
                 return;
@@ -183,7 +188,7 @@ public class AniworldHelper {
             statistics.computeIfAbsent("Resolve Video URL Requests", k -> new AtomicInteger(0)).incrementAndGet();
 
             try {
-                Document document = Jsoup.connect(episode.getUrl()).get();
+                Document document = Jsoup.connect(episode.getAniworldUrl()).get();
                 Elements list = document.select(".row > li");
                 for (Element element : list) {
                     if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
