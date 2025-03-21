@@ -238,8 +238,9 @@ public class AutoLoaderHandler extends Handler {
                     log.info("Scan done, next in " + (sleepTime/1000) + "s");
                     Utils.sleep(sleepTime);
                 } catch (Exception ex) {
-                    log.error("", ex);
-                    Utils.sleep(2000);
+                    log.error("Failed to scan", ex);
+                    log.error("Next Scan in 1h");
+                    Utils.sleep(1000*60*60*2);
                 }
             }
         });

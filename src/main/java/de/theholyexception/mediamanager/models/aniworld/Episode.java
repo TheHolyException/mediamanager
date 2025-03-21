@@ -37,8 +37,8 @@ public class Episode {
     public Episode(Element element) {
         this.episodeNumber = Integer.parseInt(element.text());
         this.id = Integer.parseInt(element.attr("data-episode-id"));
-        this.videoUrl = AniworldHelper.ANIWORLD_URL + element.attr("href");
-        this.aniworldUrl = null;
+        this.videoUrl = null;
+        this.aniworldUrl = AniworldHelper.ANIWORLD_URL + element.attr("href");
         this.title = element.attr("title");
         this.isDirty = true;
     }
@@ -79,6 +79,7 @@ public class Episode {
 
     public List<Integer> getLanguageIds() {
         if (languageIds == null) {
+            System.out.println("getLanguageIDs");
             AniworldHelper.resolveEpisodeLanguages(this);
             AniworldHelper.urlResolver.awaitGroup(883855723);
             this.isDirty = true;
