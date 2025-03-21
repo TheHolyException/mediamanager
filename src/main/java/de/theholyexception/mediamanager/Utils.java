@@ -52,7 +52,7 @@ public class Utils {
     }
 
     public static String intergerListToString(List<Integer> list) {
-        if (list.isEmpty()) return "";
+        if (list == null || list.isEmpty()) return "";
         StringBuilder sb = new StringBuilder();
         for (Integer i : list) {
             sb.append(i);

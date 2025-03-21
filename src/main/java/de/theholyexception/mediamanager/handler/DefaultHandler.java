@@ -455,16 +455,16 @@ public class DefaultHandler extends Handler {
         JSONObject response = new JSONObject();
         {
             JSONObject memory = new JSONObject();
-            memory.put("current", Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory());
-            memory.put("heap", Runtime.getRuntime().totalMemory());
-            memory.put("max", Runtime.getRuntime().maxMemory());
+            memory.put("current", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory()));
+            memory.put("heap", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()));
+            memory.put("max", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory()));
             response.put("memory", memory);
         }
 
         {
             JSONObject docker = new JSONObject();
-            docker.put("memoryLimit", dockerMemoryLimit);
-            docker.put("memoryUsage", dockerMemoryUsage);
+            docker.put("memoryLimit", StaticUtils.toHumanReadableFileSize(dockerMemoryLimit));
+            docker.put("memoryUsage", StaticUtils.toHumanReadableFileSize(dockerMemoryUsage));
             response.put("docker", docker);
         }
 

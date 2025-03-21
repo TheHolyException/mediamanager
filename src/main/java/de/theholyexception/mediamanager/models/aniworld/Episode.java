@@ -50,7 +50,6 @@ public class Episode {
         this.videoUrl = row.get("szVideoURL", String.class);
         this.title = row.get("szTitle", String.class);
         this.downloaded = row.get("bLoaded", Integer.class) == 1;
-        this.isDirty = false;
         String szLanguageIDs = row.get("szLanguageIds", String.class);
         if (szLanguageIDs != null && !szLanguageIDs.isEmpty())
             this.languageIds = Utils.stringToIntgerList(szLanguageIDs);
@@ -59,6 +58,7 @@ public class Episode {
         if (videoUrl != null && videoUrl.isEmpty()) videoUrl = null;
 
         this.season = season;
+        this.isDirty = false;
     }
 
     public static void loadFromDB(DataBaseInterface db, Season season) {
@@ -95,7 +95,7 @@ public class Episode {
 
             AniworldHelper.resolveEpisodeLanguages(this);
             AniworldHelper.urlResolver.awaitGroup(883855723);
-            this.isDirty = true;
+            this.isDirty = true; // TODO check if changes has occured, then set this to true
         }
 
     }
