@@ -94,7 +94,9 @@ function setupGridstack() {
         }
 
         grid.removeWidget(o.el);
-        grid.addWidget(WidgetManager.getWidget(widgetName, "").render(), {
+        let widget = $(WidgetManager.getWidget(widgetName, "").render());
+        addRemoveButtonToWidget(widget);
+        grid.addWidget(widget.get(0), {
             x: o.x,
             y: o.y,
             w: o.w,
@@ -116,6 +118,16 @@ function setupGridstack() {
             })
         }
     }
+}
+
+function addRemoveButtonToWidget(widget){
+    let removeBtn = $('<button>')
+        .addClass('remove-widget-btn')
+        .html('<i class="fa-solid fa-trash"></i>')
+        .click(function(){
+            grid.removeWidget(this.parentElement);
+        });
+    widget.append(removeBtn);
 }
 
 function onWSResponseDefault(cmd, content) {
