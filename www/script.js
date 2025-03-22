@@ -75,11 +75,15 @@ function setupGridstack() {
         handle: '.widget-handle',
         staticGrid: true
     });
-    
+
     GridStack.setupDragIn('.grid-stack-item', {/* appendTo: 'body',  */helper: 'clone' }, insert);
 
+    let addToggle = true;
     grid.on('added', function (event, items) {
-        if(items[1] && items[1].own) return;
+        addToggle = !addToggle;
+        if(addToggle){
+            return
+        }
 
         let o = items[0];
         let addedElem = $(o.el);
@@ -89,13 +93,12 @@ function setupGridstack() {
             widgetName = addedElem.attr('widget-name');
         }
 
-        addedElem.remove();
+        grid.removeWidget(o.el);
         grid.addWidget(WidgetManager.getWidget(widgetName, "").render(), {
             x: o.x,
             y: o.y,
             w: o.w,
             h: o.h,
-            own: true,
             widgetName: widgetName
         });
     });
@@ -139,7 +142,7 @@ function onWSResponseDefault(cmd, content) {
 
             break;
         case "requestSubfoldersResponse":
-            subfolderSelection = $('.subfolder')
+            subfolderSelection = $('.subfolder.download')
             subfolderSelection.empty();
             subfolderSelection.append($('<option>'));
 
