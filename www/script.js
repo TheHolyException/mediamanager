@@ -135,12 +135,12 @@ function onWSResponseDefault(cmd, content) {
         case "systemInfo":
             StatisticsWidget.updateStatistics(content);
             break;
-        case "syn": // Acknowledge data sync
+        /* case "syn": // Acknowledge data sync
             for (i = 0; i < content.data.length; i++) {
                 let entry = content.data[i];
                 DownloadsWidget.addDownloaderItem(entry);
             }
-            break;
+            break; */
         case "targetFolders":
             targetFolders = content.targets;
             break;
