@@ -94,7 +94,9 @@ function setupGridstack() {
         }
 
         grid.removeWidget(o.el);
-        grid.addWidget(WidgetManager.getWidget(widgetName, "").render(), {
+        let widget = $(WidgetManager.getWidget(widgetName, "").render());
+        addRemoveButtonToWidget(widget);
+        grid.addWidget(widget.get(0), {
             x: o.x,
             y: o.y,
             w: o.w,
@@ -118,17 +120,27 @@ function setupGridstack() {
     }
 }
 
+function addRemoveButtonToWidget(widget){
+    let removeBtn = $('<button>')
+        .addClass('remove-widget-btn')
+        .html('<i class="fa-solid fa-trash"></i>')
+        .click(function(){
+            grid.removeWidget(this.parentElement);
+        });
+    widget.append(removeBtn);
+}
+
 function onWSResponseDefault(cmd, content) {
     switch (cmd) {
         case "systemInfo":
             StatisticsWidget.updateStatistics(content);
             break;
-        case "syn": // Acknowledge data sync
+        /* case "syn": // Acknowledge data sync
             for (i = 0; i < content.data.length; i++) {
                 let entry = content.data[i];
                 DownloadsWidget.addDownloaderItem(entry);
             }
-            break;
+            break; */
         case "targetFolders":
             targetFolders = content.targets;
             break;

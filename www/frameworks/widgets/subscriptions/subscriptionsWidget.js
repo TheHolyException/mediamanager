@@ -179,5 +179,5 @@ class SubscriptionsWidget extends BaseWidget {
                 $('[autoloader="' + content.id + '"]').remove();
                 break;
         }
-    }    
+    }
 }
