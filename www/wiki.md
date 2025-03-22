@@ -1,6 +1,6 @@
 # WebSocket Protocol
 ### Status responses
-```json
+```json5
 {
     "cmd": "response",
     "targetSystem": "string",
@@ -13,7 +13,7 @@
 ```
 
 ### General packet structure
-```json
+```json5
 {
     "cmd": "string",           // Command
     "targetSystem": "string",  // Categorization of the system that should handle the command
@@ -26,7 +26,7 @@
 # TargetSystem: Default
 
 ## Command: "ping"
-```json
+```json5
 {
     "cmd": "ping",         
     "targetSystem": "default",
@@ -37,7 +37,7 @@
 ```
 
 ### Response
-```json
+```json5
 {
   "cmd": "pong",
   "targetSystem": "default",
@@ -49,7 +49,7 @@
 
 ## Command: "syn"
 This command requests all relevant data from the server
-```json
+```json5
 {
     "cmd": "syn",         
     "targetSystem": "default",
@@ -61,7 +61,7 @@ This command requests all relevant data from the server
 
 ### Response
 Data for the downloads page
-```json
+```json5
 {
     "cmd": "syn",         
     "targetSystem": "default",
@@ -86,7 +86,7 @@ Data for the downloads page
 ```
 
 Data for settings
-```json
+```json5
 {
     "cmd": "setting",         
     "targetSystem": "default",
@@ -102,7 +102,7 @@ Data for settings
 }
 ```
 Target Data
-```json
+```json5
 {
     "cmd": "targetFolders",         
     "targetSystem": "default",
@@ -121,7 +121,7 @@ Target Data
 ---
 
 ## Command: "put"
-```json
+```json5
 {
     "cmd": "put",         
     "targetSystem": "default",
@@ -138,6 +138,12 @@ Target Data
             "enableSeasonAndEpisodeRenaming": "true|false",
             "enableSessionRecovery": "true|false",
             "useDirectMemory": "true|false"
+          },
+          "autoloaderData": {
+            "animeId": 0,
+            "seasonId": 0,
+            "episodeId": 0,
+            "provider": "string" // Optional: Alternative provider from wich the anime should be downloaded
           }
         },
         ...
@@ -151,7 +157,7 @@ Target Data
 ---
 
 ## Command: "del"
-```json
+```json5
 {
     "cmd": "del",
     "targetSystem": "default",
@@ -164,7 +170,7 @@ Target Data
 4: "Cannot remove task, already downloading!" -> [via Status response](#status-responses)
 
 **BROADCAST**:
-```json
+```json5
 {
     "cmd": "del",
     "targetSystem": "default",
@@ -179,7 +185,7 @@ Target Data
 ---
 
 ## Command: "del-all"
-```json
+```json5
 {
     "cmd": "del-all",
     "targetSystem": "default",
@@ -188,7 +194,7 @@ Target Data
 ```
 ### Responses
 **BROADCAST**:
-```json
+```json5
 {
     "cmd": "del",
     "targetSystem": "default",
@@ -205,7 +211,7 @@ Target Data
 ---
 
 ## Command: "setting"
-```json
+```json5
 {
     "cmd": "setting",
     "targetSystem": "default",
@@ -219,7 +225,7 @@ Target Data
 4: "Unsupported setting" -> [via Status response](#status-responses)
 
 **Broadcast**
-```json
+```json5
 {
     "cmd": "setting",
     "targetSystem": "default",
@@ -238,7 +244,7 @@ Target Data
 ---
 
 ## Command: "requestSubfolders"
-```json
+```json5
 {
   "cmd": "requestSubfolders",
   "targetSystem": "default",
@@ -250,7 +256,7 @@ Target Data
 ### Responses
 4: "No sub-folders are configured for {text}" -> [via Status response](#status-responses)
 
-```json
+```json5
 {
   "cmd": "requestSubfoldersResponse",
   "targetSystem": "default",
@@ -265,7 +271,7 @@ Target Data
 ```
 
 ## Command: "systemInfo"
-```json
+```json5
 {
     "cmd": "systemInfo",
     "targetSystem": "default",
@@ -274,7 +280,7 @@ Target Data
 ```
 ### Responses
 
-```json
+```json5
 {
   "cmd": "systemInfo",
   "targetSystem": "default",
@@ -310,7 +316,7 @@ Target Data
 # TargetSystem: Aniworld
 
 ## Command: "resolve"
-```json
+```json5
 {
     "cmd": "resolve",
     "targetSystem": "aniworld",
@@ -327,7 +333,7 @@ Target Data
 
 # TargetSystem: Autoloader
 ## Command: "getData"
-```json
+```json5
 {
     "cmd": "getData",
     "targetSystem": "autoloader",
@@ -335,7 +341,7 @@ Target Data
 }
 ```
 ### Responses
-```json
+```json5
 {
     "cmd": "syn",
     "targetSystem": "autoloader",
@@ -360,7 +366,7 @@ Target Data
 ---
 
 ## Command: "subscribe"
-```json
+```json5
 {
     "cmd": "subscribe",
     "targetSystem": "autoloader",
@@ -379,7 +385,7 @@ Target Data
 ---
 
 ## Command: "unsubscribe"
-```json
+```json5
 {
     "cmd": "unsubscribe",
     "targetSystem": "autoloader",
@@ -395,15 +401,47 @@ Target Data
 ---
 
 ## Command: "runDownload"
-```json
+```json5
 {
-    "cmd": "runDownload",
-    "targetSystem": "autoloader",
-    "content": {
-        "id": 0     // Identifier of the anime
-    }
+  "cmd": "runDownload",
+  "targetSystem": "autoloader",
+  "content": {
+    "id": 0     // Identifier of the anime
+  }
 }
 ```
 ### Responses
 "Anime with id {id} not found!" -> [via Status response](#status-responses)
 2: "OK" -> [via Status response](#status-responses)
+
+---
+
+## Command: "getAlternateStreams"
+Gets alternate stream providers for an autoloader added episode
+```json5
+{
+    "cmd": "getAlternateProviders",
+    "targetSystem": "autoloader",
+    "content": {
+      // Identifiers can be obtained via the objects from the syn command in the default target system
+      "animeId": 0,     // Identifier of the anime
+      "seasonId": 0,    // Identifier of the season
+      "episodeId": 0    // Identifier of the episode
+    }
+}
+```
+### Responses
+```json5
+{
+    "cmd": "getAlternateProvidersResponse",
+    "targetSystem": "autoloader",
+    "content": {
+      "providers": [
+        "VOE",
+        "Doodstream",
+        "Vidoza",
+        "Streamtape"
+      ]
+    }
+}
+```

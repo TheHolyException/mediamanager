@@ -9,6 +9,8 @@ import de.theholyexception.mediamanager.*;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
+import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
+import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
@@ -236,17 +238,13 @@ public class DefaultHandler extends Handler {
 
     @SuppressWarnings("unchecked")
     private WebSocketResponse scheduleDownload(WebSocketBasic socket, JSONObjectContainer content) {
-        String url = content.get("url", String.class);
-        if (url == null || url.isEmpty())
-            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
-
         String targetPath = content.get("target", String.class);
         log.debug("Resolving target: " + targetPath.split("/")[0]);
         Target target = targets.get(targetPath.split("/")[0]);
         log.debug("Target resolved!: " + target);
 
         if (target == null || target.path() == null)
-            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
+            return WebSocketResponse.ERROR.setMessage("Invalid Target " + content.get("target", String.class));
 
         String subDirectory = targetPath.replace(targetPath.split("/")[0] + "/", "");
         if (target.subFolders() && subDirectory.isEmpty()) {
@@ -277,9 +275,18 @@ public class DefaultHandler extends Handler {
                 "state", "Committed",
                 "sortIndex", tableItem.getSortIndex());
 
-        int animeId = content.get("animeId", -1, Integer.class);
 
+        String url = putDownloadResolveURL(content);
+
+        if (url == null || url.isEmpty())
+            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
         if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("PUT,"+url+","+tableItem.getSortIndex());}}
+
+
+
+        AutoLoaderHandler autoLoaderHandler = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER));
+        JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
+        JSONObject options = content.getObjectContainer("options").getRaw();
 
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
@@ -329,8 +336,6 @@ public class DefaultHandler extends Handler {
             }
         };
 
-        JSONObject options = content.getObjectContainer("options").getRaw();
-
         // Getting the right downloader
         Downloader downloader = DownloaderSelector.selectDownloader(url, downloadFolder, updateEvent, options);
         tableItem.setDownloader(downloader);
@@ -370,8 +375,9 @@ public class DefaultHandler extends Handler {
                 // Check if we have an animeId
                 // the animeId is intended to only be used for AutoLoader
                 // it is used to rescan existing anime and send the count of missing episodes to the client
-                if (animeId != -1) {
-                    Anime anime = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER)).getAnimeByID(animeId);
+                if (autoloaderData != null) {
+                    int animeId = autoloaderData.get("animeId", Integer.class);
+                    Anime anime = autoLoaderHandler.getAnimeByID(animeId);
                     anime.scanDirectoryForExistingEpisodes();
                     WebSocketUtils.sendAutoLoaderItem(null, anime);
                 }
@@ -379,6 +385,12 @@ public class DefaultHandler extends Handler {
                 log.error("Failed to download", ex);
                 if (!ex.getMessage().contains("File.getName()"))
                     updateEvent.onError(ex.getMessage());
+                if (autoloaderData != null) {
+                    changeObject(content, "autoloaderRetryFlag", 1);
+
+                    // Trigger the alternative providers to prefetch the data
+                    //autoLoaderHandler.getAlternativeProviders(autoloaderData);
+                }
             }
             tableItem.setRunning(false);
         });
@@ -491,6 +503,26 @@ public class DefaultHandler extends Handler {
         }
 
         return response;
+    }
+
+    private String putDownloadResolveURL(JSONObjectContainer content) {
+        String contentURL = content.get("url", String.class);
+        AutoLoaderHandler autoLoaderHandler = ((AutoLoaderHandler) MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER));
+        JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
+        // When we have autoloader
+        if (autoloaderData != null) {
+            Episode episode = autoLoaderHandler.getEpisodeFromAutoloaderData(autoloaderData);
+
+            String providerName = autoloaderData.get("provider", String.class);
+            if (providerName != null) {
+                AniworldProvider provider = AniworldProvider.getProviderByName(providerName);
+                if (provider == null)
+                    throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Unsupported provider " + autoloaderData.get("provider", String.class)));
+
+                return episode.getAlternateVideoURLs().get(provider);
+            }
+        }
+        return contentURL;
     }
 
 }
