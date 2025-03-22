@@ -42,7 +42,7 @@
     }
 }
 
-.widget:not(:is(.grid-stack-static .widget)){
+:is(.grid-stack .widget):not(:is(.grid-stack-static .widget)){
     border: 2px solid var(--darkerTextColor);
 
     .widget-handle {
