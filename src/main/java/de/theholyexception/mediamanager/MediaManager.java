@@ -69,7 +69,6 @@ public class MediaManager {
     private ConfigJSON systemSettings;
     @Getter
     private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
-    @Getter
     private TomlParseResult tomlConfig;
     @Getter
     private DataBaseInterface db;

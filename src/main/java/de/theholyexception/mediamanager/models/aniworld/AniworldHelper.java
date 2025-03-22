@@ -193,6 +193,8 @@ public class AniworldHelper {
                 Elements list = document.select(".row > li");
                 for (Element element : list) {
                     if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
+                    AniworldProvider provider = AniworldProvider.getProvider(element);
+                    if (provider == null) continue;
                     episode.setVideoUrl(AniworldHelper.getRedirectedURL(AniworldHelper.ANIWORLD_URL+element.attr("data-link-target")));
                     break;
                 }
@@ -229,15 +231,16 @@ public class AniworldHelper {
             Elements list = document.select(".row > li");
 
             for (Element element : list) {
+                // Check if the language matches
+                if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
+
                 AniworldProvider provider = AniworldProvider.getProvider(element);
                 // Check if we support the provider and if we should exclude it
                 if (provider == null || provider.equals(exclude)) continue;
 
-                // Check if the language matches
-                if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
-
                 String url = AniworldHelper.getRedirectedURL(AniworldHelper.ANIWORLD_URL+element.attr("data-link-target"));
                 result.put(provider, url);
+
             }
             alternateVideoUrlCache.put(cacheIdentifier, result);
         } catch (Exception ex) {
@@ -272,7 +275,4 @@ public class AniworldHelper {
                 .collect(Collectors.joining())
                 .hashCode();
     }
-
-
-
 }

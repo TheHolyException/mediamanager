@@ -359,7 +359,7 @@ public class DefaultHandler extends Handler {
                 if (!ex.getMessage().contains("File.getName()"))
                     updateEvent.onError(ex.getMessage());
                 if (autoloaderData != null) {
-                    changeObject(content, "autoloaderRetryFlag", 1);
+                    //changeObject(content, "autoloaderRetryFlag", 1);
 
                     // Trigger the alternative providers to prefetch the data
                     //autoLoaderHandler.getAlternativeProviders(autoloaderData);

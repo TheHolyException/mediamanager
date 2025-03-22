@@ -197,11 +197,7 @@ public class AutoLoaderHandler extends Handler {
 
 
     private WebSocketResponse cmdGetAlternateProviders(WebSocketBasic socket, JSONObjectContainer content) {
-        JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
-        if (autoloaderData == null)
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid autoloaderData!"));
-
-        Map<AniworldProvider, String> urls = getAlternativeProviders(autoloaderData);
+        Map<AniworldProvider, String> urls = getAlternativeProviders(content);
 
         JSONObject payload = new JSONObject();
         JSONArray array = new JSONArray();

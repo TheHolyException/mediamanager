@@ -83,8 +83,7 @@ Data for the downloads page
                     "seasonId": 0,
                     "episodeId": 0,
                     "provider": "string" // Optional: Alternative provider from wich the anime should be downloaded
-                },
-                autoloaderRetryFlag: 0|1 // Optional: Indicates if an autoloader task has failed, and you can use another provider
+                }
             },
             ....
         ]
