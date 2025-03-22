@@ -95,6 +95,9 @@ class DownloadsWidget extends BaseWidget {
 
                     let btnResent = row.find('[action="resend"]');
                     btnResent.css('display', item.state.startsWith('Error') ? 'block' : 'none');
+
+                    let resentStream = row.find('[action="resendOtherStream"]')
+                    resentStream.css('display', item.autoloaderData != undefined && item.state.startsWith('Error') ? 'block' : 'none')
                 }
 
                 DownloadsWidget.setStatusAndTooltip(row, item);
