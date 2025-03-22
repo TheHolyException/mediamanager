@@ -133,7 +133,7 @@ class DownloadsWidget extends BaseWidget {
             .attr('title', 'Delete from List')
             .addClass('fa fa-trash')
             .click(function () {
-                row.remove();
+                $(this).closest('[uuid="' + item.uuid + '"]').remove();
 
                 let data = DownloadsWidget.indexes.get(item.uuid);
                 if (data.state != "new") {
