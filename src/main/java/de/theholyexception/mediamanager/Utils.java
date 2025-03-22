@@ -47,7 +47,6 @@ public class Utils {
         try {
             Thread.sleep(millis);
         } catch (InterruptedException ex) {
-            //log.error("Interrupted Fail", ex);
         }
     }
 
@@ -69,6 +68,10 @@ public class Utils {
             list.add(Integer.parseInt(s));
         }
         return list;
+    }
+
+    public static String escape(String string) {
+        return string.replaceAll("[^a-zA-Z0-9-_.]", "_");
     }
 
 }

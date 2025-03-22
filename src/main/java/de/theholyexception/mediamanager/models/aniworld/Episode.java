@@ -33,7 +33,7 @@ public class Episode {
     @Setter
     private List<Integer> languageIds = null;
     private boolean isDirty;
-    @Getter
+    @Getter @Setter
     private Season season;
     @Getter
     private final Map<AniworldProvider, String> alternateVideoURLs = new HashMap<>();

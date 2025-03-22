@@ -28,7 +28,7 @@ BEGIN
 			case when bLoaded = '1' then 1 else 0 end,
 			_szAniworldURL,
 			szVideoURL,
-            _szLanguageIDs
+            _szLanguageIds
 		);
 	else
 	    select 'update';
@@ -39,7 +39,7 @@ BEGIN
 			bLoaded = case when _bLoaded = '1' then 1 else 0 end,
 			szAniworldURL = _szAniworldURL,
 			szVideoURL = _szVideoURL,
-            szLanguageIDs = _szLanguageIDs
+            szLanguageIds = _szLanguageIds
 		where nKey = _nKey;
 	end if;
 END

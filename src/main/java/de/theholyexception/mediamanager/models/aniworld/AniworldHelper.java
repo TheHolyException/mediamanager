@@ -4,6 +4,7 @@ import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.holyapi.util.expiringmap.ExpiringMap;
 import de.theholyexception.mediamanager.AniworldProvider;
+import de.theholyexception.mediamanager.Utils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -260,7 +261,7 @@ public class AniworldHelper {
             return uuid;
         }
         String match = matcher.group(1);
-        match = match.replaceAll("[^a-zA-Z0-9-_.]", "_");
+        match = Utils.escape(match);
         urlToSubdirectory.put(url, match);
         return match;
     }

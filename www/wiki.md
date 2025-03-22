@@ -77,7 +77,14 @@ Data for the downloads page
                     "enableSeasonAndEpisodeRenaming": "true|false",
                     "enableSessionRecovery": "true|false",
                     "useDirectMemory": "true|false"
-                }
+                },
+                "autoloaderData": { // Autoloader data is optional, and only available when the autoloader has added the task
+                    "animeId": 0,
+                    "seasonId": 0,
+                    "episodeId": 0,
+                    "provider": "string" // Optional: Alternative provider from wich the anime should be downloaded
+                },
+                autoloaderRetryFlag: 0|1 // Optional: Indicates if an autoloader task has failed, and you can use another provider
             },
             ....
         ]
@@ -138,12 +145,6 @@ Target Data
             "enableSeasonAndEpisodeRenaming": "true|false",
             "enableSessionRecovery": "true|false",
             "useDirectMemory": "true|false"
-          },
-          "autoloaderData": {
-            "animeId": 0,
-            "seasonId": 0,
-            "episodeId": 0,
-            "provider": "string" // Optional: Alternative provider from wich the anime should be downloaded
           }
         },
         ...
@@ -397,6 +398,15 @@ Target Data
 ### Responses
 4: "Tried to remove anime with id {id} but this does not exist." -> [via Status response](#status-responses)
 2: "OK"
+```json5
+{
+    "cmd": "del",
+    "targetSystem": "autoloader",
+    "content": {
+      "id": 0      // Identifier of the anime
+    }
+}
+```
 
 ---
 

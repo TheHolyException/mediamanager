@@ -126,9 +126,14 @@ public class Anime {
             if (excludedSeasons.contains(season.getSeasonNumber()))
                 continue;
 
+            if (season.getAnime() == null)
+                season.setAnime(this);
+
             for (Episode episode : season.getEpisodeList()) {
                 if (episode.isDownloaded() || episode.isDownloading()) continue; // We do not need to download already downloaded episodes xD
                 if (!episode.getLanguageIds().contains(languageId)) continue; // We also do not want any episodes that are not in the selected language
+                if (episode.getSeason() == null)
+                    episode.setSeason(season);
                 result.add(episode);
             }
         }

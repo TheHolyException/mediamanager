@@ -28,7 +28,7 @@ public class Season {
 
     @Getter
     protected boolean isDirty;
-    @Getter
+    @Getter @Setter
     private Anime anime;
 
     @Getter @Setter

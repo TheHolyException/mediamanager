@@ -238,36 +238,8 @@ public class DefaultHandler extends Handler {
 
     @SuppressWarnings("unchecked")
     private WebSocketResponse scheduleDownload(WebSocketBasic socket, JSONObjectContainer content) {
-        String targetPath = content.get("target", String.class);
-        log.debug("Resolving target: " + targetPath.split("/")[0]);
-        Target target = targets.get(targetPath.split("/")[0]);
-        log.debug("Target resolved!: " + target);
 
-        if (target == null || target.path() == null)
-            return WebSocketResponse.ERROR.setMessage("Invalid Target " + content.get("target", String.class));
-
-        String subDirectory = targetPath.replace(targetPath.split("/")[0] + "/", "");
-        if (target.subFolders() && subDirectory.isEmpty()) {
-            String aniworldUrl = content.get("aniworld-url", String.class);
-            if (aniworldUrl != null && !aniworldUrl.isEmpty()) {
-                subDirectory = AniworldHelper.getAnimeTitle(aniworldUrl);
-                WebSocketUtils.sendWebsSocketResponse(socket, WebSocketResponse.WARN.setMessage("Subdirectory not specified, using " + subDirectory + " instead"), TargetSystem.DEFAULT, "put");
-            } else {
-                return WebSocketResponse.ERROR.setMessage("No subdirectory specified");
-            }
-        }
-
-        final File outputFolder;
-        if (target.subFolders() && subDirectory != null)
-            outputFolder = new File(target.path(), subDirectory);
-        else
-            outputFolder = new File(target.path());
-
-        log.debug("Output Folder: " + outputFolder.getAbsolutePath());
-        if (!outputFolder.exists() && !outputFolder.mkdirs()) {
-            log.error("Failed to create output folder " + outputFolder.getAbsolutePath());
-            return WebSocketResponse.ERROR.setMessage("Failed to create output folder " + outputFolder.getAbsolutePath());
-        }
+        File outputFolder = putDownloadResolveOutputFolder(socket, content);
 
         TableItemDTO tableItem = new TableItemDTO(content);
         urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
@@ -283,10 +255,11 @@ public class DefaultHandler extends Handler {
         if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("PUT,"+url+","+tableItem.getSortIndex());}}
 
 
-
         AutoLoaderHandler autoLoaderHandler = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER));
         JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
         JSONObject options = content.getObjectContainer("options").getRaw();
+        if (getTomlConfig().getBoolean("general.useDirectMemory", () -> false))
+            options.put("useDirectMemory", true);
 
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
@@ -404,7 +377,8 @@ public class DefaultHandler extends Handler {
                 return;
             tableItem.setExecutingThread(Thread.currentThread());
             String title = downloader.resolveTitle();
-            changeObject(content, "title", title);
+            if (title != null)
+                changeObject(content, "title", title);
         });
 
         return null;
@@ -523,6 +497,39 @@ public class DefaultHandler extends Handler {
             }
         }
         return contentURL;
+    }
+
+    private File putDownloadResolveOutputFolder(WebSocketBasic socket, JSONObjectContainer content) {
+        String targetPath = content.get("target", String.class);
+        log.debug("Resolving target: " + targetPath.split("/")[0]);
+        Target target = targets.get(targetPath.split("/")[0]);
+        log.debug("Target resolved!: " + target);
+
+        if (target == null || target.path() == null)
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid Target " + content.get("target", String.class)));
+
+        String subDirectory = targetPath.replace(targetPath.split("/")[0] + "/", "");
+        if (target.subFolders() && subDirectory.isEmpty()) {
+            String aniworldUrl = content.get("aniworld-url", String.class);
+            if (aniworldUrl != null && !aniworldUrl.isEmpty()) {
+                subDirectory = AniworldHelper.getAnimeTitle(aniworldUrl);
+                WebSocketUtils.sendWebsSocketResponse(socket, WebSocketResponse.WARN.setMessage("Subdirectory not specified, using " + subDirectory + " instead"), TargetSystem.DEFAULT, "put");
+            } else
+                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Subdirectory not specified"));
+        }
+
+        File outputFolder;
+        if (target.subFolders() && subDirectory != null)
+            outputFolder = new File(target.path(), Utils.escape(subDirectory));
+        else
+            outputFolder = new File(target.path());
+
+        log.debug("Output Folder: " + outputFolder.getAbsolutePath());
+        if (!outputFolder.exists() && !outputFolder.mkdirs()) {
+            log.error("Failed to create output folder " + outputFolder.getAbsolutePath());
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create output folder " + outputFolder.getAbsolutePath()));
+        }
+        return outputFolder;
     }
 
 }
