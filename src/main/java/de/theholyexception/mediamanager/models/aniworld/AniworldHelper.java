@@ -1,10 +1,9 @@
-package de.theholyexception.mediamanager;
+package de.theholyexception.mediamanager.models.aniworld;
 
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.holyapi.util.expiringmap.ExpiringMap;
-import de.theholyexception.mediamanager.models.aniworld.Episode;
-import de.theholyexception.mediamanager.models.aniworld.Season;
+import de.theholyexception.mediamanager.AniworldProvider;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -19,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class AniworldHelper {
@@ -207,7 +207,43 @@ public class AniworldHelper {
     }
 
 
+    private static final Map<Integer, Map<AniworldProvider, String>> alternateVideoUrlCache = Collections.synchronizedMap(new ExpiringMap<>(1000L*60L*30L, false)); // 30 min
 
+    /**
+     * Searches for alternate video urls
+     * @param episode Episode to search in
+     * @param languageId Language to search for
+     * @param exclude Provider to exclude
+     */
+    public static Map<AniworldProvider,String> resolveAlternateVideoURLs(Episode episode, int languageId, AniworldProvider exclude) {
+        Map<AniworldProvider, String> result = new HashMap<>();
+        int cacheIdentifier = generateCacheIdentifier(episode.getAniworldUrl(), languageId, exclude);
+        if (alternateVideoUrlCache.containsKey(cacheIdentifier)) {
+            return alternateVideoUrlCache.get(cacheIdentifier);
+        }
+        statistics.computeIfAbsent("Resolve Alternate Video URL Requests", k -> new AtomicInteger(0)).incrementAndGet();
+
+        try {
+            Document document = Jsoup.connect(episode.getAniworldUrl()).get();
+            Elements list = document.select(".row > li");
+
+            for (Element element : list) {
+                AniworldProvider provider = AniworldProvider.getProvider(element);
+                // Check if we support the provider and if we should exclude it
+                if (provider == null || provider.equals(exclude)) continue;
+
+                // Check if the language matches
+                if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
+
+                String url = AniworldHelper.getRedirectedURL(AniworldHelper.ANIWORLD_URL+element.attr("data-link-target"));
+                result.put(provider, url);
+            }
+            alternateVideoUrlCache.put(cacheIdentifier, result);
+        } catch (Exception ex) {
+            log.error("Failed to load video url", ex);
+        }
+        return result;
+    }
 
     private static final Pattern pattern = Pattern.compile("https:\\/\\/aniworld\\.to\\/anime\\/stream\\/([^\\/]+)");
     private static final Map<String, String> urlToSubdirectory = new HashMap<>();
@@ -228,5 +264,14 @@ public class AniworldHelper {
         urlToSubdirectory.put(url, match);
         return match;
     }
+
+    public static int generateCacheIdentifier(Object... data) {
+        return Arrays.stream(data)
+                .map(Object::toString)
+                .collect(Collectors.joining())
+                .hashCode();
+    }
+
+
 
 }

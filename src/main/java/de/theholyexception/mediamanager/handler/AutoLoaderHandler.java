@@ -2,15 +2,9 @@ package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
-import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
-import de.theholyexception.holyapi.util.DataUtils;
-import de.theholyexception.holyapi.util.ResourceUtilities;
-import de.theholyexception.mediamanager.AniworldHelper;
-import de.theholyexception.mediamanager.MediaManager;
-import de.theholyexception.mediamanager.TargetSystem;
-import de.theholyexception.mediamanager.Utils;
+import de.theholyexception.mediamanager.*;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
+import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.SettingProperty;
@@ -19,11 +13,11 @@ import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.File;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.Executors;
 
@@ -33,7 +27,6 @@ import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
 public class AutoLoaderHandler extends Handler {
 
     private final List<Anime> subscribedAnimes = Collections.synchronizedList(new ArrayList<>());
-    private DataBaseInterface db;
     private DefaultHandler defaultHandler;
 
     private SettingProperty<Boolean> spAutoDownload;
@@ -67,10 +60,9 @@ public class AutoLoaderHandler extends Handler {
             defaultHandler = (DefaultHandler) MediaManager.getInstance().getHandlers().get(TargetSystem.DEFAULT);
             Anime.setBaseDirectory(new File(defaultHandler.getTargets().get("stream-animes").path()));
 
-            loadDatabase();
 
             subscribedAnimes.clear();
-            subscribedAnimes.addAll(Anime.loadFromDB(db));
+            subscribedAnimes.addAll(Anime.loadFromDB(MediaManager.getInstance().getDb()));
 
             if (log.isDebugEnabled())
                 printTableInfo("anime", "season", "episode");
@@ -80,9 +72,9 @@ public class AutoLoaderHandler extends Handler {
                 a.scanDirectoryForExistingEpisodes();
                 log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false));
                 if (a.isDeepDirty())
-                    a.writeToDB(db);
+                    a.writeToDB(MediaManager.getInstance().getDb());
             });
-            db.getExecutorHandler().awaitGroup(-1);
+            MediaManager.getInstance().getDb().getExecutorHandler().awaitGroup(-1);
 
             if (enabled)
                 startThread();
@@ -118,6 +110,7 @@ public class AutoLoaderHandler extends Handler {
             case "subscribe" -> cmdSubscribe(content);
             case "unsubscribe" -> cmdUnsubscribe(content);
             case "runDownload" -> cmdRunDownload(content);
+            case "getAlternateProviders" -> cmdGetAlternateProviders(socket, content);
             default -> {
                 log.error("Invalid command " + command);
                 yield WebSocketResponse.ERROR.setMessage("Invalid command " + command);
@@ -147,8 +140,8 @@ public class AutoLoaderHandler extends Handler {
             return WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url +  " cannot parse title!");
 
         List<Integer> excludedSeasonList = new ArrayList<>();
-        String _excludedSeasons = content.get("excludedSeasons", String.class);
-        if (_excludedSeasons != null && !_excludedSeasons.isEmpty()) {
+        String excludedSeasonsString = content.get("excludedSeasons", String.class);
+        if (excludedSeasonsString != null && !excludedSeasonsString.isEmpty()) {
             String[] excludedSeasons = content.get("excludedSeasons", String.class).split(",");
             for (String excludedSeason : excludedSeasons)
                 excludedSeasonList.add(Integer.parseInt(excludedSeason));
@@ -161,9 +154,9 @@ public class AutoLoaderHandler extends Handler {
         anime.loadMissingEpisodes();
         anime.scanDirectoryForExistingEpisodes();
         subscribedAnimes.add(anime);
-        anime.writeToDB(db);
+        anime.writeToDB(MediaManager.getInstance().getDb());
 
-        db.getExecutorHandler().awaitGroup(-1);
+        MediaManager.getInstance().getDb().getExecutorHandler().awaitGroup(-1);
 
         // Inform everyone about the new item
         WebSocketUtils.sendAutoLoaderItem(null, anime);
@@ -176,7 +169,7 @@ public class AutoLoaderHandler extends Handler {
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
         if (optAnime.isPresent()) {
             Anime anime = optAnime.get();
-            db.executeSafe("delete from anime where nKey = ?", id);
+            MediaManager.getInstance().getDb().executeSafe("delete from anime where nKey = ?", id);
             subscribedAnimes.remove(anime);
             WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
 
@@ -199,7 +192,29 @@ public class AutoLoaderHandler extends Handler {
         runDownload(optAnime.get());
         return WebSocketResponse.OK;
     }
+
+
+
+
+    private WebSocketResponse cmdGetAlternateProviders(WebSocketBasic socket, JSONObjectContainer content) {
+        JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
+        if (autoloaderData == null)
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid autoloaderData!"));
+
+        Map<AniworldProvider, String> urls = getAlternativeProviders(autoloaderData);
+
+        JSONObject payload = new JSONObject();
+        JSONArray array = new JSONArray();
+        for (Map.Entry<AniworldProvider, String> entry : urls.entrySet()) {
+            array.add(entry.getKey().getDisplayName());
+        }
+        payload.put("providers", array);
+        WebSocketUtils.sendPacket("getAlternateProvidersResponse", TargetSystem.AUTOLOADER, payload, socket);
+        return null;
+    }
     //endregion
+
+
 
     private void startThread() {
         Thread t = new Thread(() -> {
@@ -227,7 +242,7 @@ public class AutoLoaderHandler extends Handler {
                             runDownload(anime);
 
                         if (anime.isDeepDirty())
-                            anime.writeToDB(db);
+                            anime.writeToDB(MediaManager.getInstance().getDb());
 
                         Utils.sleep(checkDelayMs);
                     }
@@ -259,15 +274,18 @@ public class AutoLoaderHandler extends Handler {
                     data.set("url", unloadedEpisode.getVideoUrl());
                     data.set("target", "stream-animes/"+anime.getDirectory().getName());
                     data.set("created", System.currentTimeMillis());
-                    data.set("animeId", anime.getId());
+
+                    JSONObjectContainer autoloaderData = new JSONObjectContainer();
+                    autoloaderData.set("animeId", anime.getId());
+                    autoloaderData.set("seasonId", unloadedEpisode.getSeason().getId());
+                    autoloaderData.set("episodeId", unloadedEpisode.getId());
+                    data.set("autoloaderData", autoloaderData.getRaw());
 
                     JSONObjectContainer options = new JSONObjectContainer();
                     options.set("useDirectMemory", "false");
                     options.set("enableSessionRecovery", "false");
                     options.set("enableSeasonAndEpisodeRenaming", "true");
-
                     data.set("options", options.getRaw());
-                    log.debug("Starting download of " + unloadedEpisode.getTitle());
 
                     JSONObjectContainer payload = new JSONObjectContainer();
                     JSONArrayContainer list = new JSONArrayContainer();
@@ -282,52 +300,13 @@ public class AutoLoaderHandler extends Handler {
             }
         }
 
-        anime.writeToDB(db);
-    }
-
-    private void loadDatabase() {
-        try {
-            db = new MySQLInterface(
-                    getTomlConfig().getString("mysql.host"),
-                    Math.toIntExact(getTomlConfig().getLong("mysql.port")),
-                    getTomlConfig().getString("mysql.username"),
-                    getTomlConfig().getString("mysql.password"),
-                    getTomlConfig().getString("mysql.database"));
-            db.asyncDataSettings(2);
-            db.connect();
-
-            if (Boolean.TRUE.equals(getTomlConfig().getBoolean("autoloader.executeDBScripts"))) {
-                executeDatabaseScripts();
-            }
-
-            Anime.setCurrentID(getCurrentId("anime"));
-            Season.setCurrentID(getCurrentId("season"));
-        } catch (Exception ex) {
-            log.error("", ex);
-        }
-    }
-
-
-    private void executeDatabaseScripts() {
-        try {
-            List<String> files = ResourceUtilities.listResourceFilesRecursive("sql/");
-            for (String file : files.stream().sorted().toList()) {
-                if (!file.endsWith(".sql")) continue;
-                String content = new String(DataUtils.readAllBytes(ResourceUtilities.getResourceAsStream("sql/"+file)));
-                String[] filePath = file.split("/");
-                log.debug("Executing SQL Script: " + filePath[filePath.length-1]);
-                db.executeAsync(-2, content);
-            }
-            db.getExecutorHandler().awaitGroup(-2, 20);
-        } catch (Exception ex) {
-            log.error("Failed to execute SQL Scripts", ex);
-        }
+        anime.writeToDB(MediaManager.getInstance().getDb());
     }
 
     private void printTableInfo(String... tables) {
         for (String table : tables) {
             try {
-                ResultSet rs = db.executeQuery("select count(*) from " + table);
+                ResultSet rs = MediaManager.getInstance().getDb().executeQuery("select count(*) from " + table);
                 rs.next();
                 log.debug("Table " + table + " row count: " + rs.getInt(1));
                 rs.close();
@@ -337,22 +316,56 @@ public class AutoLoaderHandler extends Handler {
         }
     }
 
-    private int getCurrentId(String table) {
-        int result = 0;
-        try {
-            ResultSet rs = db.executeQuery("select nKey from " + table + " order by nKey desc");
-            if (rs.next())
-                result = rs.getInt(1);
-            rs.close();
-        } catch (SQLException ex) {
-            log.error("", ex);
-        }
-        return result;
-    }
-
     public Anime getAnimeByID(int id) {
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
         return optAnime.orElse(null);
+    }
+    public Episode getEpisodeFromAutoloaderData(JSONObjectContainer autoloaderData) {
+        int animeId = autoloaderData.get("animeId", Integer.class);
+        int seasonId = autoloaderData.get("seasonId", Integer.class);
+        int episodeId = autoloaderData.get("episodeId", Integer.class);
+
+        return getEpisodeByPath(animeId, seasonId, episodeId);
+    }
+
+    public Episode getEpisodeByPath(int animeId, int seasonId, int episodeId) {
+        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == animeId).findFirst();
+        if (optAnime.isEmpty())
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
+
+        Optional<Season> optSeason = optAnime.get().getSeasonList().stream().filter(season -> season.getId() == seasonId).findFirst();
+        if (optSeason.isEmpty())
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Season with id " + seasonId + " not found!"));
+
+        Optional<Episode> optEpisode = optSeason.get().getEpisodeList().stream().filter(ep -> ep.getId() == episodeId).findFirst();
+        if (optEpisode.isEmpty())
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Episode with id " + episodeId + " not found!"));
+
+        return optEpisode.get();
+    }
+
+    public Map<AniworldProvider, String> getAlternativeProviders(JSONObjectContainer autoloaderData) {
+        int animeId = autoloaderData.get("animeId", Integer.class);
+        int seasonId = autoloaderData.get("seasonId", Integer.class);
+        int episodeId = autoloaderData.get("episodeId", Integer.class);
+
+        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == animeId).findFirst();
+        if (optAnime.isEmpty())
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
+
+        Episode episode = getEpisodeByPath(animeId, seasonId, episodeId);
+        if (episode.getVideoUrl() == null)
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Episode has no video url!"));
+
+        AniworldProvider provider = AniworldProvider.getProvider(episode.getVideoUrl());
+
+        Map<AniworldProvider, String> urls = AniworldHelper.resolveAlternateVideoURLs(episode, optAnime.get().getLanguageId(), provider);
+        Map<AniworldProvider, String> episodeAlternateVideoUrls = episode.getAlternateVideoURLs();
+        synchronized (episodeAlternateVideoUrls) {
+            episodeAlternateVideoUrls.clear();
+            episodeAlternateVideoUrls.putAll(urls);
+        }
+        return urls;
     }
 
 }

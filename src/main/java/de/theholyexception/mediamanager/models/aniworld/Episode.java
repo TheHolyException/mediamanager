@@ -4,7 +4,7 @@ import de.theholyexception.holyapi.datastorage.sql.Result;
 import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.holyapi.util.ExecutorTask;
-import de.theholyexception.mediamanager.AniworldHelper;
+import de.theholyexception.mediamanager.AniworldProvider;
 import de.theholyexception.mediamanager.Utils;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,7 +12,9 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @ToString
 @Slf4j
@@ -33,6 +35,8 @@ public class Episode {
     private boolean isDirty;
     @Getter
     private Season season;
+    @Getter
+    private final Map<AniworldProvider, String> alternateVideoURLs = new HashMap<>();
 
     public Episode(Element element) {
         this.episodeNumber = Integer.parseInt(element.text());
@@ -98,7 +102,6 @@ public class Episode {
             AniworldHelper.urlResolver.awaitGroup(883855723);
             this.isDirty = true; // TODO check if changes has occured, then set this to true
         }
-
     }
 
     public void writeToDB(DataBaseInterface db, int seasonLink) {

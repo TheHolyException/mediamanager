@@ -6,12 +6,18 @@ import de.theholyexception.holyapi.datastorage.file.ConfigJSON;
 import de.theholyexception.holyapi.datastorage.file.FileConfiguration;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
+import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
+import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
+import de.theholyexception.holyapi.util.DataUtils;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
+import de.theholyexception.holyapi.util.ResourceUtilities;
 import de.theholyexception.mediamanager.handler.AniworldHandler;
 import de.theholyexception.mediamanager.handler.AutoLoaderHandler;
 import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.handler.Handler;
+import de.theholyexception.mediamanager.models.aniworld.Anime;
+import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.webserver.WebServer;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
@@ -29,6 +35,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.Executors;
 
@@ -37,6 +45,7 @@ public class MediaManager {
 
     @Getter
     private static MediaManager instance;
+    private static final ExecutorHandler executorHandler;
 
     public static void main(String[] args) {
         new MediaManager();
@@ -62,50 +71,79 @@ public class MediaManager {
     private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
     @Getter
     private TomlParseResult tomlConfig;
-    private static final ExecutorHandler executorHandler;
+    @Getter
+    private DataBaseInterface db;
 
     static {
         executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
         executorHandler.setThreadNameFactory(cnt -> "WS-Executor-" + cnt);
     }
 
-    public MediaManager() {
+	public MediaManager() {
         MediaManager.instance = this;
-        loadHandlers();
-        loadConfiguration();
-        checkForDockerEnvironment();
-        loadWebServer();
+		List<Runnable> initListeners = Collections.synchronizedList(new ArrayList<>());
+		initListeners.add(this::loadHandlers);
+        initListeners.add(this::loadConfiguration);
+        initListeners.add(this::checkForDockerEnvironment);
+        initListeners.add(this::loadWebServer);
+        initListeners.add(this::loadDatabase);
+
+        for (int i = 0; i < initListeners.size(); i++) {
+            Runnable initListener = initListeners.get(i);
+            try {
+                initListener.run();
+            } catch (InitializationException ex) {
+                log.error("Failed to initialize " + ex.getName(), ex);
+                System.exit(1000+i);
+            } catch (Exception ex) {
+                log.error("Failed to initialize " + initListener + " unusual error:", ex);
+            }
+        }
+
         handlers.values().forEach(Handler::initialize);
     }
 
     private void loadHandlers() {
-        addHandler(new DefaultHandler(TargetSystem.DEFAULT));
-        addHandler(new AniworldHandler(TargetSystem.ANIWORLD));
-        addHandler(new AutoLoaderHandler(TargetSystem.AUTOLOADER));
+        try {
+            addHandler(new DefaultHandler(TargetSystem.DEFAULT));
+            addHandler(new AniworldHandler(TargetSystem.ANIWORLD));
+            addHandler(new AutoLoaderHandler(TargetSystem.AUTOLOADER));
+        } catch (Exception ex) {
+            throw new InitializationException("Load Handlers", ex.getMessage());
+        }
     }
 
     private void addHandler(Handler handler) {
         handlers.put(handler.getTargetSystem(), handler);
     }
 
-    private void loadConfiguration() {
+    private void loadConfiguration() throws InitializationException {
         try {
             Path path = Paths.get(("./config/config.toml"));
             tomlConfig = Toml.parse(path);
-            tomlConfig.errors().forEach(error -> System.out.println(error.toString()));
+            StringBuilder errors = new StringBuilder();
+            tomlConfig.errors().forEach(error -> {
+                errors.append(error.getMessage());
+            });
+            if (!errors.isEmpty())
+                throw new InitializationException("Failed to parse config.toml", errors.toString());
+
+            int webSocketThreads = Math.toIntExact(getTomlConfig().getLong("webserver.webSocketThreads"));
+            executorHandler.updateExecutorService(Executors.newFixedThreadPool(webSocketThreads));
         } catch (IOException ex) {
-            ex.printStackTrace();
+            throw new InitializationException("Failed to load config.toml", ex.getMessage());
         }
 
-        systemSettings = new ConfigJSON(new File("./config/systemsettings.json"));
-        systemSettings.loadConfig();
-        changeLogLevel();
-        Settings.init(systemSettings);
-        handlers.values().forEach(Handler::loadConfigurations);
-        systemSettings.saveConfig(FileConfiguration.SaveOption.PRETTY_PRINT);
-
-        int webSocketThreads = Math.toIntExact(getTomlConfig().getLong("webserver.webSocketThreads"));
-        executorHandler.updateExecutorService(Executors.newFixedThreadPool(webSocketThreads));
+        try {
+            systemSettings = new ConfigJSON(new File("./config/systemsettings.json"));
+            systemSettings.loadConfig();
+            changeLogLevel();
+            Settings.init(systemSettings);
+            handlers.values().forEach(Handler::loadConfigurations);
+            systemSettings.saveConfig(FileConfiguration.SaveOption.PRETTY_PRINT);
+        } catch (Exception ex) {
+            throw new InitializationException("Failed to load systemsettings.json", ex.getMessage());
+        }
     }
 
     private void checkForDockerEnvironment() {
@@ -122,52 +160,109 @@ public class MediaManager {
     }
 
     private void loadWebServer() {
-        new WebServer(new WebServer.Configuration(
-                Math.toIntExact(tomlConfig.getLong("webserver.port")),
-                tomlConfig.getString("webserver.host"),
-                tomlConfig.getString("webserver.webroot")
-                , new WebSocketEvent() {
-            @Override
-            public void onMessage(String data, WebSocketBasic socket) {
-                JSONObjectContainer dataset = (JSONObjectContainer) JSONReader.readString(data);
+        try {
+            new WebServer(new WebServer.Configuration(
+                    Math.toIntExact(tomlConfig.getLong("webserver.port")),
+                    tomlConfig.getString("webserver.host"),
+                    tomlConfig.getString("webserver.webroot")
+                    , new WebSocketEvent() {
+                @Override
+                public void onMessage(String data, WebSocketBasic socket) {
+                    JSONObjectContainer dataset = (JSONObjectContainer) JSONReader.readString(data);
 
-                String targetSystem = dataset.get("targetSystem", "default", String.class);
-                String cmd = dataset.get("cmd", String.class);
-                JSONObjectContainer content = dataset.getObjectContainer("content", new JSONObjectContainer());
+                    String targetSystem = dataset.get("targetSystem", "default", String.class);
+                    String cmd = dataset.get("cmd", String.class);
+                    JSONObjectContainer content = dataset.getObjectContainer("content", new JSONObjectContainer());
 
-                Handler handler = handlers.get(TargetSystem.valueOf(targetSystem.toUpperCase()));
-                if (handler == null)
-                    throw new IllegalStateException("Invalid target-system: " + targetSystem);
+                    Handler handler = handlers.get(TargetSystem.valueOf(targetSystem.toUpperCase()));
+                    if (handler == null)
+                        throw new IllegalStateException("Invalid target-system: " + targetSystem);
 
-                executorHandler.putTask(new ExecutorTask(() -> {
-                    WebSocketResponse response;
-                    try {
-                        response = handler.handleCommand(socket, cmd, content);
-                    } catch (Exception ex) {
-                        log.error("Failed to process command", ex);
-                        response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
-                    }
-                    if (response != null) {
-                        response.getResponse().set("sourceCommand", cmd);
-                        WebSocketUtils.sendPacket("response", handler.getTargetSystem(),response.getResponse().getRaw(), socket);
-                    }
-                }));
+                    executorHandler.putTask(new ExecutorTask(() -> {
+                        WebSocketResponse response;
+                        try {
+                            response = handler.handleCommand(socket, cmd, content);
+                        } catch (WebSocketResponseException ex) {
+                            response = ex.getResponse();
+                        } catch (Exception ex) {
+                            log.error("Failed to process command", ex);
+                            response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
+                        }
+                        if (response != null) {
+                            response.getResponse().set("sourceCommand", cmd);
+                            WebSocketUtils.sendPacket("response", handler.getTargetSystem(),response.getResponse().getRaw(), socket);
+                        }
+                    }));
+                }
+
+                @Override
+                public void onOpen(WebSocketBasic socket) {
+                    clientList.add(socket);
+                }
+
+                @Override
+                public void onClose(WebSocketBasic socket) {
+                    clientList.remove(socket);
+                }
+
+                @Override
+                public void onError(WebSocketBasic socket, String message, Exception exception) {
+                    clientList.remove(socket);
+                }
+            }));
+        } catch (Exception ex) {
+            throw new InitializationException("Load Webserver", ex.getMessage());
+        }
+    }
+
+    private void loadDatabase() throws InitializationException {
+        try {
+            db = new MySQLInterface(
+                    getTomlConfig().getString("mysql.host"),
+                    Math.toIntExact(getTomlConfig().getLong("mysql.port")),
+                    getTomlConfig().getString("mysql.username"),
+                    getTomlConfig().getString("mysql.password"),
+                    getTomlConfig().getString("mysql.database"));
+            db.asyncDataSettings(2);
+            db.connect();
+
+            if (Boolean.TRUE.equals(getTomlConfig().getBoolean("autoloader.executeDBScripts"))) {
+                executeDatabaseScripts();
             }
 
-            @Override
-            public void onOpen(WebSocketBasic socket) {
-                clientList.add(socket);
-            }
+            Anime.setCurrentID(getCurrentId("anime"));
+            Season.setCurrentID(getCurrentId("season"));
+        } catch (Exception ex) {
+            throw new InitializationException("Load Database", ex.getMessage());
+        }
+    }
 
-            @Override
-            public void onClose(WebSocketBasic socket) {
-                clientList.remove(socket);
+    private void executeDatabaseScripts() throws InitializationException {
+        try {
+            List<String> files = ResourceUtilities.listResourceFilesRecursive("sql/");
+            for (String file : files.stream().sorted().toList()) {
+                if (!file.endsWith(".sql")) continue;
+                String content = new String(DataUtils.readAllBytes(ResourceUtilities.getResourceAsStream("sql/"+file)));
+                String[] filePath = file.split("/");
+                log.debug("Executing SQL Script: " + filePath[filePath.length-1]);
+                db.executeAsync(-2, content);
             }
+            db.getExecutorHandler().awaitGroup(-2, 20);
+        } catch (Exception ex) {
+            throw new InitializationException("Execute Database Scripts", ex.getMessage());
+        }
+    }
 
-            @Override
-            public void onError(WebSocketBasic socket, String message, Exception exception) {
-                clientList.remove(socket);
-            }
-        }));
+    private int getCurrentId(String table) {
+        int result = 0;
+        try {
+            ResultSet rs = db.executeQuery("select nKey from " + table + " order by nKey desc");
+            if (rs.next())
+                result = rs.getInt(1);
+            rs.close();
+        } catch (SQLException ex) {
+            log.error("", ex);
+        }
+        return result;
     }
 }

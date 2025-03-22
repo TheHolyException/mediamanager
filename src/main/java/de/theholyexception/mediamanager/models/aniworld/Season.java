@@ -3,7 +3,6 @@ package de.theholyexception.mediamanager.models.aniworld;
 import de.theholyexception.holyapi.datastorage.sql.Result;
 import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
-import de.theholyexception.mediamanager.AniworldHelper;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
