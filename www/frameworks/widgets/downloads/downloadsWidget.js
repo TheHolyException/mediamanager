@@ -155,7 +155,18 @@ class DownloadsWidget extends BaseWidget {
                 });
             });
 
-        toolbar.append(deleteBtn, resentBtn);
+        //Column - toolbar - resend with other stream
+        let resentWithOtherStreamBtn = $('<i>')
+            .attr('action', 'resendOtherStream')
+            .attr('title', 'Restart Download with other Stream')
+            .addClass('fa-solid fa-code-branch')
+            .css('display', item.autoloaderData != undefined && item.state.startsWith('Error') ? 'block' : 'none')
+            .click(function () {
+                let data = DownloadsWidget.indexes.get(item.uuid);
+                SelectStreamPopup.request(data);
+            });
+
+        toolbar.append(resentBtn, deleteBtn, resentWithOtherStreamBtn);
         //===============================================================================
         //==============================Column - State===============================
         let state = $('<td>')

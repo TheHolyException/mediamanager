@@ -43,6 +43,7 @@ function connect() {
                 break;
             case "autoloader":
                 SubscriptionsWidget.onWSResponse(cmd, content);
+                SelectStreamPopup.onWSResponse(cmd, content);
                 break;
         }
     };
