@@ -220,7 +220,7 @@ public class AniworldHelper {
      */
     public static Map<AniworldProvider,String> resolveAlternateVideoURLs(Episode episode, int languageId, AniworldProvider exclude) {
         Map<AniworldProvider, String> result = new HashMap<>();
-        int cacheIdentifier = generateCacheIdentifier(episode.getAniworldUrl(), languageId, exclude);
+        int cacheIdentifier = generateCacheIdentifier(episode.getAniworldUrl(), languageId, exclude == null ? "null" : exclude);
         if (alternateVideoUrlCache.containsKey(cacheIdentifier)) {
             return alternateVideoUrlCache.get(cacheIdentifier);
         }
