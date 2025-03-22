@@ -87,7 +87,7 @@ function openAddSourcePopup() {
             display: "flex",
             gap: "15px"
         },
-        " .subfolder, .targetfolder": {
+        " .subfolder.download, .targetfolder": {
             "background-color": "var(--darkBGColor1)",
             "flex-grow": 1,
             "border-top-right-radius": "50px",
@@ -113,7 +113,7 @@ function openAddSourcePopup() {
                 getUrls($('.tab-btn.active').attr('tab-name')), 
                 getSettings($('.settings-container').find('[config]')),
                 $('.targetfolder').val(),
-                $('.subfolder').val()
+                $('.subfolder.download').val()
             );
         },
         closePopup: true,
@@ -187,7 +187,7 @@ function createSourceInput() {
             </label>
             <label class="tab-line-container">
                 <span class="lable">Subfolder</span>
-                <textbox-dropdown class="subfolder">
+                <textbox-dropdown class="subfolder download">
                 </textbox-dropdown>
             </label>
         </div>
@@ -302,7 +302,7 @@ function getUrls(activeTab){
 function onTargetSelection() {
     let selection = $('.targetfolder').get(0).value;
     sendPacket("requestSubfolders", "default", { "selection": selection })
-    let subfolderSelection = $('.subfolder');
+    let subfolderSelection = $('.subfolder.download');
     subfolderSelection.empty();
     subfolderSelection.val('');
 }
