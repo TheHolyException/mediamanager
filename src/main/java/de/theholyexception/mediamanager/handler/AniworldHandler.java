@@ -1,6 +1,7 @@
 package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.mediamanager.WebSocketResponseException;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
 import de.theholyexception.mediamanager.TargetSystem;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
@@ -30,18 +31,16 @@ public class AniworldHandler extends Handler {
     }
 
     @Override
-    public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
-        return switch (command) {
+    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+        switch (command) {
             case "resolve" -> cmdResolve(socket, content);
-            default -> {
-                log.error("Invalid command " + command);
-                yield WebSocketResponse.ERROR.setMessage("Invalid command " + command);
-            }
-        };
+            default ->
+                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private WebSocketResponse cmdResolve(WebSocketBasic socket, JSONObjectContainer content) {
+    private void cmdResolve(WebSocketBasic socket, JSONObjectContainer content) {
         try {
             int language = Integer.parseInt(content.get("language", String.class));
             String url = content.get("url", String.class);
@@ -80,9 +79,8 @@ public class AniworldHandler extends Handler {
             sendPacket("links", TargetSystem.ANIWORLD, res, socket);
         } catch (Exception ex) {
             log.error("Failed to resolve anime", ex);
-            return WebSocketResponse.ERROR.setMessage(ex.getMessage());
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage(ex.getMessage()));
         }
-        return null;
     }
 
 }

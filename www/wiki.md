@@ -81,8 +81,7 @@ Data for the downloads page
                 "autoloaderData": { // Autoloader data is optional, and only available when the autoloader has added the task
                     "animeId": 0,
                     "seasonId": 0,
-                    "episodeId": 0,
-                    "provider": "string" // Optional: Alternative provider from wich the anime should be downloaded
+                    "episodeId": 0
                 }
             },
             ....
@@ -446,10 +445,22 @@ Gets alternate stream providers for an autoloader added episode
     "targetSystem": "autoloader",
     "content": {
       "providers": [
-        "VOE",
-        "Doodstream",
-        "Vidoza",
-        "Streamtape"
+        {
+          "name": "VOE",
+          "url": "https:\/\/voe.sx\/e\/...."
+        },
+        {
+          "name": "Doodstream",
+          "url": "..."
+        },
+        {
+          "name": "Vidoza",
+          "url": "..."
+        },
+        {
+          "name": "Streamtape",
+          "url": "..."
+        }
       ]
     }
 }

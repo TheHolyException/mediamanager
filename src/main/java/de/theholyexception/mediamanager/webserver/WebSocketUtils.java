@@ -42,10 +42,11 @@ public class WebSocketUtils {
 
         packetBuffer = new HashMap<>();
         directPacketBuffer = new HashMap<>();
-        Thread packetThread = new Thread(() -> {
+
+        if (Boolean.TRUE.equals(tpr.getBoolean("general.enablePacketBuffer", () -> true))) {Thread packetThread = new Thread(() -> {
             while (true) {
                 try {
-                    Utils.sleep(result.getLong("general.packetPufferSleep"));
+                    Utils.sleep(result.getLong("general.packetBufferSleep", () -> 1000));
                     synchronized (packetBuffer) {
                         if (!packetBuffer.isEmpty()) {
                             JSONObject response = new JSONObject();
@@ -77,9 +78,7 @@ public class WebSocketUtils {
                         if (!deleteBuffer.isEmpty()) {
                             JSONObject body = new JSONObject();
                             JSONArray list = new JSONArray();
-                            for (String uuid : deleteBuffer) {
-                                list.add(uuid);
-                            }
+							list.addAll(deleteBuffer);
                             body.put("list", list);
                             sendPacket("del", TargetSystem.DEFAULT, body, null);
                             deleteBuffer.clear();
@@ -96,8 +95,9 @@ public class WebSocketUtils {
                 }
             }
         });
-        packetThread.setName("PacketThread");
-        packetThread.start();
+            packetThread.setName("PacketThread");
+            packetThread.start();
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -160,7 +160,6 @@ public class WebSocketUtils {
         }
     }
 
-    @SuppressWarnings("unchecked")
     public static void changeObject(JSONObjectContainer object, Object key, Object value) {
         object.set(key, value);
         object.set("modified", System.currentTimeMillis());

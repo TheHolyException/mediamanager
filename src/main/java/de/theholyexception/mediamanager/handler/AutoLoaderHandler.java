@@ -44,11 +44,11 @@ public class AutoLoaderHandler extends Handler {
     @Override
     public void loadConfigurations() {
         super.loadConfigurations();
-        int urlResolverThreads = Math.toIntExact(getTomlConfig().getLong("autoloader.urlResolverThreads"));
+        int urlResolverThreads = Math.toIntExact(getTomlConfig().getLong("autoloader.urlResolverThreads", () -> 10));
         AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(urlResolverThreads));
 
-        checkIntervalMin = getTomlConfig().getLong("autoloader.checkIntervalMin");
-        checkDelayMs = getTomlConfig().getLong("autoloader.checkDelayMs");
+        checkIntervalMin = getTomlConfig().getLong("autoloader.checkIntervalMin", () -> 60);
+        checkDelayMs = getTomlConfig().getLong("autoloader.checkDelayMs", () -> 5000);
         enabled = Boolean.TRUE.equals(getTomlConfig().getBoolean("autoloader.enabled"));
 
         spAutoDownload = Settings.getSettingProperty("AUTO_DOWNLOAD", false, "systemSettings");
@@ -91,53 +91,50 @@ public class AutoLoaderHandler extends Handler {
 
     //region commands
     @Override
-    public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
         try {
             while (!initialized) {
                 synchronized (this) {
                     this.wait(30000);
                     if (!initialized) {
-                        return WebSocketResponse.ERROR.setMessage("AutoLoader is not initialized yet");
+                        throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("AutoLoader is not initialized yet"));
                     }
                 }
             }
         } catch (InterruptedException ex) {
-            return null;
+            return;
         }
 
-        return switch (command) {
+        switch (command) {
             case "getData" -> cmdGetData(socket);
             case "subscribe" -> cmdSubscribe(content);
             case "unsubscribe" -> cmdUnsubscribe(content);
             case "runDownload" -> cmdRunDownload(content);
             case "getAlternateProviders" -> cmdGetAlternateProviders(socket, content);
-            default -> {
-                log.error("Invalid command " + command);
-                yield WebSocketResponse.ERROR.setMessage("Invalid command " + command);
-            }
-        };
+            default ->
+                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
+        }
     }
 
-    private WebSocketResponse cmdGetData(WebSocketBasic socket) {
+    private void cmdGetData(WebSocketBasic socket) {
         WebSocketUtils.sendAutoLoaderItem(socket, subscribedAnimes);
-        return null;
     }
 
-    private WebSocketResponse cmdSubscribe(JSONObjectContainer content) {
+    private void cmdSubscribe(JSONObjectContainer content) {
         String url = content.get("url", String.class);
         int languageId = content.get("languageId", Integer.class);
         String directory = content.get("directory", null, String.class);
         if (directory.isEmpty()) directory = null;
 
         if (subscribedAnimes.stream().anyMatch(a -> a.getUrl().equals(url)))
-            return WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url + " this url is already subscribed!");
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url + " this url is already subscribed!"));
 
         log.debug("Adding subscriber " + url);
         String title = AniworldHelper.getAnimeTitle(url);
         log.debug("Resolved title: " + title);
 
         if (title == null)
-            return WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url +  " cannot parse title!");
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url + " cannot resolve title!"));
 
         List<Integer> excludedSeasonList = new ArrayList<>();
         String excludedSeasonsString = content.get("excludedSeasons", String.class);
@@ -160,11 +157,11 @@ public class AutoLoaderHandler extends Handler {
 
         // Inform everyone about the new item
         WebSocketUtils.sendAutoLoaderItem(null, anime);
-        return WebSocketResponse.OK;
+        throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 
     @SuppressWarnings("unchecked")
-    private WebSocketResponse cmdUnsubscribe(JSONObjectContainer content) {
+    private void cmdUnsubscribe(JSONObjectContainer content) {
         int id = content.get("id", Integer.class);
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
         if (optAnime.isPresent()) {
@@ -177,36 +174,41 @@ public class AutoLoaderHandler extends Handler {
             payload.put("id", id);
             WebSocketUtils.sendPacket("del", TargetSystem.AUTOLOADER, payload, null);
         } else {
-            return WebSocketResponse.ERROR.setMessage("Tried to remove anime with id " + id + " but this does not exist.");
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to unsubscribe from " + id + " this id does not exist!"));
         }
-        return WebSocketResponse.OK;
+        throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 
-    private WebSocketResponse cmdRunDownload(JSONObjectContainer content) {
-        if (!enabled) return WebSocketResponse.ERROR.setMessage("AutoLoader is disabled!");
+    private void cmdRunDownload(JSONObjectContainer content) {
+        if (!enabled)
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("AutoLoader is disabled!"));
 
         int animeId = content.get("id", Integer.class);
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(a -> a.getId() == animeId).findFirst();
-        if (optAnime.isEmpty()) return WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!");
+        if (optAnime.isEmpty())
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
 
         runDownload(optAnime.get());
-        return WebSocketResponse.OK;
+        throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 
 
 
 
-    private WebSocketResponse cmdGetAlternateProviders(WebSocketBasic socket, JSONObjectContainer content) {
+    @SuppressWarnings("unchecked")
+    private void cmdGetAlternateProviders(WebSocketBasic socket, JSONObjectContainer content) {
         Map<AniworldProvider, String> urls = getAlternativeProviders(content);
 
         JSONObject payload = new JSONObject();
         JSONArray array = new JSONArray();
         for (Map.Entry<AniworldProvider, String> entry : urls.entrySet()) {
-            array.add(entry.getKey().getDisplayName());
+            JSONObject object = new JSONObject();
+            object.put("name", entry.getKey().getDisplayName());
+            object.put("url", entry.getValue());
+            array.add(object);
         }
         payload.put("providers", array);
         WebSocketUtils.sendPacket("getAlternateProvidersResponse", TargetSystem.AUTOLOADER, payload, socket);
-        return null;
     }
     //endregion
 

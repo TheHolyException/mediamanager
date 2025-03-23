@@ -27,7 +27,6 @@ public enum AniworldProvider {
 	public static AniworldProvider getProvider(Element streamProviderListeItem) {
 		Element element = streamProviderListeItem.selectFirst(".watchEpisode > i");
 		String title = element.attr("title");
-
 		for (AniworldProvider value : values()) {
 			if (title.equalsIgnoreCase(value.hosterIdentifier))
 				return value;

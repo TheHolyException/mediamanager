@@ -10,7 +10,6 @@ import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
-import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
@@ -49,7 +48,6 @@ public class DefaultHandler extends Handler {
 
     private long dockerMemoryLimit;
     private long dockerMemoryUsage;
-    private final AtomicInteger downloadHandlerFactoryCounter = new AtomicInteger(0);
     private final ExecutorHandler downloadHandler;
     private final ExecutorHandler titleResolverHandler;
 
@@ -73,10 +71,8 @@ public class DefaultHandler extends Handler {
         String systemSettings = "systemSettings";
 
         spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
-        spDownloadThreads.addSubscriber(value -> {
-            downloadHandlerFactoryCounter.set(0);
-            downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value));
-        });
+        spDownloadThreads.addSubscriber(value ->
+            downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value)));
 
         spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
         spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
@@ -84,7 +80,7 @@ public class DefaultHandler extends Handler {
         FFmpeg.setFFmpegPath(getTomlConfig().getString("general.ffmpeg"));
 
 
-        downloadFolder = new File(getTomlConfig().getString("general.tmpDownloadFolder"));
+        downloadFolder = new File(getTomlConfig().getString("general.tmpDownloadFolder", () -> "./tmp"));
         if (!downloadFolder.exists() && !downloadFolder.mkdirs())
             log.error("Could not create download folder");
 
@@ -98,6 +94,9 @@ public class DefaultHandler extends Handler {
 
     private void loadTargets() {
         TomlArray targetArray = getTomlConfig().getArray("target");
+        if (targetArray == null)
+            throw new InitializationException("LoadTargets", "Failed to load targets");
+
         for (int i = 0; i < targetArray.size(); i ++) {
             TomlTable x = targetArray.getTable(i);
             Target tar = new Target(
@@ -111,41 +110,32 @@ public class DefaultHandler extends Handler {
 
     // region commands
     @Override
-    public WebSocketResponse handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
-        return switch (command) {
+    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+        switch (command) {
             case "syn" -> cmdSyncData(socket);
 
             case "put" -> cmdPutData(socket, content);
 
             case "del" -> cmdDelete(content);
 
-            case "del-all" -> cmdDeleteAll();
+            case "del-all" -> cmdDeleteAll(socket);
 
             case "setting" -> cmdChangeSetting(content);
 
-            case "requestSubfolders" -> cmdRequestSubfolders(socket, content);
+            case "requestSubfolders" -> cmdRequestSubFolders(socket, content);
             case "testDelay" -> {
                 log.debug("Test delay");
                 Utils.sleep(5000);
-                yield WebSocketResponse.OK.setMessage("Test delay done!");
+                throw new WebSocketResponseException(WebSocketResponse.OK.setMessage("Test delay done!"));
             }
-            case "ping" -> {
-                sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), socket);
-                yield null;
-            }
-            case "systemInfo" -> {
-                sendSystemInformation(socket);
-                yield null;
-            }
-
-            default -> {
-                log.error("Invalid command " + command);
-                yield WebSocketResponse.ERROR.setMessage("Invalid command " + command);
-            }
-        };
+            case "ping" -> sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), socket);
+            case "systemInfo" -> sendSystemInformation(socket);
+            default ->
+                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
+        }
     }
 
-    private WebSocketResponse cmdSyncData(WebSocketBasic socket) {
+    private void cmdSyncData(WebSocketBasic socket) {
         List<JSONObjectContainer> jsonData = urls.values().stream()
                 .sorted(TableItemDTO::compareTo)
                 .map(TableItemDTO::getJsonObject)
@@ -154,52 +144,57 @@ public class DefaultHandler extends Handler {
         sendSettings(socket);
         sendSystemInformation(socket);
         sendTargetFolders(socket);
-        return null;
     }
 
-    protected WebSocketResponse cmdPutData(WebSocketBasic socket, JSONObjectContainer content) {
+    protected void cmdPutData(WebSocketBasic socket, JSONObjectContainer content) {
         for (Object data : content.getArrayContainer("list").getRaw()) {
             JSONObjectContainer item = (JSONObjectContainer) JSONReader.readString(data.toString());
-            WebSocketResponse response = scheduleDownload(socket, item);
-            if (socket != null && response != null)
-                WebSocketUtils.sendWebsSocketResponse(socket, response, TargetSystem.DEFAULT, "put");
+            try {
+                scheduleDownload(socket, item);
+            } catch (WebSocketResponseException ex) {
+                WebSocketUtils.sendWebsSocketResponse(socket, ex.getResponse(), TargetSystem.DEFAULT, "put");
+            }
         }
-        return null;
     }
 
-    private WebSocketResponse cmdDelete(JSONObjectContainer content) {
+    private void cmdDelete(JSONObjectContainer content) {
         UUID uuid = UUID.fromString(content.get("uuid", String.class));
 
         List<TableItemDTO> toDelete = new ArrayList<>();
         TableItemDTO item = urls.get(uuid);
         if (item == null)
-            return WebSocketResponse.ERROR.setMessage("Failed to find object, is it already deleted?");
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to find object, is it already deleted?"));
 
         WebSocketResponse response = deleteObject(item, toDelete);
         if (response != null)
-            return response;
+            throw new WebSocketResponseException(response);
 
+        // Skip if nothing to delete
         if (toDelete.isEmpty())
-            return null;
+            return;
 
         deleteObjectToAll(toDelete);
         urls.remove(uuid);
-        return null;
     }
 
-    private WebSocketResponse cmdDeleteAll() {
+    private void cmdDeleteAll(WebSocketBasic socket) {
         List<TableItemDTO> toDelete = new ArrayList<>();
-        new HashMap<>(urls).values().forEach(object -> deleteObject(object, toDelete));
+        for (TableItemDTO value : new HashMap<>(urls).values()) {
+            WebSocketResponse response = deleteObject(value, toDelete);
+            if (response != null)
+                WebSocketUtils.sendWebsSocketResponse(socket, response, TargetSystem.DEFAULT, "del-all");
+        }
+
+        // Skip if nothing to delete
         if (toDelete.isEmpty())
-            return null;
+            return;
 
         deleteObjectToAll(toDelete);
         for (TableItemDTO tableItemDTO : toDelete)
             urls.remove(tableItemDTO.getUuid());
-        return null;
     }
 
-    private WebSocketResponse cmdChangeSetting(JSONObjectContainer content) {
+    private void cmdChangeSetting(JSONObjectContainer content) {
         JSONArrayContainer settings = content.getArrayContainer("settings");
         for (Object o : settings.getRaw()) {
             JSONObject setting = (JSONObject) o;
@@ -209,36 +204,36 @@ public class DefaultHandler extends Handler {
             switch (key) {
                 case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
                 case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
-                default -> WebSocketResponse.ERROR.setMessage("Unsupported setting: " + key);
+                default -> throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid setting " + key));
             }
         }
         sendSettings(null);
-        return null;
     }
 
     @SuppressWarnings("unchecked")
-    private WebSocketResponse cmdRequestSubfolders(WebSocketBasic socket, JSONObjectContainer content) {
+    private void cmdRequestSubFolders(WebSocketBasic socket, JSONObjectContainer content) {
         String targetPath = content.get("selection", String.class);
         Target target = targets.get(targetPath.split("/")[0]);
 
-        if (!target.subFolders()) {
-            return null;
-        }
+        if (!target.subFolders())
+            return;
 
         JSONObject response = new JSONObject();
         JSONArray array = new JSONArray();
         File subFolder = new File(target.path());
         if (subFolder.listFiles() != null)
-            array.addAll(Arrays.stream(subFolder.listFiles()).filter(File::isDirectory).map(File::getName).toList());
+            array.addAll(Arrays.stream(subFolder.listFiles())
+                    .filter(File::isDirectory)
+                    .map(File::getName)
+                    .toList());
         response.put("subfolders", array);
+
         sendPacket("requestSubfoldersResponse", TargetSystem.DEFAULT, response, socket);
-        return null;
     }
     // endregion commands
 
     @SuppressWarnings("unchecked")
-    private WebSocketResponse scheduleDownload(WebSocketBasic socket, JSONObjectContainer content) {
-
+    private void scheduleDownload(WebSocketBasic socket, JSONObjectContainer content) {
         File outputFolder = putDownloadResolveOutputFolder(socket, content);
 
         TableItemDTO tableItem = new TableItemDTO(content);
@@ -247,19 +242,17 @@ public class DefaultHandler extends Handler {
                 "state", "Committed",
                 "sortIndex", tableItem.getSortIndex());
 
-
-        String url = putDownloadResolveURL(content);
-
+        String url = content.get("url", String.class);
         if (url == null || url.isEmpty())
-            return WebSocketResponse.ERROR.setMessage("Invalid URL " + url);
-        if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("PUT,"+url+","+tableItem.getSortIndex());}}
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid URL"));
 
+        if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("PUT,"+url+","+tableItem.getSortIndex());}}
 
         AutoLoaderHandler autoLoaderHandler = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER));
         JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
         JSONObject options = content.getObjectContainer("options").getRaw();
-        if (getTomlConfig().getBoolean("general.useDirectMemory", () -> false))
-            options.put("useDirectMemory", true);
+
+        options.put("useDirectMemory", getTomlConfig().getBoolean("general.useDirectMemory", () -> false)+"");
 
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
@@ -275,9 +268,7 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onInfo(String s) {
-                //if (log.isDebugEnabled()) {
-                //    log.debug(s);
-                //}
+                // Not needed
             }
 
             @Override
@@ -316,12 +307,14 @@ public class DefaultHandler extends Handler {
         // Start the download
         // This task is only running when the titleTask is completed
         ExecutorTask downloadTask = new ExecutorTask(() -> {
+            // Check if the task has already been deleted, if so we skipp the execution
             if (tableItem.isDeleted()) {
                 if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DELETED,"+url+","+tableItem.getSortIndex());}}
                 return;
             }
+            // Set the information about the thread to the model item
+            //
             tableItem.setRunning(true);
-            tableItem.setExecutingThread(Thread.currentThread());
             try {
                 if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("START,"+url+","+tableItem.getSortIndex());}}
                 File file = downloader.start();
@@ -358,12 +351,6 @@ public class DefaultHandler extends Handler {
                 log.error("Failed to download", ex);
                 if (!ex.getMessage().contains("File.getName()"))
                     updateEvent.onError(ex.getMessage());
-                if (autoloaderData != null) {
-                    //changeObject(content, "autoloaderRetryFlag", 1);
-
-                    // Trigger the alternative providers to prefetch the data
-                    //autoLoaderHandler.getAlternativeProviders(autoloaderData);
-                }
             }
             tableItem.setRunning(false);
         });
@@ -375,13 +362,10 @@ public class DefaultHandler extends Handler {
         titleResolverHandler.putTask(() -> {
             if (tableItem.isDeleted())
                 return;
-            tableItem.setExecutingThread(Thread.currentThread());
             String title = downloader.resolveTitle();
             if (title != null)
                 changeObject(content, "title", title);
         });
-
-        return null;
     }
 
     private void startSystemDataFetcher() {
@@ -405,6 +389,7 @@ public class DefaultHandler extends Handler {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private void sendTargetFolders(WebSocketBasic socket) {
         JSONObject response = new JSONObject();
         JSONArray array = new JSONArray();
@@ -422,12 +407,11 @@ public class DefaultHandler extends Handler {
         if (toDelete.getTask() != null) {
             if (toDelete.getTask().isRunning()) {
                 if (!toDelete.getDownloader().cancel()) {
-                    return WebSocketResponse.WARN.setMessage("Already running, download cannot be canceled!");
+                    return WebSocketResponse.WARN.setMessage("Failed to abort task! Downloader does not allow canceling");
                 }
             } else {
-                if (!downloadHandler.abortTask(toDelete.getTask())) {
-                    if (!toDelete.getTask().isCompleted())
-                        return WebSocketResponse.WARN.setMessage("Failed to abort task! internal error!");
+                if (!downloadHandler.abortTask(toDelete.getTask()) && !toDelete.getTask().isCompleted()) {
+                    return WebSocketResponse.WARN.setMessage("Failed to abort task! internal error!");
                 }
             }
         }
@@ -439,64 +423,35 @@ public class DefaultHandler extends Handler {
     @SuppressWarnings("unchecked")
     private JSONObject formatSystemInfo() {
         JSONObject response = new JSONObject();
-        {
-            JSONObject memory = new JSONObject();
-            memory.put("current", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory()));
-            memory.put("heap", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()));
-            memory.put("max", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory()));
-            response.put("memory", memory);
-        }
 
-        {
-            JSONObject docker = new JSONObject();
-            docker.put("memoryLimit", StaticUtils.toHumanReadableFileSize(dockerMemoryLimit));
-            docker.put("memoryUsage", StaticUtils.toHumanReadableFileSize(dockerMemoryUsage));
-            response.put("docker", docker);
-        }
+        JSONObject memory = new JSONObject();
+        memory.put("current", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory()));
+        memory.put("heap", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()));
+        memory.put("max", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory()));
+        response.put("memory", memory);
 
-        {
-            ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) downloadHandler.getExecutorService());
-            JSONObject threadPool = new JSONObject();
+        JSONObject docker = new JSONObject();
+        docker.put("memoryLimit", StaticUtils.toHumanReadableFileSize(dockerMemoryLimit));
+        docker.put("memoryUsage", StaticUtils.toHumanReadableFileSize(dockerMemoryUsage));
+        response.put("docker", docker);
 
-            Map<String, AtomicInteger> map = new HashMap<>();
-            for (Thread downloadThread : downloadHandler.getThreadList())
-                map.computeIfAbsent(downloadThread.getState().toString(), k -> new AtomicInteger(0)).incrementAndGet();
+        ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) downloadHandler.getExecutorService());
+        JSONObject threadPool = new JSONObject();
 
-            for (Map.Entry<String, AtomicInteger> entry : map.entrySet()) {
-                threadPool.put(entry.getKey(), entry.getValue());
-            }
-            threadPool.put("max", threadPoolExecutor.getMaximumPoolSize());
-            threadPool.put("completed", threadPoolExecutor.getCompletedTaskCount());
-            response.put("threadPool", threadPool);
-        }
+        Map<String, AtomicInteger> map = new HashMap<>();
+        for (Thread downloadThread : downloadHandler.getThreadList())
+            map.computeIfAbsent(downloadThread.getState().toString(), k -> new AtomicInteger(0)).incrementAndGet();
 
-        {
-            JSONObject aniworld = new JSONObject();
-            AniworldHelper.getStatistics().forEach((k, v) -> aniworld.put(k, v.get()));
-            response.put("aniworld", aniworld);
-        }
+		threadPool.putAll(map);
+        threadPool.put("max", threadPoolExecutor.getMaximumPoolSize());
+        threadPool.put("completed", threadPoolExecutor.getCompletedTaskCount());
+        response.put("threadPool", threadPool);
+
+        JSONObject aniworld = new JSONObject();
+        AniworldHelper.getStatistics().forEach((k, v) -> aniworld.put(k, v.get()));
+        response.put("aniworld", aniworld);
 
         return response;
-    }
-
-    private String putDownloadResolveURL(JSONObjectContainer content) {
-        String contentURL = content.get("url", String.class);
-        AutoLoaderHandler autoLoaderHandler = ((AutoLoaderHandler) MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER));
-        JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
-        // When we have autoloader
-        if (autoloaderData != null) {
-            Episode episode = autoLoaderHandler.getEpisodeFromAutoloaderData(autoloaderData);
-
-            String providerName = autoloaderData.get("provider", String.class);
-            if (providerName != null) {
-                AniworldProvider provider = AniworldProvider.getProviderByName(providerName);
-                if (provider == null)
-                    throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Unsupported provider " + autoloaderData.get("provider", String.class)));
-
-                return episode.getAlternateVideoURLs().get(provider);
-            }
-        }
-        return contentURL;
     }
 
     private File putDownloadResolveOutputFolder(WebSocketBasic socket, JSONObjectContainer content) {

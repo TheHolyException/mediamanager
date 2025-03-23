@@ -1,6 +1,7 @@
 package de.theholyexception.mediamanager;
 
 import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -10,6 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 public class FileLogger {
 
 	private static final Map<String, FileLogger> fileLoggerCache = new HashMap<>();
@@ -27,13 +29,13 @@ public class FileLogger {
 	public FileLogger(String name) {
 		file = new File(loggerFolder, name);
 		try {
-			if (!file.exists()) {
-				file.createNewFile();
+			if (!file.exists() && !file.createNewFile()) {
+				throw new IOException("Failed to create logger file");
 			}
 
 			bos = new BufferedOutputStream(new FileOutputStream(file));
 		} catch (IOException ex) {
-			ex.printStackTrace();
+			log.error("Failed to create logger", ex);
 		}
 	}
 
@@ -47,7 +49,7 @@ public class FileLogger {
 			bos.write(builder.toString().getBytes());
 			bos.flush();
 		} catch (IOException ex) {
-			ex.printStackTrace();
+			log.error("Failed to log", ex);
 		}
 	}
 

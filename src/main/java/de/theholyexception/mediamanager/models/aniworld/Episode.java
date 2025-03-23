@@ -12,9 +12,7 @@ import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.nodes.Element;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @ToString
 @Slf4j
@@ -36,7 +34,7 @@ public class Episode {
     @Getter @Setter
     private Season season;
     @Getter
-    private final Map<AniworldProvider, String> alternateVideoURLs = new HashMap<>();
+    private final Map<AniworldProvider, String> alternateVideoURLs = new EnumMap<>(AniworldProvider.class);
 
     public Episode(Element element) {
         this.episodeNumber = Integer.parseInt(element.text());
@@ -83,7 +81,6 @@ public class Episode {
 
     public List<Integer> getLanguageIds() {
         if (languageIds == null) {
-            System.out.println("getLanguageIDs");
             AniworldHelper.resolveEpisodeLanguages(this);
             AniworldHelper.urlResolver.awaitGroup(883855723);
             this.isDirty = true;
@@ -98,9 +95,11 @@ public class Episode {
                 throw new IllegalStateException("Season has no anime");
             log.debug("Episode " + a.getTitle() + " - " + title + " scans for language");
 
+            ArrayList<Integer> languageIDsPrev = new ArrayList<>(languageIds == null ? new ArrayList<>() : languageIds);
             AniworldHelper.resolveEpisodeLanguages(this);
             AniworldHelper.urlResolver.awaitGroup(883855723);
-            this.isDirty = true; // TODO check if changes has occured, then set this to true
+            if (languageIDsPrev.containsAll(languageIds))
+                this.isDirty = true;
         }
     }
 

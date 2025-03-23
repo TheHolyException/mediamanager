@@ -121,13 +121,11 @@ public class MediaManager {
             Path path = Paths.get(("./config/config.toml"));
             tomlConfig = Toml.parse(path);
             StringBuilder errors = new StringBuilder();
-            tomlConfig.errors().forEach(error -> {
-                errors.append(error.getMessage());
-            });
+            tomlConfig.errors().forEach(error -> errors.append(error.getMessage()));
             if (!errors.isEmpty())
                 throw new InitializationException("Failed to parse config.toml", errors.toString());
 
-            int webSocketThreads = Math.toIntExact(getTomlConfig().getLong("webserver.webSocketThreads"));
+            int webSocketThreads = Math.toIntExact(getTomlConfig().getLong("webserver.webSocketThreads", () -> 10));
             executorHandler.updateExecutorService(Executors.newFixedThreadPool(webSocketThreads));
         } catch (IOException ex) {
             throw new InitializationException("Failed to load config.toml", ex.getMessage());
@@ -161,9 +159,9 @@ public class MediaManager {
     private void loadWebServer() {
         try {
             new WebServer(new WebServer.Configuration(
-                    Math.toIntExact(tomlConfig.getLong("webserver.port")),
-                    tomlConfig.getString("webserver.host"),
-                    tomlConfig.getString("webserver.webroot")
+                    Math.toIntExact(tomlConfig.getLong("webserver.port", () -> 8080)),
+                    tomlConfig.getString("webserver.host", () -> "0.0.0.0"),
+                    tomlConfig.getString("webserver.webroot", () -> "./www")
                     , new WebSocketEvent() {
                 @Override
                 public void onMessage(String data, WebSocketBasic socket) {
@@ -178,9 +176,9 @@ public class MediaManager {
                         throw new IllegalStateException("Invalid target-system: " + targetSystem);
 
                     executorHandler.putTask(new ExecutorTask(() -> {
-                        WebSocketResponse response;
+                        WebSocketResponse response = null;
                         try {
-                            response = handler.handleCommand(socket, cmd, content);
+                            handler.handleCommand(socket, cmd, content);
                         } catch (WebSocketResponseException ex) {
                             response = ex.getResponse();
                         } catch (Exception ex) {
@@ -217,11 +215,11 @@ public class MediaManager {
     private void loadDatabase() throws InitializationException {
         try {
             db = new MySQLInterface(
-                    getTomlConfig().getString("mysql.host"),
-                    Math.toIntExact(getTomlConfig().getLong("mysql.port")),
-                    getTomlConfig().getString("mysql.username"),
-                    getTomlConfig().getString("mysql.password"),
-                    getTomlConfig().getString("mysql.database"));
+                    getTomlConfig().getString("mysql.host", () -> "localhost"),
+                    Math.toIntExact(getTomlConfig().getLong("mysql.port", () -> 3306)),
+                    getTomlConfig().getString("mysql.username", () -> "mediamanager"),
+                    getTomlConfig().getString("mysql.password", () -> "mediamanager"),
+                    getTomlConfig().getString("mysql.database", () -> "mediamanager"));
             db.asyncDataSettings(2);
             db.connect();
 

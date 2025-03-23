@@ -28,8 +28,6 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     @Setter
     private boolean isRunning = false;
     @Setter
-    private Thread executingThread;
-    @Setter
     private boolean isFailed = false;
     private final int sortIndex = counter.getAndIncrement();
 
@@ -43,7 +41,7 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     }
 
     /*
-        a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified objec
+        a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified object
      */
     @Override
     public int compareTo(TableItemDTO o) {

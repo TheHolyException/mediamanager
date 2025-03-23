@@ -3,7 +3,7 @@ package de.theholyexception.mediamanager.settings;
 import de.theholyexception.holyapi.datastorage.file.ConfigJSON;
 import de.theholyexception.holyapi.datastorage.file.FileConfiguration;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.mediamanager.models.SettingMetadata;
+import de.theholyexception.mediamanager.InitializationException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -35,8 +35,7 @@ public class Settings {
                     .getObjectContainer(configPath, new JSONObjectContainer())
                     .getObjectContainer(setting, new JSONObjectContainer());
             if (settingElement == null) {
-                log.error("Setting " + setting + " not found in configuration file");
-                return null;
+                throw new InitializationException("Setting " + setting + " not found in configuration file", "Setting " + setting + " not found in configuration file");
             }
         } else {
             settingElement = null;

@@ -1,6 +1,5 @@
 package de.theholyexception.mediamanager.settings;
 
-import de.theholyexception.mediamanager.models.SettingMetadata;
 import lombok.Getter;
 
 import java.lang.reflect.ParameterizedType;
