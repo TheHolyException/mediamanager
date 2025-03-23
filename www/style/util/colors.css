@@ -1,0 +1,13 @@
+:root {
+    --textColor: #f5f7fa;
+    --darkerTextColor: #9aa5b1;
+    --darkBGColor1: #11111c;
+    --darkBGColor2: #1f2129;
+    --darkBGColor3: #1f212f;
+    --selectedBorderColor: #0891b2;
+    --error: rgb(85, 0, 0);
+    --success: rgb(0, 85, 0);
+    --processing: rgb(85, 85, 0);
+    --committed: rgb(0, 85, 85);
+    --hover-color: #046daa;
+}

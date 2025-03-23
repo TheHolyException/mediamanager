@@ -2,112 +2,93 @@
 <html lang="en">
 
 <head>
+    <title>Mediamanager</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mediamanager</title>
+
+    <script src="./frameworks/widgets/baseWidget.js"></script>
+    <script src="./frameworks/widgets/downloads/downloadsWidget.js"></script>
+    <script src="./frameworks/widgets/settings/settingsWidget.js"></script>
+    <script src="./frameworks/widgets/statistics/statisticsWidget.js"></script>
+    <script src="./frameworks/widgets/subscriptions/subscriptionsWidget.js"></script>
+    <script src="./frameworks/widgets/widgetManager.js"></script>
+    <link rel="stylesheet" href="./frameworks/widgets/widget.css">
+
+    <script src="./frameworks/yeti/yeti-alerts.js"></script>
+    <script src="./frameworks/tabBar/tabBar.js" defer></script>
+    <script src="./scripts/addSourcePopup.js" defer></script>
+    <script src="./scripts/streamSelectPopup.js" defer></script>
     <script src="./websocket.js" defer></script>
     <script src="./script.js" defer></script>
     <script src="./aniworld.js" defer></script>
-    <script src="./autoloader.js" defer></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <link rel="stylesheet" type="text/css" href="./style.css" />
+    <script src="./frameworks/customTags/optionTextfield.js" defer></script>
+    <script src="./frameworks/popup/modalLightboxPopup.js" defer></script>
+    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+
+    <link rel="stylesheet" type="text/css" href="./style/util/colors.css" />
+    <link rel="stylesheet" type="text/css" href="./style/general.css" />
+    <link rel="stylesheet" type="text/css" href="./style/components/navbar.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/downloads/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/settings/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/statistics/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/subscriptions/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/yeti/yeti-alerts.css" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack-all.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack.min.css" rel="stylesheet">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 </head>
 
 <body>
-    <div id="statusElement">
-        <label id="statusText">Initialisiere</label>
-    </div>
-    <h4>Java Heap:</h4>
-    <label id="heapInfo"></label>
-    <br>
-    <h4>Docker Heap:</h4>
-    <label id="dockerInfo"></label>
-    <br>
-    <h4>Thread Pool:</h4>
-    <label id="downloaderInfo"></label>
-    <br>
-    <h3>Source</h3>
-    <label>(i) Supported are (voe; streamtape; vidoza; doodstream; )</label>
-    <div id="selector">
-        <div id="inputContainer" class="padding5">
-            <label>URL</label>
-            <input id="url" type="text" onpaste="onPaste();" />
-            <br>
-            <label>Add on paste</label>
-            <input id="autoadd" type="checkbox" />
-            <br>
-        </div>
-        <div id="aniworldconfig" class="padding5">
-            <label>Aniworld Resolver</label>
-            <div>
-                <Label>URL</Label>
-                <input id="aniworld-url" type="text" />
-            </div>
-            <div>
-                <label>Language: </label>
-                <select id="aniworldLanguage">
-                    <option value="1">German</option>
-                    <option value="2">English SUB</option>
-                    <option value="3">German SUB</option>
-                </select>
-            </div>
-            <button id="btnResolve" onclick="resolveAniworld()">Resolve</button>
-            <label id="resolveInfo"></label>
-            <br>
-            <button id="btnReset" onclick="resetAniworld()">Reset</button>
-        </div>
-    </div>
-    <br>
-    <label>Target Folder:</label>
-    <select id="targetSelection" onchange="onTargetSelection()">
-        <option value="stream-series">Stream - Series</option>
-        <option value="stream-movies">Stream - Movies</option>
-        <option value="stream-animes">Stream - Animes</option>
-        <!--
-        <option value="downloadable">Downloadable</option>
-        <option value="devnull">/dev/null</option>
-        -->
-    </select>
-    <br>
-    <label>Subfolder</label>
-    <input id="subfolder" type="text" />
-    <label>Subfolders on Server</label>
-    <select id="subfolderSelection" onchange="onSubfolderSelection()">
-    </select>
-    <br>
-
-    <h3>Global Settings</h3>
-    <div id="globalSettingsContainer">
+    <header>
         <div>
-            <label>VOE Threads:</label>
-            <input id="VOE_THREADS" class="globalSetting" type="number" style="width: 40px;" value="4" max="10" min="1">
+            <div class="ws-state-container">
+                <p id="ws-state">
+                    <i id="ws-state-icon" class="fa-solid fa-spinner"></i>
+                </p>
+            </div>
         </div>
         <div>
-            <label>Parallel Downloads:</label>
-            <input id="PARALLEL_DOWNLOADS" class="globalSetting" type="number" style="width: 40px;" value="4" max="10"
-                min="1">
+            <nav class="nav-bar embeded-widget-toolbar">
+                <a tab-name="downloads">Downloads</a>
+                <a tab-name="settings">Settings</a>
+                <a tab-name="statistics">Statistics</a>
+                <a tab-name="subscriptions">Subscriptions</a>
+            </nav>
+            <nav class="nav-bar widget-toolbar-bar">
+                <a class="grid-stack-item" widget-name="downloads">Downloads</a>
+                <a class="grid-stack-item" widget-name="settings">Settings</a>
+                <a class="grid-stack-item" widget-name="statistics">Statistics</a>
+                <a class="grid-stack-item" widget-name="subscriptions">Subscriptions</a>
+            </nav>
         </div>
-        <button onclick="saveGlobalSettings()">Save</button>
-    </div>
-
-    <h3>Individual Settings</h3>
-    <div id="settingsContainer">
-    </div>
-    <button id="btnAdd" onclick="onElementAdd()">Add</button>
-    </div>
-    <br>
-    <button onclick="onCommit()">Commit</button>
-    <button onclick="onClear()">Clear All</button>
-    <table id="table">
-        <tr>
-            <th>Delete</th>
-            <th>Resend</th>
-            <th>Status</th>
-            <th>URL</th>
-            <th>Target</th>
-        </tr>
-    </table>
-    <label>(i) Hover over the row to see the options</label>
+        <div class="action-bar">
+            <nav class="action-bar-buttons">
+                <a>
+                    <label class="toggle-icon edit-save">
+                        <i class="on fa-solid fa-floppy-disk"></i>
+                        <i class="off fa-solid fa-pen"></i>
+                        <input type="checkbox">
+                    </label>
+                </a>
+            </nav>
+            <div class="slide-checkbox">
+                <label>
+                    <span class="slider"></span>
+                    <span class="opt off"><i class="fas fa-stream"></i></span>
+                    <span class="opt on"><i class="fas fa-grip-horizontal"></i></span>
+                    <input type="checkbox">
+                </label>
+            </div>
+        </div>
+    </header>
+    <div id="statusText" class="statusText"></div>
+    <main class="main-container">
+        <div class="embeded-widget"></div>
+        <div class="grid-stack"></div>
+    </main>
 </body>
 
 </html>

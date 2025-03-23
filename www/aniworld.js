@@ -1,63 +1,60 @@
-let resolvedLinks = "";
-let btnResolve = document.getElementById("btnResolve");
-let btnReset = document.getElementById("btnReset");
-let resolveInfoElement = document.getElementById("resolveInfo");
-let aniworldLanguage = document.getElementById("aniworldLanguage");
-btnReset.disabled = true;
-
-function resolveAniworld() {
-    let request = {
-        type: "resolveAniworld",
-        url: document.getElementById("aniworld-url").value,
-        language: aniworldLanguage.value
-    }
-    setAniworldStatusColor("WAIT");
-    btnResolve.disabled = true;
-    resolveInfoElement.innerText = "Processing..."
-    send(request);
-}
-
-function onWSResponseAniworldParser(data) {
-    let responseText = "";
-
-    if (data.content == "FAILED") {
-        responseText = data.error;
-        setAniworldStatusColor("ERROR");
-        btnReset.disabled = false;
-    } else {
-        resolvedLinks = "";
-        let links = data.content;
-        let counter = 0;
-        for (let index in links) {
-            let link = links[index];
-            resolvedLinks += link + ";";
-            counter++;
+class Aniworld{
+    constructor(stateLabel){
+        if(!Aniworld.instance){
+            Aniworld.instance = this;
         }
-        resolvedLinks = resolvedLinks.substring(0, resolvedLinks.length - 1);
-        responseText = "Resolved " + counter + " Links"
-        setAniworldStatusColor("OK");
-        btnReset.disabled = false;
+
+        Aniworld.stateLabel = stateLabel;
+        Aniworld.resolvedLinks = "";
+        Aniworld.isResolving = false;
+        return Aniworld.instance;
     }
 
-    resolveInfoElement.innerText = responseText;
-    btnResolve.disabled = false;
-}
+    resolveLinks(links, languageID){
+        if(Aniworld.isResolving)
+            return;
 
+        console.log("Resolve:", links, languageID);
 
-function setAniworldStatusColor(status) {
-    let statusElement = document.getElementById('resolveInfo');
-    for (i = 0; i < statusElement.classList.length; i++) {
-        if (statusElement.classList[i].startsWith('resolverStatus'))
-            statusElement.classList.remove(statusElement.classList[i]);
+        Aniworld.setAniworldStatusColor("WAIT");
+        Aniworld.stateLabel.text("Processing...");
+        sendPacket("resolve", "aniworld", {
+            url: links,
+            language: languageID
+        });
+
+        Aniworld.isResolving = true;
     }
-    if (status != "") {
-        statusElement.classList.add('resolverStatus' + status);
-    }
-}
 
-function resetAniworld() {
-    btnReset.disabled = true;
-    resolvedLinks = "";
-    resolveInfoElement.innerText = "";
-    setAniworldStatusColor("");
+    static resetResolvedLinks() {
+        Aniworld.resolvedLinks = "";
+        Aniworld.stateLabel.text("");
+        Aniworld.setAniworldStatusColor("");
+    }
+
+    static setAniworldStatusColor(state) {
+        Aniworld.stateLabel.attr('state', state);
+    }
+
+    static onWSResponseAniworldParser(cmd, content) {
+        let responseText = "";
+    
+        switch (cmd) {
+            case "links":
+                if (content.error != undefined) {
+                    responseText = content.error;
+                    Aniworld.setAniworldStatusColor("ERROR");
+                    break;
+                }
+
+                let links = content.links;
+                Aniworld.resolvedLinks = links.join(';');
+                responseText = "Resolved " + links.length + " Links"
+                Aniworld.setAniworldStatusColor("OK");
+                Aniworld.isResolving = false;
+                break;
+        }
+    
+        Aniworld.stateLabel.text(responseText);
+    }
 }

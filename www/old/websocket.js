@@ -8,12 +8,13 @@ function connect() {
         sendPacket("syn", "default", {});
         sendPacket('getData', 'autoloader');
         setWebSocketStatusFeedback(2);
+        onTargetSelection(); // Refresh subfolders
     };
 
     ws.onmessage = function (e) {
         let data = JSON.parse(e.data);
 
-        if (data.cmd != "systemInfo" || true) {
+        if (data.cmd != "systemInfo") {
             console.log("<-")
             console.log(data)
         }
@@ -36,14 +37,12 @@ function connect() {
         switch (targetSystem) {
             case "default":
                 onWSResponseDefault(cmd, content);
-                DownloadsWidget.onWSResponse(cmd, content);
                 break;
             case "aniworld":
                 Aniworld.onWSResponseAniworldParser(cmd, content);
                 break;
             case "autoloader":
-                SubscriptionsWidget.onWSResponse(cmd, content);
-                SelectStreamPopup.onWSResponse(cmd, content);
+                onWSResponseAutoloader(cmd, content);
                 break;
         }
     };
@@ -64,9 +63,6 @@ function connect() {
 }
 
 function sendPacket(cmd, targetSystem, content) {
-    if(ws.readyState  !== WebSocket.OPEN)
-        return;
-
     let request = {
         cmd: cmd,
         targetSystem: targetSystem,

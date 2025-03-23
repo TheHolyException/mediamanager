@@ -2,6 +2,8 @@ target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
+/logs/
+MediaManager-1.0-SNAPSHOT.jar
 
 ### IntelliJ IDEA ###
 .idea
@@ -33,3 +35,9 @@ build/
 
 ### Mac OS ###
 .DS_Store
+cookies.curr.txt
+cookies.last.txt
+logs/
+tmp/
+config.json
+config/

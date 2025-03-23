@@ -1,0 +1,99 @@
+.queue-action-bar {
+    display: flex;
+    gap: 15px;
+
+    a {
+        font-size: 1.2em;
+        cursor: pointer;
+        border-radius: 10px;
+        padding: 10px;
+    }
+}
+
+.add-sources-btn {
+    background-color: var(--success);
+}
+
+.commit-sources-btn {
+    background-color: var(--committed);
+}
+
+.retry-all-btn {
+    background-color: var(--processing);
+}
+
+.delete-all-btn {
+    background-color: var(--error);
+}
+
+.delete-completed-btn {
+    background-color: var(--error);
+}
+
+.queue-table {
+    table-layout: auto;
+    font-size: 1.2em;
+    tr {
+        &.failed {
+            background-color: var(--error);
+        }
+        
+        &.success {
+            background-color: var(--success);
+        }
+        
+        &.downlading {
+            background-color: var(--processing);
+        }
+        
+        &.committed {
+            background-color: var(--committed);
+        }
+
+        &:first-of-type {
+            position: sticky;
+            top: 0;
+            font-size: 1.5em;
+            background-color: var(--darkBGColor3);
+        }
+        
+        th {
+            padding: 10px 10px;
+            width: auto;
+        }
+
+        td {
+            padding: 10px 10px;
+            width: auto;
+        }
+
+        [col="actions"] {
+            width: 150px;
+            max-width: 150px;
+
+            &:is(td){
+                display: flex;
+                justify-content: center;
+                gap: 15px;
+
+                i {
+                    cursor: pointer;
+                }
+            }
+        }
+
+        [col="url"] {
+            a {
+                color: var(--textColor);
+            }
+        }
+
+        /* [col="state"] {
+            
+        }
+
+        [col="target"] {
+            
+        } */
+    }
+}

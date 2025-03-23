@@ -1,179 +1,145 @@
 package de.theholyexception.mediamanager;
 
-import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.LoggerContext;
+import de.theholyexception.holyapi.datastorage.file.ConfigJSON;
+import de.theholyexception.holyapi.datastorage.file.FileConfiguration;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.holyapi.datastorage.json.JSONReader;
+import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
+import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
+import de.theholyexception.holyapi.util.DataUtils;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
-import de.theholyexception.mediamanager.configuration.ConfigJSON;
-import de.theholyexception.mediamanager.models.TableItem;
-import de.theholyexception.mediamanager.models.Target;
-import de.theholyexception.mediamanager.settings.SettingProperty;
+import de.theholyexception.holyapi.util.ResourceUtilities;
+import de.theholyexception.mediamanager.handler.AniworldHandler;
+import de.theholyexception.mediamanager.handler.AutoLoaderHandler;
+import de.theholyexception.mediamanager.handler.DefaultHandler;
+import de.theholyexception.mediamanager.handler.Handler;
+import de.theholyexception.mediamanager.models.aniworld.Anime;
+import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.webserver.WebServer;
+import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import me.kaigermany.downloaders.*;
-import me.kaigermany.downloaders.dood.DoodDownloader;
-import me.kaigermany.downloaders.voe.VOEDownloadEngine;
 import me.kaigermany.ultimateutils.StaticUtils;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketEvent;
-import org.json.simple.*;
-import org.json.simple.parser.*;
+import org.slf4j.LoggerFactory;
+import org.tomlj.Toml;
+import org.tomlj.TomlParseResult;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.lang.reflect.Field;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
 @Slf4j
 public class MediaManager {
 
-    private static final HashMap<String, String> arguments = new HashMap<>();
-    private static boolean debug = false;
-
+    @Getter
+    private static MediaManager instance;
+    private static final ExecutorHandler executorHandler;
 
     public static void main(String[] args) {
-        parseArguments(args);
         new MediaManager();
     }
 
-
-    /**
-     * Parses the Start Arguments of the application in a HashMap
-     *
-     * @param args Start arguments that should be parsed
-     */
-    private static void parseArguments(String[] args) {
-        for (String arg : args) {
-            String[] s = arg.toLowerCase().split(":");
-            if (s.length != 2) {
-                if (s[0].startsWith("-")) {
-                    arguments.put(s[0].substring(1), null);
-                } else {
-                    log.error("Invalid argument found: " + s[0]);
-                }
-                continue;
-            }
-            arguments.put(s[0], s[1]);
-        }
-        log.info("Loaded arguments: " + arguments.toString());
+    public static TomlParseResult getTomlConfig() {
+        return instance.tomlConfig;
     }
 
-    private void handleArguments() {
-        if (arguments.containsKey("ffmpeg")) {
-            FFmpeg.setFFmpegPath(arguments.get("ffmpeg"));
-            log.info("FFMPEG Path: " + arguments.get("ffmpeg"));
-        }
-
-        if (arguments.containsKey("debug")) {
-            debug = Boolean.parseBoolean(arguments.get("debug"));
-            log.info("Debug mode enabled");
-        }
+    public void changeLogLevel() {
+        Level level = Level.valueOf(tomlConfig.getString("general.logLevel"));
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+        context.getLogger("ROOT").setLevel(level);
     }
 
-    private final Map<String, Target> targets = new HashMap<>();
-    private long dockerMemoryLimit;
-    private long dockerMemoryUsage;
+    @Getter
     private boolean isDockerEnvironment = false;
-    private final Map<UUID, TableItem> urls = Collections.synchronizedMap(new HashMap<>());
+    @Getter
     private final List<WebSocketBasic> clientList = Collections.synchronizedList(new ArrayList<>());
-    private ConfigJSON configuration;
-    private ExecutorHandler executorHandler;
-    private SettingProperty<Integer> downloadThreads;
-    private SettingProperty<Integer> voeThreads;
-    private SettingProperty<String> ffmpegPath;
-    private SettingProperty<String> downloadFolderSetting;
-    private File downloadFolder;
+    @Getter
+    private ConfigJSON systemSettings;
+    @Getter
+    private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
+    private TomlParseResult tomlConfig;
+    @Getter
+    private DataBaseInterface db;
 
-
-    public MediaManager() {
+    static {
         executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
-        loadConfiguration();
-        handleArguments();
-        checkForDockerEnvironment();
-        startSystemDataFetcher();
-
-        new WebServer(new WebServer.Configuration(8080, "0.0.0.0", "./www", new WebSocketEvent() {
-            @Override
-            public void onMessage(String data, WebSocketBasic socket) {
-                try {
-                    JSONObject dataset = (JSONObject) new JSONParser().parse(data);
-
-                    String targetSystem = dataset.getOrDefault("targetSystem", "defaultSystem").toString();
-
-                    switch (targetSystem) {
-                        case "defaultSystem" -> processDefaultPackets(socket, dataset);
-                        case "autoLoader" -> throw new IllegalStateException("Not implemented yet");
-                        default -> throw new IllegalStateException("Invalid target-system: " + targetSystem);
-                    }
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-
-            @Override
-            public void onOpen(WebSocketBasic socket) {
-                clientList.add(socket);
-            }
-
-            @Override
-            public void onClose(WebSocketBasic socket) {
-                clientList.remove(socket);
-            }
-
-            @Override
-            public void onError(WebSocketBasic socket, String message, Exception exception) {
-                clientList.remove(socket);
-            }
-        }));
+        executorHandler.setThreadNameFactory(cnt -> "WS-Executor-" + cnt);
     }
 
-    private void loadConfiguration() {
-        configuration = new ConfigJSON(new File("./config.json"));
-        configuration.loadConfig();
-        if (!configuration.getFile().exists()) {
-            URL url = MediaManager.class.getClassLoader().getResource("config-template.json");
-            try (FileInputStream fis = new FileInputStream(new File(url.toURI()))) {
-                boolean result = configuration.createNewIfNotExists(fis);
-                if (result) log.info("New configuration created");
-            } catch (IOException | URISyntaxException ex) {
-                ex.printStackTrace();
+	public MediaManager() {
+        MediaManager.instance = this;
+		List<Runnable> initListeners = Collections.synchronizedList(new ArrayList<>());
+		initListeners.add(this::loadHandlers);
+        initListeners.add(this::loadConfiguration);
+        initListeners.add(this::checkForDockerEnvironment);
+        initListeners.add(this::loadWebServer);
+        initListeners.add(this::loadDatabase);
+
+        for (int i = 0; i < initListeners.size(); i++) {
+            Runnable initListener = initListeners.get(i);
+            try {
+                initListener.run();
+            } catch (InitializationException ex) {
+                log.error("Failed to initialize " + ex.getName(), ex);
+                System.exit(1000+i);
+            } catch (Exception ex) {
+                log.error("Failed to initialize " + initListener + " unusual error:", ex);
             }
         }
-        loadTargets();
-        Settings.init(configuration);
 
-        downloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1);
-        voeThreads = Settings.getSettingProperty("VOE_THREADS", 1);
-        ffmpegPath = Settings.getSettingProperty("FFMPEG", "ffmpeg");
-        downloadFolderSetting = Settings.getSettingProperty("DOWNLOAD_FOLDER", "./tmp");
-
-
-        downloadThreads.addSubscriber(value -> executorHandler.updateExecutorService(Executors.newFixedThreadPool(value)));
-        voeThreads.addSubscriber(VOEDownloadEngine::setThreads);
-        ffmpegPath.addSubscriber(FFmpeg::setFFmpegPath);
-        downloadFolderSetting.addSubscriber(value -> {
-            downloadFolder = new File(value);
-            if (!downloadFolder.exists())
-                downloadFolder.mkdirs();
-        });
+        handlers.values().forEach(Handler::initialize);
     }
 
-    private void loadTargets() {
-        JSONArrayContainer targetsConfig = configuration.getJson().getArrayContainer("targets");
-        for (Object object : targetsConfig.getRaw()) {
-            JSONObject target = (JSONObject) object;
-            Target tar = new Target(
-                      target.get("identifier").toString()
-                    , target.get("path").toString()
-                    , target.containsKey("subFolders") ? Boolean.valueOf(target.get("subFolders").toString()) : false);
-            targets.put(target.get("identifier").toString(), tar);
+    private void loadHandlers() {
+        try {
+            addHandler(new DefaultHandler(TargetSystem.DEFAULT));
+            addHandler(new AniworldHandler(TargetSystem.ANIWORLD));
+            addHandler(new AutoLoaderHandler(TargetSystem.AUTOLOADER));
+        } catch (Exception ex) {
+            throw new InitializationException("Load Handlers", ex.getMessage());
+        }
+    }
+
+    private void addHandler(Handler handler) {
+        handlers.put(handler.getTargetSystem(), handler);
+    }
+
+    private void loadConfiguration() throws InitializationException {
+        try {
+            Path path = Paths.get(("./config/config.toml"));
+            tomlConfig = Toml.parse(path);
+            StringBuilder errors = new StringBuilder();
+            tomlConfig.errors().forEach(error -> errors.append(error.getMessage()));
+            if (!errors.isEmpty())
+                throw new InitializationException("Failed to parse config.toml", errors.toString());
+
+            int webSocketThreads = Math.toIntExact(getTomlConfig().getLong("webserver.webSocketThreads", () -> 10));
+            executorHandler.updateExecutorService(Executors.newFixedThreadPool(webSocketThreads));
+        } catch (IOException ex) {
+            throw new InitializationException("Failed to load config.toml", ex.getMessage());
+        }
+
+        try {
+            systemSettings = new ConfigJSON(new File("./config/systemsettings.json"));
+            systemSettings.loadConfig();
+            changeLogLevel();
+            Settings.init(systemSettings);
+            handlers.values().forEach(Handler::loadConfigurations);
+            systemSettings.saveConfig(FileConfiguration.SaveOption.PRETTY_PRINT);
+        } catch (Exception ex) {
+            throw new InitializationException("Failed to load systemsettings.json", ex.getMessage());
         }
     }
 
@@ -183,297 +149,117 @@ public class MediaManager {
             if (!a.isEmpty()) isDockerEnvironment = true;
             return;
         } catch (Exception ex) {
-            ex.printStackTrace();
+            log.error(ex.getMessage());
         }
+
         isDockerEnvironment = false;
         log.warn("No docker environment!");
     }
 
-    private void processDefaultPackets(WebSocketBasic socket, JSONObject dataset) {
-        switch (dataset.get("type").toString()) {
-            case "syn" -> syncData(socket);
+    private void loadWebServer() {
+        try {
+            new WebServer(new WebServer.Configuration(
+                    Math.toIntExact(tomlConfig.getLong("webserver.port", () -> 8080)),
+                    tomlConfig.getString("webserver.host", () -> "0.0.0.0"),
+                    tomlConfig.getString("webserver.webroot", () -> "./www")
+                    , new WebSocketEvent() {
+                @Override
+                public void onMessage(String data, WebSocketBasic socket) {
+                    JSONObjectContainer dataset = (JSONObjectContainer) JSONReader.readString(data);
 
-            case "put" -> putData(dataset);
+                    String targetSystem = dataset.get("targetSystem", "default", String.class);
+                    String cmd = dataset.get("cmd", String.class);
+                    JSONObjectContainer content = dataset.getObjectContainer("content", new JSONObjectContainer());
 
-            case "del" -> delete(dataset);
+                    Handler handler = handlers.get(TargetSystem.valueOf(targetSystem.toUpperCase()));
+                    if (handler == null)
+                        throw new IllegalStateException("Invalid target-system: " + targetSystem);
 
-            case "del-all" -> deleteAll();
-
-            case "setting" -> changeSetting(dataset);
-
-            case "resolveAniworld" -> resolveAniworld(socket, dataset);
-
-            case "targetSelection" -> targetSelection(socket, dataset);
-
-            default -> log.error("invalid dataset " + dataset.get("type"));
-        }
-    }
-
-    private void syncData(WebSocketBasic socket) {
-        List<JSONObject> jsonData = urls.values().stream()
-                .sorted(TableItem::compareTo)
-                .map(TableItem::getJsonObject)
-                .toList();
-        sendObject(socket, jsonData);
-        sendSettings(socket);
-        sendSystemInformation(socket);
-    }
-
-    private void putData(JSONObject dataset) {
-        JSONObject content = (JSONObject) dataset.get("content");
-        urls.put(UUID.fromString(content.get("uuid").toString()), new TableItem(content));
-        changeObject(content, "state", "Committed");
-
-        String url = content.get("url").toString();
-        String targetPath = content.get("target").toString();
-        log.debug("Resolving target: " + targetPath.split("/")[0]);
-        Target target = targets.get(targetPath.split("/")[0]);
-        log.debug("Target resolved!: " + target);
-
-        File outputFolder = new File(target.path(), targetPath.replace(targetPath.split("/")[0] + "/", ""));
-        log.debug("Output Folder: " + outputFolder.getAbsolutePath());
-        if (!outputFolder.exists()) outputFolder.mkdirs();
-
-        var updateEvent = new DownloadStatusUpdateEvent() {
-            @Override
-            public void onProgressUpdate(double v) {
-                if (v >= 1) {
-                    changeObject(content, "state", "Completed");
-                } else {
-                    changeObject(content, "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
+                    executorHandler.putTask(new ExecutorTask(() -> {
+                        WebSocketResponse response = null;
+                        try {
+                            handler.handleCommand(socket, cmd, content);
+                        } catch (WebSocketResponseException ex) {
+                            response = ex.getResponse();
+                        } catch (Exception ex) {
+                            log.error("Failed to process command", ex);
+                            response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
+                        }
+                        if (response != null) {
+                            response.getResponse().set("sourceCommand", cmd);
+                            WebSocketUtils.sendPacket("response", handler.getTargetSystem(),response.getResponse().getRaw(), socket);
+                        }
+                    }));
                 }
-            }
 
-            @Override
-            public void onInfo(String s) {
-            }
+                @Override
+                public void onOpen(WebSocketBasic socket) {
+                    clientList.add(socket);
+                }
 
-            @Override
-            public void onWarn(String s) {
-            }
+                @Override
+                public void onClose(WebSocketBasic socket) {
+                    clientList.remove(socket);
+                }
 
-            @Override
-            public void onError(String s) {
-                changeObject(content, "state", "Error: " + s);
-            }
-
-            @Override
-            public void onLogFile(String s, byte[] bytes) {
-            }
-        };
-
-        JSONObject options = (JSONObject) content.get("options");
-
-        // Getting the right downloader
-        Downloader downloader = DownloaderSelector.selectDownloader(url);
-
-        // Start the download task
-        executorHandler.putTask(new ExecutorTask(() -> {
-            try {
-                File file = downloader.start(url, downloadFolder, updateEvent, options);
-                File targetFile = new File(outputFolder, file.getName());
-                log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
-                Files.move(file.toPath(), targetFile.toPath());
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                updateEvent.onError(ex.getMessage());
-            }
-        }));
-    }
-
-    private void delete(JSONObject dataset) {
-        TableItem toDelete = urls.get(UUID.fromString(dataset.get("uuid").toString()));
-        deleteObjectToAll(toDelete);
-        urls.remove(UUID.fromString(dataset.get("uuid").toString()));
-    }
-
-    private void deleteAll() {
-        urls.values().forEach(this::deleteObjectToAll);
-        urls.clear();
-    }
-
-    private void changeSetting(JSONObject dataset) {
-        JSONObject setting = (JSONObject) dataset.get("content");
-        String key = setting.get("key").toString();
-        String val = setting.get("val").toString();
-
-        switch (key) {
-            case "VOE_THREADS" -> voeThreads.setValue(Integer.parseInt(val));
-            case "PARALLEL_DOWNLOADS" -> downloadThreads.setValue(Integer.parseInt(val));
-            default -> throw new IllegalStateException("Unsupported Setting: " + key);
-        }
-        broadcastData(null, dataset.toJSONString());
-    }
-
-    private void resolveAniworld(WebSocketBasic socket, JSONObject dataset) {
-        try {
-            int language = Integer.parseInt(dataset.get("language").toString());
-            List<String> links = AniWorldParser.getLinks(dataset.get("url").toString(), language);
-            JSONObject res = new JSONObject();
-            JSONArray ds = new JSONArray();
-            ds.addAll(links);
-            res.put("content", ds);
-            res.put("type", "aniworld-links");
-            socket.send(res.toJSONString());
+                @Override
+                public void onError(WebSocketBasic socket, String message, Exception exception) {
+                    clientList.remove(socket);
+                }
+            }));
         } catch (Exception ex) {
-            JSONObject res = new JSONObject();
-            res.put("content", "FAILED");
-            res.put("error", ex.getMessage());
-            res.put("type", "aniworld-links");
-            socket.send(res.toJSONString());
+            throw new InitializationException("Load Webserver", ex.getMessage());
         }
     }
 
-    private void targetSelection(WebSocketBasic socket, JSONObject dataset) {
-        String targetPath = dataset.get("selection").toString();
-        Target target = targets.get(targetPath.split("/")[0]);
-
-        if (!target.subFolders()) {
-            sendWarn(socket, dataset.get("type").toString(), "No sub-folders are configured for " + target.identifier());
-            return;
-        }
-
-        JSONObject response = new JSONObject();
-        response.put("type", "targetSelectionResolved");
-        JSONArray array = new JSONArray();
-        File subFolder = new File(target.path());
-        if (subFolder.listFiles() != null)
-            array.addAll(Arrays.stream(subFolder.listFiles()).map(File::getName).toList());
-        response.put("subfolders", array);
-        socket.send(response.toJSONString());
-    }
-
-
-    private void sendObject(WebSocketBasic socket, JSONObject... objects) {
-        sendObject(socket, Arrays.stream(objects).toList());
-    }
-
-    private void sendObject(WebSocketBasic socket, List<JSONObject> objects) {
-        JSONObject body = new JSONObject();
-        JSONArray dataset = new JSONArray();
-        for (JSONObject object : objects)
-            dataset.add(object);
-        body.put("content",dataset);
-        body.put("type", "syn");
-        socket.send(body.toJSONString());
-    }
-
-    private void sendWarn(WebSocketBasic socket, String sourceType, String message) {
-        JSONObject body = new JSONObject();
-        body.put("type", "warn");
-        body.put("sourceType", sourceType);
-        body.put("message", message);
-        socket.send(body.toJSONString());
-    }
-
-    private void sendSettings(WebSocketBasic socket) {
-        Settings.SETTING_PROPERTIES.entrySet().stream()
-                .filter(entry -> entry.getValue().getMetadata().forClient())
-                .forEach(entry -> {
-            JSONObject body = new JSONObject();
-            JSONObject dataset = new JSONObject();
-            dataset.put("key", entry.getKey());
-            dataset.put("val", entry.getValue().getValue());
-            body.put("content",dataset);
-            body.put("type", "setting");
-            socket.send(body.toJSONString());
-        });
-    }
-
-    private void sendObjectToAll(JSONObject... objects) {
-        sendObjectToAll(Arrays.stream(objects).toList());
-    }
-
-    private void sendObjectToAll(List<JSONObject> objects) {
-        for (WebSocketBasic webSocketBasic : new ArrayList<>(clientList)) {
-            try {
-                sendObject(webSocketBasic, objects);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                webSocketBasic.close();
-                clientList.remove(webSocketBasic);
-            }
-        }
-    }
-
-    private void deleteObjectToAll(TableItem object) {
-        JSONObject body = new JSONObject();
-        body.put("type", "del");
-        body.put("uuid", object.getUuid().toString());
-        broadcastData(null, body.toJSONString());
-    }
-
-    private void changeObject(JSONObject object, Object key, Object value) {
-        object.put(key, value);
-        object.put("modified", System.currentTimeMillis());
-        sendObjectToAll(object);
-    }
-
-    private void broadcastData(WebSocketBasic source, String data) {
-        for (WebSocketBasic webSocketBasic : new ArrayList<>(clientList)) {
-            if (webSocketBasic != null && webSocketBasic == source) continue;
-            try {
-                webSocketBasic.send(data);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        }
-    }
-
-    private void startSystemDataFetcher() {
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                sendSystemInformation(null);
-            }
-        }, 0, 5000);
-    }
-
-    private void sendSystemInformation(WebSocketBasic target) {
+    private void loadDatabase() throws InitializationException {
         try {
-            if (isDockerEnvironment) {
-                dockerMemoryLimit = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.max").start().getInputStream())).trim());
-                dockerMemoryUsage = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.current").start().getInputStream())).trim());
+            db = new MySQLInterface(
+                    getTomlConfig().getString("mysql.host", () -> "localhost"),
+                    Math.toIntExact(getTomlConfig().getLong("mysql.port", () -> 3306)),
+                    getTomlConfig().getString("mysql.username", () -> "mediamanager"),
+                    getTomlConfig().getString("mysql.password", () -> "mediamanager"),
+                    getTomlConfig().getString("mysql.database", () -> "mediamanager"));
+            db.asyncDataSettings(2);
+            db.connect();
+
+            if (Boolean.TRUE.equals(getTomlConfig().getBoolean("autoloader.executeDBScripts"))) {
+                executeDatabaseScripts();
             }
-            if (target == null) {
-                broadcastData(null, formatSystemInfo().toJSONString());
-            } else {
-                target.send(formatSystemInfo().toJSONString());
-            }
+
+            Anime.setCurrentID(getCurrentId("anime"));
+            Season.setCurrentID(getCurrentId("season"));
         } catch (Exception ex) {
-            ex.printStackTrace();
+            throw new InitializationException("Load Database", ex.getMessage());
         }
     }
 
-    private JSONObject formatSystemInfo() {
-        JSONObject response = new JSONObject();
-        response.put("type", "systemInfo");
-        response.put("heap", String.format("Java Runtime: %s/%s/%s"
-                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())
-                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory())
-                , StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory())
-        ));
-        if (isDockerEnvironment) {
-            response.put("containerHeap", String.format("Docker Container: %s/%s"
-                    , StaticUtils.toHumanReadableFileSize(dockerMemoryUsage)
-                    , StaticUtils.toHumanReadableFileSize(dockerMemoryLimit)
-            ));
+    private void executeDatabaseScripts() throws InitializationException {
+        try {
+            List<String> files = ResourceUtilities.listResourceFilesRecursive("sql/");
+            for (String file : files.stream().sorted().toList()) {
+                if (!file.endsWith(".sql")) continue;
+                String content = new String(DataUtils.readAllBytes(ResourceUtilities.getResourceAsStream("sql/"+file)));
+                String[] filePath = file.split("/");
+                log.debug("Executing SQL Script: " + filePath[filePath.length-1]);
+                db.executeAsync(-2, content);
+            }
+            db.getExecutorHandler().awaitGroup(-2, 20);
+        } catch (Exception ex) {
+            throw new InitializationException("Execute Database Scripts", ex.getMessage());
         }
-        ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) executorHandler.getExecutorService());
-        response.put("handler", String.format("""
-                        Active Count: %s
-                        Core Size: %s
-                        Pool Size: %s
-                        Pool Size (Max): %s
-                        Completed Tasks: %s
-                        """
-                , threadPoolExecutor.getActiveCount()
-                , threadPoolExecutor.getCorePoolSize()
-                , threadPoolExecutor.getPoolSize()
-                , threadPoolExecutor.getMaximumPoolSize()
-                , threadPoolExecutor.getCompletedTaskCount()
-                ));
-        return response;
     }
 
+    private int getCurrentId(String table) {
+        int result = 0;
+        try {
+            ResultSet rs = db.executeQuery("select nKey from " + table + " order by nKey desc");
+            if (rs.next())
+                result = rs.getInt(1);
+            rs.close();
+        } catch (SQLException ex) {
+            log.error("", ex);
+        }
+        return result;
+    }
 }
