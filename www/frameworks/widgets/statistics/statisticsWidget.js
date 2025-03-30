@@ -5,7 +5,7 @@ class StatisticsWidget extends BaseWidget {
 
     render() {
         let widget = $(`
-        <div class="widget" widget-name="StatisticsWidget">
+        <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="StatisticsWidget">
             <h1 class="widget-handle">Statistics</h1>
             <div class="statistics">
                 <div class="statistic-group">

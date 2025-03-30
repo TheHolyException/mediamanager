@@ -1,0 +1,25 @@
+.scrollbar-on-hover{
+    overflow: hidden!important;
+
+    &:hover{
+        overflow: auto!important;
+    }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+    width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: #2a2929;
+    border-radius: 50px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 50px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

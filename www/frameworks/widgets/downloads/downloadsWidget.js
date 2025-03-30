@@ -7,7 +7,7 @@ class DownloadsWidget extends BaseWidget {
 
     render() {
         let widget = $(`
-        <div class="widget">
+        <div class="widget scrollbar-on-hover custom-scrollbar">
             <h1 class="widget-handle">Download Queue</h1>
             <nav class="queue-action-bar">
                 <a class="add-sources-btn" onclick="openAddSourcePopup()"><i class="fa fa-plus"></i> Add</a>
