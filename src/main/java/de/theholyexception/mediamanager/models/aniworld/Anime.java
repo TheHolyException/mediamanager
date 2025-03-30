@@ -93,6 +93,7 @@ public class Anime {
 
     public void setDirectoryPath(String overridePath, boolean markDirty) {
         if (overridePath != null) {
+            overridePath = Utils.escape(overridePath);
             customDirectory = overridePath;
             if (markDirty) isDirty = true;
             directory = new File(baseDirectory, overridePath);
@@ -163,7 +164,7 @@ public class Anime {
                 continue;
 
             String sn = String.format("S%02d", season.getSeasonNumber());
-            for (Episode episode : season.getEpisodeList().stream().filter(e -> !e.isDownloaded()).toList()) {
+            for (Episode episode : season.getEpisodeList().stream().toList()) {
                 String en = String.format("E%02d", episode.getEpisodeNumber());
                 boolean exists = existingFiles.contains(sn + en);
                 episode.setDownloaded(exists);
@@ -207,7 +208,6 @@ public class Anime {
         }
 
         lastUpdate = System.currentTimeMillis();
-        //WebSocketUtils.sendAutoLoaderItem(null, this);
     }
 
 
@@ -238,6 +238,9 @@ public class Anime {
         seasonList.forEach(season -> season.writeToDB(db, id));
     }
 
+    public void updateLastUpdate() {
+        lastUpdate = System.currentTimeMillis();
+    }
 
 
     public JSONObject toJSONObject() {

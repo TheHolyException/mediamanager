@@ -236,7 +236,11 @@ public class AniworldHelper {
 
                 AniworldProvider provider = AniworldProvider.getProvider(element);
                 // Check if we support the provider and if we should exclude it
-                if (provider == null || provider.equals(exclude)) continue;
+                if (provider == null || provider.equals(exclude)) {
+                    log.debug("No provider found for " + element.selectFirst(".watchEpisode > i").attr("title") + " excluding " + exclude);
+                    log.debug(provider == null ? "No provider found" : provider.toString());
+                    continue;
+                }
 
                 String url = AniworldHelper.getRedirectedURL(AniworldHelper.ANIWORLD_URL+element.attr("data-link-target"));
                 result.put(provider, url);

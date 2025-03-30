@@ -192,9 +192,6 @@ public class AutoLoaderHandler extends Handler {
         throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 
-
-
-
     @SuppressWarnings("unchecked")
     private void cmdGetAlternateProviders(WebSocketBasic socket, JSONObjectContainer content) {
         Map<AniworldProvider, String> urls = getAlternativeProviders(content);
@@ -243,6 +240,8 @@ public class AutoLoaderHandler extends Handler {
                             anime.writeToDB(MediaManager.getInstance().getDb());
 
                         Utils.sleep(checkDelayMs);
+
+                        anime.updateLastUpdate(); // Update the lastUpdate variable
                     }
 
                     long sleepTime = checkIntervalMin*1000L*60L;

@@ -65,10 +65,10 @@ class SubscriptionsWidget extends BaseWidget {
         let itemId = item.id;
 
         let existing = $('[autoloader="' + itemId + '"]');
-        if (existing.length > 0){
+        if (existing.length > 0) {
             existing.remove();
         }
-        
+
         let row = $('<tr>')
             .attr('autoloader', itemId)
             .attr('title', SubscriptionsWidget.getTooltip(item));
@@ -84,7 +84,7 @@ class SubscriptionsWidget extends BaseWidget {
                 let btnDownload = $('<i>')
                     .addClass('fa fa-download')
                     .attr('title', 'Start Download')
-                    .click(function(){
+                    .click(function () {
                         sendPacket("runDownload", "autoloader", { id: item.id })
                     });
                 toolbar.append(btnDownload);
@@ -95,7 +95,7 @@ class SubscriptionsWidget extends BaseWidget {
                 let btnUnsubscribe = $('<i>')
                     .addClass('fa-solid fa-ban')
                     .attr('title', 'Unsubscribe')
-                    .click(function(){
+                    .click(function () {
                         sendPacket("unsubscribe", "autoloader", { id: item.id })
                     });
                 toolbar.append(btnUnsubscribe);
@@ -135,15 +135,16 @@ class SubscriptionsWidget extends BaseWidget {
             let date = new Date(item.lastScan);
             let hours = date.getHours().toString().padStart(2, '0');
             let minutes = date.getMinutes().toString().padStart(2, '0');
+            let seconds = date.getSeconds().toString().padStart(2, '0');
             let txtLastScan = $('<td>')
-                .text(hours + ':' + minutes);
+                .text(hours + ':' + minutes + ':' + seconds);
             row.append(txtLastScan);
         }
 
         table.append(row);
     }
 
-    static getTooltip(item){
+    static getTooltip(item) {
         let tooltip = "Download Directory:\n\t" + item.directory + "\n";
         tooltip += "Excluded Seasons:\n";
 
@@ -155,14 +156,14 @@ class SubscriptionsWidget extends BaseWidget {
         return tooltip;
     }
 
-    static autoloaderSave(subfolder, url, languageId, excludedSeasons) {    
+    static autoloaderSave(subfolder, url, languageId, excludedSeasons) {
         let request = {
             url: url,
             languageId: languageId,
             directory: subfolder,
             excludedSeasons: excludedSeasons
         }
-        
+
         sendPacket('subscribe', 'autoloader', request);
     }
 

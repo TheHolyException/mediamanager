@@ -45,8 +45,8 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
      */
     @Override
     public int compareTo(TableItemDTO o) {
-        Long l1 = Long.valueOf(sortIndex);
-        Long l2 = Long.valueOf(o.sortIndex);
+        Long l1 = (long) sortIndex;
+        Long l2 = (long) o.sortIndex;
         return l1.compareTo(l2);
     }
 }

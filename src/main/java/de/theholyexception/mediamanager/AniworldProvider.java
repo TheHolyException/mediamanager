@@ -1,42 +1,44 @@
 package de.theholyexception.mediamanager;
 
 import lombok.Getter;
+import me.kaigermany.downloaders.DownloaderSelector;
 import org.jsoup.nodes.Element;
 
-import java.util.List;
-
 public enum AniworldProvider {
-	VOE("VOE", "Hoster VOE", "voe.sx"),
-	DOODSTREAM("Doodstream", "Hoster Doodstream", "doodstream.com", "dood.li"),
-	VIDOZA("Vidoza", "Hoster Vidoza", "videzz.net", "vidoza.net"),
-	STREAMTAPE("Streamtape", "Hoster Streamtape", "streamtape.com", "watchadsontape.com");
+	VOE("VOE", "Hoster VOE"),
+	STREAMTAPE("StreamTape", "Hoster Streamtape"),
+	VIDOZA("Vidoza", "Hoster Vidoza"),
+	LULUVDO("Luluvdo", "Hoster Luluvdo"),
+	VIDMOLY("Vidmoly", "Hoster Vidmoly"),
+	DOODSTREAM("Doodstream", "Hoster Doodstream"),
+	;
+
 
 	@Getter
 	private String displayName;
 	@Getter
 	private String hosterIdentifier;
-	@Getter
-	private List<String> url;
 
-	AniworldProvider(String displayName, String hosterIdentifier, String... url) {
+	AniworldProvider(String displayName, String hosterIdentifier) {
 		this.displayName = displayName;
 		this.hosterIdentifier = hosterIdentifier;
-		this.url = List.of(url);
 	}
 
 	public static AniworldProvider getProvider(Element streamProviderListeItem) {
 		Element element = streamProviderListeItem.selectFirst(".watchEpisode > i");
 		String title = element.attr("title");
 		for (AniworldProvider value : values()) {
-			if (title.equalsIgnoreCase(value.hosterIdentifier))
+			if (title.equalsIgnoreCase(value.hosterIdentifier)) {
 				return value;
+			}
 		}
 		return null;
 	}
 
 	public static AniworldProvider getProvider(String url) {
+		String downloadKey = DownloaderSelector.detectDownloaderByDomain(url);
 		for (AniworldProvider value : values()) {
-			if (value.getUrl().contains(url))
+			if (value.getDisplayName().equals(downloadKey))
 				return value;
 		}
 		return null;
@@ -48,5 +50,13 @@ public enum AniworldProvider {
 				return value;
 		}
 		return null;
+	}
+
+	@Override
+	public String toString() {
+		return "AniworldProvider{" +
+				"displayName='" + displayName + '\'' +
+				", hosterIdentifier='" + hosterIdentifier + '\'' +
+				'}';
 	}
 }

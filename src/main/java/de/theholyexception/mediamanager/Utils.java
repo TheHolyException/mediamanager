@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 public class Utils {
@@ -72,6 +73,22 @@ public class Utils {
 
     public static String escape(String string) {
         return string.replaceAll("[^a-zA-Z0-9-_.]", "_");
+    }
+
+    public static void safeDelete(File dir) {
+        if (dir == null) {
+            log.error("Directory is null");
+            return;
+        }
+
+        for(File f : Objects.requireNonNull(dir.listFiles())){
+            if(f.isDirectory()){
+                safeDelete(f);
+            } else {
+                if (!f.delete())
+                    log.warn("Failed to delete file " + f.getAbsolutePath());
+            }
+        }
     }
 
 }

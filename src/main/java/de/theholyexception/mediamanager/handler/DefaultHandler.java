@@ -29,6 +29,8 @@ import org.tomlj.TomlArray;
 import org.tomlj.TomlTable;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
@@ -55,6 +57,8 @@ public class DefaultHandler extends Handler {
     private SettingProperty<Integer> spDownloadThreads;
     private SettingProperty<Integer> spVoeThreads;
     private final FileLogger fLogger = new FileLogger("DefaultHandler");
+    private boolean downloadLogFiles;
+    private File downloadLogFolder;
 
 
     public DefaultHandler(TargetSystem targetSystem) {
@@ -72,7 +76,7 @@ public class DefaultHandler extends Handler {
 
         spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
         spDownloadThreads.addSubscriber(value ->
-            downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value)));
+        downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value)));
 
         spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
         spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
@@ -84,12 +88,22 @@ public class DefaultHandler extends Handler {
         if (!downloadFolder.exists() && !downloadFolder.mkdirs())
             log.error("Could not create download folder");
 
+        this.downloadLogFiles = MediaManager.getTomlConfig().getBoolean("general.logDebugDownloaderFiles", () -> false);
+
         loadTargets();
     }
 
     @Override
     public void initialize() {
         startSystemDataFetcher();
+
+        if (this.downloadLogFiles) {
+            String folderName = MediaManager.getTomlConfig().getString("general.logDebugDownloaderFolder", () -> "./downloader-logs");
+            File folder = new File(folderName);
+            if (!folder.mkdirs())
+                throw new InitializationException("Initialize", "Could not create log folder");
+            downloadLogFolder = folder;
+        }
     }
 
     private void loadTargets() {
@@ -284,8 +298,14 @@ public class DefaultHandler extends Handler {
             }
 
             @Override
-            public void onLogFile(String s, byte[] bytes) {
-                // Not implemented
+            public void onLogFile(String fileName, byte[] bytes) {
+                if (downloadLogFiles) {
+                    try (FileOutputStream fos = new FileOutputStream(new File(downloadLogFolder, fileName))) {
+                        fos.write(bytes);
+                    } catch (IOException e) {
+                        log.error("Failed to write log file", e);
+                    }
+                }
             }
 
             @Override
@@ -301,71 +321,81 @@ public class DefaultHandler extends Handler {
         };
 
         // Getting the right downloader
-        Downloader downloader = DownloaderSelector.selectDownloader(url, downloadFolder, updateEvent, options);
+        File downloadTempFolder = new File(downloadFolder, UUID.randomUUID().toString());
+        Downloader downloader = DownloaderSelector.selectDownloader(url, downloadTempFolder, updateEvent, options);
         tableItem.setDownloader(downloader);
 
-        // Start the download
-        // This task is only running when the titleTask is completed
-        ExecutorTask downloadTask = new ExecutorTask(() -> {
-            // Check if the task has already been deleted, if so we skipp the execution
-            if (tableItem.isDeleted()) {
-                if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DELETED,"+url+","+tableItem.getSortIndex());}}
-                return;
-            }
-            // Set the information about the thread to the model item
-            //
-            tableItem.setRunning(true);
-            try {
-                if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("START,"+url+","+tableItem.getSortIndex());}}
-                File file = downloader.start();
-                if (downloader.isCanceled()) {
-                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("CANCELED,"+url+","+tableItem.getSortIndex());}}
+        try {
+            // Start the download
+            // This task is only running when the titleTask is completed
+            ExecutorTask downloadTask = new ExecutorTask(() -> {
+                // Check if the task has already been deleted, if so we skipp the execution
+                if (tableItem.isDeleted()) {
+                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DELETED,"+url+","+tableItem.getSortIndex());}}
                     return;
                 }
+                // Set the information about the thread to the model item
+                tableItem.setRunning(true);
 
-                // Check if an error has occurred during the download
-                // if so, early escape the task so further error won't be overridden the initial error
-                if (tableItem.isFailed()) {
-                    tableItem.setRunning(false);
-                    log.warn("Download failed!");
-                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("FAILED,"+url+","+tableItem.getSortIndex());}}
+                if (!downloadTempFolder.mkdirs())
+                    throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create temp folder"));
+
+                try {
+                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("START,"+url+","+tableItem.getSortIndex());}}
+                    File file = downloader.start();
+                    if (downloader.isCanceled()) {
+                        if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("CANCELED,"+url+","+tableItem.getSortIndex());}}
+                        return;
+                    }
+
+                    // Check if an error has occurred during the download
+                    // if so, early escape the task so further error won't be overridden the initial error
+                    if (tableItem.isFailed()) {
+                        tableItem.setRunning(false);
+                        log.warn("Download failed!");
+                        if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("FAILED,"+url+","+tableItem.getSortIndex());}}
+                        return;
+                    }
+                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DONE,"+url+","+tableItem.getSortIndex());}}
+
+                    File targetFile = new File(outputFolder, file.getName());
+                    log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
+                    Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("MOVED,"+url+","+tableItem.getSortIndex());}}
+
+                    // Check if we have an animeId
+                    // the animeId is intended to only be used for AutoLoader
+                    // it is used to rescan existing anime and send the count of missing episodes to the client
+                    if (autoloaderData != null) {
+                        int animeId = autoloaderData.get("animeId", Integer.class);
+                        Anime anime = autoLoaderHandler.getAnimeByID(animeId);
+                        anime.scanDirectoryForExistingEpisodes();
+                        WebSocketUtils.sendAutoLoaderItem(null, anime);
+                    }
+                } catch (Exception ex) {
+                    log.error("Failed to download", ex);
+                    if (!ex.getMessage().contains("File.getName()"))
+                        updateEvent.onError(ex.getMessage());
+                } finally {
+                    Utils.safeDelete(downloadTempFolder);
+                }
+                tableItem.setRunning(false);
+            });
+            tableItem.setTask(downloadTask);
+            downloadHandler.putTask(downloadTask);
+
+            // Resolve the title
+            // After the title is resolved, the download task is scheduled
+            titleResolverHandler.putTask(() -> {
+                if (tableItem.isDeleted())
                     return;
-                }
-                if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DONE,"+url+","+tableItem.getSortIndex());}}
-
-                File targetFile = new File(outputFolder, file.getName());
-                log.debug("Moving file from " + file.getAbsolutePath() + " to " + targetFile);
-                Files.move(file.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("MOVED,"+url+","+tableItem.getSortIndex());}}
-
-                // Check if we have an animeId
-                // the animeId is intended to only be used for AutoLoader
-                // it is used to rescan existing anime and send the count of missing episodes to the client
-                if (autoloaderData != null) {
-                    int animeId = autoloaderData.get("animeId", Integer.class);
-                    Anime anime = autoLoaderHandler.getAnimeByID(animeId);
-                    anime.scanDirectoryForExistingEpisodes();
-                    WebSocketUtils.sendAutoLoaderItem(null, anime);
-                }
-            } catch (Exception ex) {
-                log.error("Failed to download", ex);
-                if (!ex.getMessage().contains("File.getName()"))
-                    updateEvent.onError(ex.getMessage());
-            }
-            tableItem.setRunning(false);
-        });
-        tableItem.setTask(downloadTask);
-        downloadHandler.putTask(downloadTask);
-
-        // Resolve the title
-        // After the title is resolved, the download task is scheduled
-        titleResolverHandler.putTask(() -> {
-            if (tableItem.isDeleted())
-                return;
-            String title = downloader.resolveTitle();
-            if (title != null)
-                changeObject(content, "title", title);
-        });
+                String title = downloader.resolveTitle();
+                if (title != null)
+                    changeObject(content, "title", title);
+            });
+        } finally {
+            Utils.safeDelete(downloadTempFolder);
+        }
     }
 
     private void startSystemDataFetcher() {
