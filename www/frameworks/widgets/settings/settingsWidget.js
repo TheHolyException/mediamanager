@@ -12,22 +12,6 @@ class SettingsWidget extends BaseWidget {
             <nav class="settings-action-bar">
                 <a class="save-settings-btn"><i class="fas fa-save"></i> Save</a>
             </nav>
-            <!--<div class="settings">
-                <label class="setting" setting="VOE_THREADS">
-                    <span>VOE Threads</span>
-                    <input class="input" type="number" max="10" min="1">
-                </label>
-                <label class="setting" setting="PARALLEL_DOWNLOADS">
-                    <span>Parallel Downloads</span>
-                    <input class="input" type="number" max="10" min="1">
-                </label>
-                <label class="setting" setting="RETRY_MINUTES">
-                    <span>Parallel Downloads</span>
-                    <input class="input" type="number" min="1">
-                </label>
-            </div>-->
-
-
             <table class="settings">
                 <tr class="setting" setting="VOE_THREADS">
                     <td class="label">VOE Threads</td>
