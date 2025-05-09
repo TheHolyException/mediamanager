@@ -14,18 +14,18 @@
     .save-settings-btn{
         background-color: var(--committed);
     }
-
-    .settings {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    }
     
+    .settings{
+        border-collapse: separate;
+        border-spacing: 0 15px;
+    }
+
     .setting {
-        display: flex;
         width: 400px;
 
-        span {
+        .label {
+            width: 0px;
+            white-space: nowrap;
             background-color: var(--darkBGColor2);
             border-top-left-radius: 50px;
             border-bottom-left-radius: 50px;

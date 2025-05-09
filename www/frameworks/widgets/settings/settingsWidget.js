@@ -12,7 +12,7 @@ class SettingsWidget extends BaseWidget {
             <nav class="settings-action-bar">
                 <a class="save-settings-btn"><i class="fas fa-save"></i> Save</a>
             </nav>
-            <div class="settings">
+            <!--<div class="settings">
                 <label class="setting" setting="VOE_THREADS">
                     <span>VOE Threads</span>
                     <input class="input" type="number" max="10" min="1">
@@ -21,7 +21,27 @@ class SettingsWidget extends BaseWidget {
                     <span>Parallel Downloads</span>
                     <input class="input" type="number" max="10" min="1">
                 </label>
-            </div>
+                <label class="setting" setting="RETRY_MINUTES">
+                    <span>Parallel Downloads</span>
+                    <input class="input" type="number" min="1">
+                </label>
+            </div>-->
+
+
+            <table class="settings">
+                <tr class="setting" setting="VOE_THREADS">
+                    <td class="label">VOE Threads</td>
+                    <td><input class="input" type="number" min="1"></td>
+                </tr>
+                <tr class="setting" setting="PARALLEL_DOWNLOADS">
+                    <td class="label">Parallel Downloads</td>
+                    <td><input class="input" type="number" min="1"></td>
+                </tr>
+                <tr class="setting" setting="RETRY_MINUTES">
+                    <td class="label">Parallel Downloads</td>
+                    <td><input class="input" type="number" min="1"></td>
+                </tr>
+            </table>
         </div>
         `);
 
@@ -44,13 +64,23 @@ class SettingsWidget extends BaseWidget {
             let settingPacket = [];
             for (let s of settings) {
                 let setting = $(s);
-                settingPacket.push({ key: setting.attr('setting'), value: setting.find('[class="input"]').val() })
+                settingPacket.push({ key: setting.attr('setting'), value: this.#getValueOfInput(setting.find('[class="input"]')) })
             }
 
             sendPacket("setting", "default", {
                 "settings": settingPacket
             });
         });
+    }
+
+    #getValueOfInput(element){
+        const type = element.attr('type');
+
+        if (type === 'checkbox') {
+            return element.prop('checked');
+        }
+        
+        return element.val();
     }
 
     static updateSettings(settings){
