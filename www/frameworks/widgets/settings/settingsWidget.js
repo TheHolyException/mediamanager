@@ -22,7 +22,7 @@ class SettingsWidget extends BaseWidget {
                     <td><input class="input" type="number" min="1"></td>
                 </tr>
                 <tr class="setting" setting="RETRY_MINUTES">
-                    <td class="label">Parallel Downloads</td>
+                    <td class="label">Retry Minutes</td>
                     <td><input class="input" type="number" min="1"></td>
                 </tr>
             </table>
@@ -48,7 +48,7 @@ class SettingsWidget extends BaseWidget {
             let settingPacket = [];
             for (let s of settings) {
                 let setting = $(s);
-                settingPacket.push({ key: setting.attr('setting'), value: this.#getValueOfInput(setting.find('[class="input"]')) })
+                settingPacket.push({ key: setting.attr('setting'), value: SettingsWidget.getValueOfInput(setting.find('[class="input"]')) })
             }
 
             sendPacket("setting", "default", {
@@ -57,7 +57,7 @@ class SettingsWidget extends BaseWidget {
         });
     }
 
-    #getValueOfInput(element){
+    static getValueOfInput(element){
         const type = element.attr('type');
 
         if (type === 'checkbox') {
