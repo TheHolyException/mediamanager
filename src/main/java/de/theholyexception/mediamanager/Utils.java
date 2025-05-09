@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 @Slf4j
 public class Utils {
@@ -81,7 +80,12 @@ public class Utils {
             return;
         }
 
-        for(File f : Objects.requireNonNull(dir.listFiles())){
+        if (dir.listFiles() == null) {
+            log.error("Directory has no files " + dir.getAbsolutePath());
+            return;
+        }
+
+        for(File f : dir.listFiles()){
             if(f.isDirectory()){
                 safeDelete(f);
             } else {

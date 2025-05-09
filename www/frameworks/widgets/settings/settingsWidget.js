@@ -48,23 +48,13 @@ class SettingsWidget extends BaseWidget {
             let settingPacket = [];
             for (let s of settings) {
                 let setting = $(s);
-                settingPacket.push({ key: setting.attr('setting'), value: SettingsWidget.getValueOfInput(setting.find('[class="input"]')) })
+                settingPacket.push({ key: setting.attr('setting'), value: setting.find('[class="input"]').val() })
             }
 
             sendPacket("setting", "default", {
                 "settings": settingPacket
             });
         });
-    }
-
-    static getValueOfInput(element){
-        const type = element.attr('type');
-
-        if (type === 'checkbox') {
-            return element.prop('checked');
-        }
-        
-        return element.val();
     }
 
     static updateSettings(settings){

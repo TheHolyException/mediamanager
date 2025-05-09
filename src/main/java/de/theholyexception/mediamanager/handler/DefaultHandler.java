@@ -5,6 +5,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
+import de.theholyexception.holyapi.util.GUIUtils;
 import de.theholyexception.mediamanager.*;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.Target;
@@ -22,15 +23,21 @@ import me.kaigermany.downloaders.DownloaderSelector;
 import me.kaigermany.downloaders.FFmpeg;
 import me.kaigermany.downloaders.voe.VOEDownloadEngine;
 import me.kaigermany.ultimateutils.StaticUtils;
+import me.kaigermany.ultimateutils.networking.smarthttp.HTTPRequestOptions;
+import me.kaigermany.ultimateutils.networking.smarthttp.HTTPResult;
+import me.kaigermany.ultimateutils.networking.smarthttp.SmartHTTP;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.tomlj.TomlArray;
 import org.tomlj.TomlTable;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.Proxy;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
@@ -56,10 +63,14 @@ public class DefaultHandler extends Handler {
     private File downloadFolder;
     private SettingProperty<Integer> spDownloadThreads;
     private SettingProperty<Integer> spVoeThreads;
+    private SettingProperty<Integer> spRetryMinutes;
     private final FileLogger fLogger = new FileLogger("DefaultHandler");
     private boolean downloadLogFiles;
     private File downloadLogFolder;
 
+    private TimerTask task;
+
+    private JSONObject torNetworkStatus;
 
     public DefaultHandler(TargetSystem targetSystem) {
         super(targetSystem);
@@ -81,6 +92,30 @@ public class DefaultHandler extends Handler {
         spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
         spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
 
+        spRetryMinutes = Settings.getSettingProperty("RETRY_MINUTES", 0, systemSettings);
+        spRetryMinutes.addSubscriber(value -> {
+            if (task != null)
+                task.cancel();
+            if (value != 0) {
+                log.info("Enabling retry timer");
+                task = new TimerTask() {
+                    @Override
+                    public void run() {
+                        urls.forEach((uuid, tableItemDTO) -> {
+                            if (tableItemDTO.getJsonObject().get("state", String.class).toLowerCase().startsWith("error")
+                                && System.currentTimeMillis()-tableItemDTO.getLastUpdate() < value*60_000) {
+                                log.info("Rescheduling download for {}", tableItemDTO.getUrl());
+                                scheduleDownload(null, tableItemDTO.getJsonObject());
+                            }
+                        });
+                    }
+                };
+                new Timer().schedule(task, value*60_000, value*60_000);
+            } else {
+                log.info("Disabled retry timer");
+            }
+        });
+
         FFmpeg.setFFmpegPath(getTomlConfig().getString("general.ffmpeg"));
 
 
@@ -100,8 +135,7 @@ public class DefaultHandler extends Handler {
         if (this.downloadLogFiles) {
             String folderName = MediaManager.getTomlConfig().getString("general.logDebugDownloaderFolder", () -> "./downloader-logs");
             File folder = new File(folderName);
-            if (!folder.mkdirs())
-                throw new InitializationException("Initialize", "Could not create log folder");
+            folder.mkdirs();
             downloadLogFolder = folder;
         }
     }
@@ -134,7 +168,7 @@ public class DefaultHandler extends Handler {
 
             case "del-all" -> cmdDeleteAll(socket);
 
-            case "setting" -> cmdChangeSetting(content);
+            case "setting" -> cmdChangeSetting(socket, content);
 
             case "requestSubfolders" -> cmdRequestSubFolders(socket, content);
             case "testDelay" -> {
@@ -208,17 +242,22 @@ public class DefaultHandler extends Handler {
             urls.remove(tableItemDTO.getUuid());
     }
 
-    private void cmdChangeSetting(JSONObjectContainer content) {
+    private void cmdChangeSetting(WebSocketBasic basic, JSONObjectContainer content) {
         JSONArrayContainer settings = content.getArrayContainer("settings");
         for (Object o : settings.getRaw()) {
-            JSONObject setting = (JSONObject) o;
-            String key = (String) setting.get("key");
-            String val = (String) setting.get("value");
-            log.info("Change setting " + key + " to: " + val);
-            switch (key) {
-                case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
-                case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
-                default -> throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid setting " + key));
+            try {
+                JSONObject setting = (JSONObject) o;
+                String key = (String) setting.get("key");
+                String val = (String) setting.get("value");
+                switch (key) {
+                    case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
+                    case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
+                    case "RETRY_MINUTES" -> spRetryMinutes.setValue(Integer.parseInt(val));
+                    default -> throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid setting " + key));
+                }
+                log.info("Changed setting {} to: {}", key, val);
+            } catch (Exception ex) {
+                WebSocketUtils.sendPacket("response", TargetSystem.DEFAULT, WebSocketResponse.ERROR.setMessage(ex.getMessage()).getResponse().getRaw(), basic);
             }
         }
         sendSettings(null);
@@ -271,6 +310,7 @@ public class DefaultHandler extends Handler {
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
             public void onProgressUpdate(double v) {
+                tableItem.update();
                 if (tableItem.isDeleted())
                     return;
                 if (v >= 1) {
@@ -294,6 +334,7 @@ public class DefaultHandler extends Handler {
             public void onError(String s) {
                 if (tableItem.isRunning() && !tableItem.isDeleted()) {
                     changeObject(content, "state", "Error: " + s);
+                    tableItem.update();
                 }
             }
 
@@ -310,6 +351,7 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onException(Throwable error) {
+                tableItem.update();
                 if (log.isDebugEnabled()) {
                     log.debug("Download failed!", error);
                 }
@@ -323,7 +365,11 @@ public class DefaultHandler extends Handler {
         // Getting the right downloader
         File downloadTempFolder = new File(downloadFolder, UUID.randomUUID().toString());
         Downloader downloader = DownloaderSelector.selectDownloader(url, downloadTempFolder, updateEvent, options);
+        downloader.setProxy(ProxyHandler.getNextProxy());
         tableItem.setDownloader(downloader);
+
+        if (!downloadTempFolder.mkdirs())
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create temp folder"));
 
         try {
             // Start the download
@@ -336,9 +382,6 @@ public class DefaultHandler extends Handler {
                 }
                 // Set the information about the thread to the model item
                 tableItem.setRunning(true);
-
-                if (!downloadTempFolder.mkdirs())
-                    throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create temp folder"));
 
                 try {
                     if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("START,"+url+","+tableItem.getSortIndex());}}
@@ -405,6 +448,12 @@ public class DefaultHandler extends Handler {
                 sendSystemInformation(null);
             }
         }, 0, 5000);
+        new Timer().schedule(new TimerTask() {
+            @Override
+            public void run() {
+                checkTorNetwork();
+            }
+        }, 0, 30000);
     }
 
     private void sendSystemInformation(WebSocketBasic target) {
@@ -450,19 +499,50 @@ public class DefaultHandler extends Handler {
         return null;
     }
 
+    private void checkTorNetwork() {
+        JSONObject result = new JSONObject();
+
+        if (!downloadHandler.getThreadList().stream()
+            .anyMatch(thread -> thread.getState().equals(Thread.State.TIMED_WAITING)))
+            return;
+
+        for (Proxy proxy : ProxyHandler.getProxies()) {
+            try {
+                HTTPResult response = SmartHTTP.request(new HTTPRequestOptions("https://check.torproject.org/api/ip").setProxy(proxy));
+                JSONObject responseJ = (JSONObject) new JSONParser().parse(new String(response.getData()));
+                result.put(proxy.address().toString(), responseJ.get("IP").toString());
+            } catch (IOException | ParseException ex) {
+                log.error(ex.getMessage());
+                result.put(proxy.address().toString(), "NOT CONNECTED");
+            }
+        }
+
+        try {
+            HTTPResult response = SmartHTTP.request(new HTTPRequestOptions("http://google.com").setTimeout(5000));
+            result.put("google", "CONNECTED");
+        } catch (Exception ex) {
+            result.put("google", "NOT CONNECTED");
+        }
+
+        torNetworkStatus = result;
+    }
+
     @SuppressWarnings("unchecked")
     private JSONObject formatSystemInfo() {
         JSONObject response = new JSONObject();
 
+        JSONObject torNetwork = torNetworkStatus;
+        response.put("torNetwork", torNetwork);
+
         JSONObject memory = new JSONObject();
-        memory.put("current", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory()));
-        memory.put("heap", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().totalMemory()));
-        memory.put("max", StaticUtils.toHumanReadableFileSize(Runtime.getRuntime().maxMemory()));
+        memory.put("current", GUIUtils.formatStorageSpace(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory()));
+        memory.put("heap", GUIUtils.formatStorageSpace(Runtime.getRuntime().totalMemory()));
+        memory.put("max", GUIUtils.formatStorageSpace(Runtime.getRuntime().maxMemory()));
         response.put("memory", memory);
 
         JSONObject docker = new JSONObject();
-        docker.put("memoryLimit", StaticUtils.toHumanReadableFileSize(dockerMemoryLimit));
-        docker.put("memoryUsage", StaticUtils.toHumanReadableFileSize(dockerMemoryUsage));
+        docker.put("memoryLimit", GUIUtils.formatStorageSpace(dockerMemoryLimit));
+        docker.put("memoryUsage", GUIUtils.formatStorageSpace(dockerMemoryUsage));
         response.put("docker", docker);
 
         ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) downloadHandler.getExecutorService());

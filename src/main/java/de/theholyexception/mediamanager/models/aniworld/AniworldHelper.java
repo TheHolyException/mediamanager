@@ -4,9 +4,11 @@ import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.holyapi.util.expiringmap.ExpiringMap;
 import de.theholyexception.mediamanager.AniworldProvider;
+import de.theholyexception.mediamanager.ProxyHandler;
 import de.theholyexception.mediamanager.Utils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -45,7 +47,9 @@ public class AniworldHelper {
         statistics.computeIfAbsent("Multi-Season Requests", k -> new AtomicInteger(0)).incrementAndGet();
         List<Season> result = new ArrayList<>();
         try {
-            Document document = Jsoup.connect(url).get();
+            Connection con = Jsoup.connect(url);
+            if (ProxyHandler.hasProxies()) con.proxy(ProxyHandler.getNextProxy());
+            Document document = con.get();
             Element streamDiv = document.selectFirst("#stream");
             Elements listElements = streamDiv.select("ul > li");
             for (Element listElement : listElements) {
@@ -63,7 +67,9 @@ public class AniworldHelper {
     public static Season getSeason(String url, int number) {
         statistics.computeIfAbsent("Season Requests", k -> new AtomicInteger(0)).incrementAndGet();
         try {
-            Document document = Jsoup.connect(url).get();
+            Connection con = Jsoup.connect(url);
+            if (ProxyHandler.hasProxies()) con.proxy(ProxyHandler.getNextProxy());
+            Document document = con.get();
             Element streamDiv = document.selectFirst("#stream");
             Elements listElements = streamDiv.select("ul > li");
             for (Element listElement : listElements) {
@@ -93,7 +99,9 @@ public class AniworldHelper {
         statistics.computeIfAbsent("Episode Requests", k -> new AtomicInteger(0)).incrementAndGet();
         List<Episode> result = new ArrayList<>();
         try {
-            Document document = Jsoup.connect(url).get();
+            Connection con = Jsoup.connect(url);
+            if (ProxyHandler.hasProxies()) con.proxy(ProxyHandler.getNextProxy());
+            Document document = con.get();
             Element streamDiv = document.selectFirst("#stream");
             Elements listElements = streamDiv.select("ul > li");
             for (Element listElement : listElements) {
@@ -110,7 +118,9 @@ public class AniworldHelper {
     public static String getAnimeTitle(String url) {
         statistics.computeIfAbsent("Title Requests", k -> new AtomicInteger(0)).incrementAndGet();
         try {
-            Document document = Jsoup.connect(url).get();
+            Connection con = Jsoup.connect(url);
+            if (ProxyHandler.hasProxies()) con.proxy(ProxyHandler.getNextProxy());
+            Document document = con.get();
             Element seriesTitle = document.selectFirst(".series-title > h1 > span");
 
             return seriesTitle.text();
@@ -123,7 +133,12 @@ public class AniworldHelper {
     public static String getRedirectedURL(String url) {
         statistics.computeIfAbsent("Redirect Requests", k -> new AtomicInteger(0)).incrementAndGet();
         try {
-            HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
+            HttpURLConnection con;
+            if (ProxyHandler.hasProxies()) {
+                con = (HttpURLConnection) new URL(url).openConnection(ProxyHandler.getNextProxy());
+            } else {
+                con = (HttpURLConnection) new URL(url).openConnection();
+            }
             con.setInstanceFollowRedirects(false); // Disable automatic redirect following
 
             int responseCode = con.getResponseCode();
@@ -159,7 +174,9 @@ public class AniworldHelper {
 
         ExecutorTask task = new ExecutorTask(() -> {
             try {
-                Document document = Jsoup.connect(episode.getAniworldUrl()).get();
+                Connection con = Jsoup.connect(episode.getAniworldUrl());
+                if (ProxyHandler.hasProxies()) con.proxy(ProxyHandler.getNextProxy());
+                Document document = con.get();
                 Elements list = document.select(".row > li");
                 for (Element element : list) {
                     int langId = Integer.parseInt(element.attr("data-lang-key"));
@@ -189,7 +206,9 @@ public class AniworldHelper {
             statistics.computeIfAbsent("Resolve Video URL Requests", k -> new AtomicInteger(0)).incrementAndGet();
 
             try {
-                Document document = Jsoup.connect(episode.getAniworldUrl()).get();
+                Connection con = Jsoup.connect(episode.getAniworldUrl());
+                if (ProxyHandler.hasProxies()) con.proxy(ProxyHandler.getNextProxy());
+                Document document = con.get();
                 Elements list = document.select(".row > li");
                 for (Element element : list) {
                     if (Integer.parseInt(element.attr("data-lang-key")) != languageId) continue;
@@ -227,7 +246,9 @@ public class AniworldHelper {
         statistics.computeIfAbsent("Resolve Alternate Video URL Requests", k -> new AtomicInteger(0)).incrementAndGet();
 
         try {
-            Document document = Jsoup.connect(episode.getAniworldUrl()).get();
+            Connection con = Jsoup.connect(episode.getAniworldUrl());
+            if (ProxyHandler.hasProxies()) con.proxy(ProxyHandler.getNextProxy());
+            Document document = con.get();
             Elements list = document.select(".row > li");
 
             for (Element element : list) {

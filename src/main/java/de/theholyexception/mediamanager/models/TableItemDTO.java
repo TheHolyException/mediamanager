@@ -18,6 +18,7 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     private final String state;
     private final String url;
     private final UUID uuid;
+    @Getter
     private final JSONObjectContainer jsonObject;
     @Setter
     private ExecutorTask task;
@@ -30,6 +31,8 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     @Setter
     private boolean isFailed = false;
     private final int sortIndex = counter.getAndIncrement();
+    @Getter
+    private long lastUpdate;
 
 
     public TableItemDTO(JSONObjectContainer content) {
@@ -38,6 +41,7 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
         url = content.get("url", String.class);
         uuid = UUID.fromString(content.get("uuid", String.class));
         jsonObject = content;
+        lastUpdate = System.currentTimeMillis();
     }
 
     /*
@@ -48,5 +52,9 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
         Long l1 = (long) sortIndex;
         Long l2 = (long) o.sortIndex;
         return l1.compareTo(l2);
+    }
+
+    public void update() {
+        lastUpdate = System.currentTimeMillis();
     }
 }
