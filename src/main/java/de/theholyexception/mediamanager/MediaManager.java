@@ -79,6 +79,8 @@ public class MediaManager {
     }
 
 	public MediaManager() {
+
+
         MediaManager.instance = this;
 		List<Runnable> initListeners = Collections.synchronizedList(new ArrayList<>());
 		initListeners.add(this::loadHandlers);
@@ -141,6 +143,8 @@ public class MediaManager {
         } catch (Exception ex) {
             throw new InitializationException("Failed to load systemsettings.json", ex.getMessage());
         }
+
+        ProxyHandler.initialize(tomlConfig);
     }
 
     private void checkForDockerEnvironment() {

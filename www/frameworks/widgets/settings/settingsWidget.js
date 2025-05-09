@@ -21,6 +21,10 @@ class SettingsWidget extends BaseWidget {
                     <span>Parallel Downloads</span>
                     <input class="input" type="number" max="10" min="1">
                 </label>
+                <label class="setting" setting="RETRY_MINUTES">
+                    <span>Retry Downloads (min)</span>
+                    <input class="input" type="number" max="999999999" min="0">
+                </label>
             </div>
         </div>
         `);
