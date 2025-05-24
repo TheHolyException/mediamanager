@@ -120,7 +120,9 @@ class OptionTextfield extends HTMLElement  {
 
     filterOptions() {
         const value = this.input.value.toLowerCase();
-        const filtered = this.options.filter(opt => opt.toLowerCase().startsWith(value));
+        const filtered = this.options.filter(opt => {
+            return opt.value.toLowerCase().startsWith(value)
+        });
         this.renderOptions(filtered);
     }
 
