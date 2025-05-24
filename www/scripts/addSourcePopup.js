@@ -9,7 +9,8 @@ function openAddSourcePopup() {
         " .src-input-container":{
             "display": "flex",
             "flex-direction": "column",
-            "gap": "15px"
+            "gap": "15px",
+            "overflow-x": "hidden!important"
         },
         " .tab-bar": {
             display: "flex"
@@ -145,7 +146,7 @@ function getSettings(settingInputs) {
 function createSourceInput() {
     let activeTab = 'url-tab';
     var content = $(`
-        <div class="src-input-container">
+        <div class="src-input-container custom-scrollbar scrollbar-on-hover">
             <nav class="tab-bar">
                 <a class="tab-btn url-tab-btn active" tab-name="url">URL</a>
                 <a class="tab-btn aniworld-tab-btn" tab-name="aniworld">Aniworld</a>
