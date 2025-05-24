@@ -79,20 +79,19 @@ public class Utils {
             log.error("Directory is null");
             return;
         }
-
-        if (dir.listFiles() == null) {
+        File[] files = dir.listFiles();
+        if (files == null) {
             log.error("Directory has no files " + dir.getAbsolutePath());
             return;
         }
-
-        for(File f : dir.listFiles()){
+        for(File f : files){
             if(f.isDirectory()){
                 safeDelete(f);
             } else {
-                if (!f.delete())
-                    log.warn("Failed to delete file " + f.getAbsolutePath());
+                if (!f.delete()) log.warn("Failed to delete file " + f.getAbsolutePath());
             }
         }
+        if (!dir.delete()) log.warn("Failed to delete dir " + dir.getAbsolutePath());
     }
 
 }

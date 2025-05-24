@@ -502,10 +502,6 @@ public class DefaultHandler extends Handler {
     private void checkTorNetwork() {
         JSONObject result = new JSONObject();
 
-        if (!downloadHandler.getThreadList().stream()
-            .anyMatch(thread -> thread.getState().equals(Thread.State.TIMED_WAITING)))
-            return;
-
         for (Proxy proxy : ProxyHandler.getProxies()) {
             try {
                 HTTPResult response = SmartHTTP.request(new HTTPRequestOptions("https://check.torproject.org/api/ip").setProxy(proxy));
