@@ -51,14 +51,29 @@ public class MediaManager {
     private static MediaManager instance;
     private static final ExecutorHandler executorHandler;
 
+    /**
+     * Main entry point for the MediaManager application.
+     * Initializes a new instance of MediaManager.
+     *
+     * @param args Command line arguments (not used)
+     */
     public static void main(String[] args) {
         new MediaManager();
     }
 
+    /**
+     * Retrieves the TOML configuration for the application.
+     *
+     * @return The TOML configuration parse result
+     */
     public static TomlParseResult getTomlConfig() {
         return instance.tomlConfig;
     }
 
+    /**
+     * Changes the log level of the application based on the configuration.
+     * The log level is read from the 'general.logLevel' configuration property.
+     */
     public void changeLogLevel() {
         Level level = Level.valueOf(tomlConfig.getString("general.logLevel"));
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
@@ -83,8 +98,6 @@ public class MediaManager {
     }
 
 	public MediaManager() {
-
-
         MediaManager.instance = this;
 		List<Runnable> initListeners = Collections.synchronizedList(new ArrayList<>());
 		initListeners.add(this::loadHandlers);
@@ -108,6 +121,12 @@ public class MediaManager {
         handlers.values().forEach(Handler::initialize);
     }
 
+    /**
+     * Initializes and registers all the handler components of the application.
+     * This includes the default handler, Aniworld handler, and AutoLoader handler.
+     * 
+     * @throws InitializationException if any handler fails to initialize
+     */
     private void loadHandlers() {
         try {
             addHandler(new DefaultHandler(TargetSystem.DEFAULT));
@@ -118,10 +137,21 @@ public class MediaManager {
         }
     }
 
+    /**
+     * Registers a handler with the application.
+     *
+     * @param handler The handler to register
+     */
     private void addHandler(Handler handler) {
         handlers.put(handler.getTargetSystem(), handler);
     }
 
+    /**
+     * Loads and validates the application configuration from various sources.
+     * This includes TOML configuration, system settings, and proxy settings.
+     *
+     * @throws InitializationException if configuration files are missing or invalid
+     */
     private void loadConfiguration() throws InitializationException {
         try {
             Path path = Paths.get(("./config/config.toml"));
@@ -151,6 +181,10 @@ public class MediaManager {
         ProxyHandler.initialize(tomlConfig);
     }
 
+    /**
+     * Detects if the application is running in a Docker container environment.
+     * Sets the isDockerEnvironment flag accordingly.
+     */
     private void checkForDockerEnvironment() {
         try {
             String a = new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.max").start().getInputStream()));
@@ -164,6 +198,11 @@ public class MediaManager {
         log.warn("No docker environment!");
     }
 
+    /**
+     * Initializes and starts the embedded web server.
+     * Configures the server based on settings from the TOML configuration.
+     * Sets up WebSocket communication for real-time client updates.
+     */
     private void loadWebServer() {
         try {
             new WebServer(new WebServer.Configuration(
@@ -220,6 +259,11 @@ public class MediaManager {
         }
     }
 
+    /**
+     * Initializes the database connection and executes any required database scripts.
+     * 
+     * @throws InitializationException if database connection or script execution fails
+     */
     private void loadDatabase() throws InitializationException {
         try {
             db = new MySQLInterface(
@@ -242,6 +286,12 @@ public class MediaManager {
         }
     }
 
+    /**
+     * Executes SQL scripts from the resources/sql directory.
+     * Scripts are executed in alphabetical order.
+     * 
+     * @throws InitializationException if any script execution fails
+     */
     private void executeDatabaseScripts() throws InitializationException {
         try {
             List<String> files = ResourceUtilities.listResourceFilesRecursive("sql/");
@@ -258,6 +308,13 @@ public class MediaManager {
         }
     }
 
+    /**
+     * Retrieves the current maximum ID from the specified database table.
+     * Used for generating new unique IDs.
+     *
+     * @param table The name of the table to query
+     * @return The maximum ID found in the table, or 0 if the table is empty
+     */
     private int getCurrentId(String table) {
         int result = 0;
         try {

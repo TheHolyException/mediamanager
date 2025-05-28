@@ -27,6 +27,11 @@ import java.util.concurrent.Executors;
 
 import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
 
+/**
+ * Handler for automatic downloading of anime episodes.
+ * Manages subscriptions to anime series, checks for new episodes, and handles
+ * the automatic downloading of new content based on user preferences.
+ */
 @Slf4j
 public class AutoLoaderHandler extends Handler {
 
@@ -45,6 +50,10 @@ public class AutoLoaderHandler extends Handler {
         super(targetSystem);
     }
 
+    /**
+     * Loads and initializes configurations for the auto-loader.
+     * Sets up thread pools, loads settings, and configures the auto-download behavior.
+     */
     @Override
     public void loadConfigurations() {
         super.loadConfigurations();
@@ -58,6 +67,11 @@ public class AutoLoaderHandler extends Handler {
         spAutoDownload = Settings.getSettingProperty("AUTO_DOWNLOAD", false, "systemSettings");
     }
 
+    /**
+     * Initializes the auto-loader after configurations are loaded.
+     * Loads subscribed anime from the database, scans for existing episodes,
+     * and starts the auto-download thread if enabled.
+     */
     @Override
     public void initialize() {
         Thread t = new Thread(() -> {
@@ -94,6 +108,15 @@ public class AutoLoaderHandler extends Handler {
     }
 
     //region commands
+    /**
+     * Processes incoming WebSocket commands for the auto-loader.
+     * Routes commands to the appropriate handler method based on the command type.
+     *
+     * @param socket The WebSocket connection that received the command
+     * @param command The command to execute (e.g., "getData", "subscribe", "unsubscribe")
+     * @param content JSON data associated with the command
+     * @throws WebSocketResponseException if the command is invalid or processing fails
+     */
     @Override
     public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
         try {
@@ -120,10 +143,23 @@ public class AutoLoaderHandler extends Handler {
         }
     }
 
+    /**
+     * Handles the 'getData' command to retrieve the current state of subscribed anime.
+     * Sends the list of all subscribed anime with their current status to the client.
+     *
+     * @param socket The WebSocket connection to send the data to
+     */
     private void cmdGetData(WebSocketBasic socket) {
         WebSocketUtils.sendAutoLoaderItem(socket, subscribedAnimes);
     }
 
+    /**
+     * Handles the 'subscribe' command to add a new anime to the subscription list.
+     * Validates the URL, resolves the anime title, and adds it to the database.
+     *
+     * @param content JSON data containing the anime URL, language ID, and other parameters
+     * @throws WebSocketResponseException if the URL is invalid or already subscribed
+     */
     private void cmdSubscribe(JSONObjectContainer content) {
         String url = content.get("url", String.class);
         int languageId = content.get("languageId", Integer.class);
@@ -165,6 +201,13 @@ public class AutoLoaderHandler extends Handler {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * Handles the 'unsubscribe' command to remove an anime from the subscription list.
+     * Removes the specified anime from the database and notifies all connected clients.
+     *
+     * @param content JSON data containing the ID of the anime to unsubscribe from
+     * @throws WebSocketResponseException if the anime ID is invalid
+     */
     private void cmdUnsubscribe(JSONObjectContainer content) {
         int id = content.get("id", Integer.class);
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
@@ -183,6 +226,13 @@ public class AutoLoaderHandler extends Handler {
         throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 
+    /**
+     * Handles the 'runDownload' command to manually trigger a download for a specific anime.
+     * Validates the episode information and adds it to the download queue.
+     *
+     * @param content JSON data containing the episode and download parameters
+     * @throws WebSocketResponseException if the episode information is invalid
+     */
     private void cmdRunDownload(JSONObjectContainer content) {
         if (!enabled)
             throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("AutoLoader is disabled!"));
@@ -197,6 +247,13 @@ public class AutoLoaderHandler extends Handler {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * Handles the 'getAlternateProviders' command to retrieve alternative streaming sources for an episode.
+     * Useful when the primary source is unavailable or has issues.
+     *
+     * @param socket The WebSocket connection to send the provider list to
+     * @param content JSON data containing the episode information
+     */
     private void cmdGetAlternateProviders(WebSocketBasic socket, JSONObjectContainer content) {
         Map<AniworldProvider, String> urls = getAlternativeProviders(content);
 
@@ -215,6 +272,11 @@ public class AutoLoaderHandler extends Handler {
 
 
 
+    /**
+     * Starts the background thread that periodically checks for new episodes.
+     * The thread runs in a loop, scanning each subscribed anime for new content
+     * and initiating downloads when auto-download is enabled.
+     */
     private void startThread() {
         Thread t = new Thread(() -> {
             while (!Thread.interrupted()) {
@@ -264,6 +326,12 @@ public class AutoLoaderHandler extends Handler {
         t.start();
     }
 
+    /**
+     * Initiates downloads for all unloaded episodes of a specific anime.
+     * Creates download tasks for each missing episode and adds them to the download queue.
+     *
+     * @param anime The anime for which to download unloaded episodes
+     */
     private void runDownload(Anime anime) {
         for (Episode unloadedEpisode : anime.getUnloadedEpisodes()) {
             unloadedEpisode.setDownloading(true);
@@ -304,6 +372,12 @@ public class AutoLoaderHandler extends Handler {
         anime.writeToDB(MediaManager.getInstance().getDb());
     }
 
+    /**
+     * Prints debug information about database tables.
+     * Logs the row count for each specified table when debug logging is enabled.
+     *
+     * @param tables The names of the tables to print information about
+     */
     private void printTableInfo(String... tables) {
         for (String table : tables) {
             try {
@@ -317,10 +391,23 @@ public class AutoLoaderHandler extends Handler {
         }
     }
 
+    /**
+     * Retrieves an anime by its ID from the list of subscribed animes.
+     *
+     * @param id The ID of the anime to find
+     * @return The Anime object if found, or null if no anime with the given ID exists
+     */
     public Anime getAnimeByID(int id) {
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
         return optAnime.orElse(null);
     }
+    /**
+     * Retrieves an episode using the data from an autoloader payload.
+     *
+     * @param autoloaderData JSON data containing anime, season, and episode identifiers
+     * @return The matching Episode object
+     * @throws WebSocketResponseException if the episode is not found
+     */
     public Episode getEpisodeFromAutoloaderData(JSONObjectContainer autoloaderData) {
         int animeId = autoloaderData.get("animeId", Integer.class);
         int seasonId = autoloaderData.get("seasonId", Integer.class);
@@ -329,6 +416,15 @@ public class AutoLoaderHandler extends Handler {
         return getEpisodeByPath(animeId, seasonId, episodeId);
     }
 
+    /**
+     * Retrieves a specific episode using its path components.
+     *
+     * @param animeId The ID of the anime
+     * @param seasonId The ID of the season
+     * @param episodeId The ID of the episode
+     * @return The matching Episode object
+     * @throws WebSocketResponseException if any component of the path is not found
+     */
     public Episode getEpisodeByPath(int animeId, int seasonId, int episodeId) {
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == animeId).findFirst();
         if (optAnime.isEmpty())
@@ -345,6 +441,13 @@ public class AutoLoaderHandler extends Handler {
         return optEpisode.get();
     }
 
+    /**
+     * Retrieves alternative streaming providers for a given episode.
+     *
+     * @param autoloaderData JSON data containing the episode information
+     * @return A map of provider names to their respective URLs
+     * @throws WebSocketResponseException if the anime or episode is not found
+     */
     public Map<AniworldProvider, String> getAlternativeProviders(JSONObjectContainer autoloaderData) {
         int animeId = autoloaderData.get("animeId", Integer.class);
         int seasonId = autoloaderData.get("seasonId", Integer.class);

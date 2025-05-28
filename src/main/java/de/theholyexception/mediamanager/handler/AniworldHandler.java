@@ -17,19 +17,41 @@ import java.util.List;
 
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.sendPacket;
 
+/**
+ * Handler for resolving anime episode links from Aniworld.
+ * This handler processes requests to resolve video URLs for anime episodes,
+ * supporting both individual seasons and entire series.
+ */
 @Slf4j
 public class AniworldHandler extends Handler {
 
 
+    /**
+     * Creates a new AniworldHandler for the specified target system.
+     *
+     * @param targetSystem The target system this handler is responsible for
+     */
     public AniworldHandler(TargetSystem targetSystem) {
         super(targetSystem);
     }
 
+    /**
+     * Initializes the handler. No initialization is required for this handler.
+     */
     @Override
     public void initialize() {
-        // Not needed
+        // No initialization needed
     }
 
+    /**
+     * Processes incoming WebSocket commands for the Aniworld handler.
+     * Routes commands to the appropriate handler method based on the command type.
+     *
+     * @param socket The WebSocket connection that received the command
+     * @param command The command to execute (currently only "resolve" is supported)
+     * @param content JSON data associated with the command
+     * @throws WebSocketResponseException if the command is invalid or processing fails
+     */
     @Override
     public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
         switch (command) {
@@ -39,6 +61,16 @@ public class AniworldHandler extends Handler {
         }
     }
 
+    /**
+     * Handles the 'resolve' command to retrieve video URLs for anime episodes.
+     * Supports resolving both individual seasons and entire series.
+     *
+     * @param socket The WebSocket connection to send the results to
+     * @param content JSON data containing the resolution parameters:
+     *                - language: The language ID to filter episodes
+     *                - url: The Aniworld URL to resolve (can be a series or season URL)
+     * @throws WebSocketResponseException if resolution fails or invalid parameters are provided
+     */
     @SuppressWarnings("unchecked")
     private void cmdResolve(WebSocketBasic socket, JSONObjectContainer content) {
         try {

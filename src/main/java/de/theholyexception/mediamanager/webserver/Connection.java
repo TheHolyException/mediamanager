@@ -9,8 +9,14 @@ import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Handles individual client connections to the WebServer.
+ * This class processes both HTTP requests and WebSocket upgrade requests,
+ * delegating to the appropriate handler based on the request type.
+ */
 @Slf4j
 public class Connection implements Runnable {
+
     private final Socket socket;
     private DataInputStream is;
     private DataOutputStream os;
@@ -19,9 +25,14 @@ public class Connection implements Runnable {
     private final String webroot;
     private final WebServer.Configuration webServerConfiguration;
 
+    /**
+     * Maps file extensions to their corresponding MIME types.
+     * Used for setting the Content-Type header in HTTP responses.
+     */
     private static final Map<String, String> mediaMap = new HashMap<>();
 
     static {
+        // Initialize MIME type mappings for various file types
         // Image
         mediaMap.put("gif", "image/gif");
         mediaMap.put("jpg", "image/jpeg");
@@ -51,6 +62,13 @@ public class Connection implements Runnable {
     }
 
 
+    /**
+     * Creates a new Connection to handle a client socket.
+     * The connection will be processed immediately on the calling thread.
+     *
+     * @param socket The client socket to handle
+     * @param configuration The web server configuration
+     */
     public Connection(Socket socket, WebServer.Configuration configuration) {
         this.socket = socket;
         this.webroot = configuration.webroot();
@@ -58,6 +76,11 @@ public class Connection implements Runnable {
         this.run();
     }
 
+    /**
+     * Main connection handling loop.
+     * Processes the incoming request, determines if it's a WebSocket upgrade
+     * or regular HTTP request, and delegates to the appropriate handler.
+     */
     @Override
     public void run() {
         try {
@@ -97,9 +120,11 @@ public class Connection implements Runnable {
     }
 
     /**
-     * Handles the incoming request as HTTP Request
-     * @param arguments http arguments
-     * @throws IOException when you do something stupid
+     * Processes an HTTP request and sends the appropriate response.
+     * Supports GET requests for static files with proper MIME type handling.
+     *
+     * @param arguments The parsed HTTP request line (method, path, version)
+     * @throws IOException if an I/O error occurs while processing the request
      */
     private void handleHttpRequest(String[] arguments) throws IOException {
         String methode = arguments[0];
@@ -139,10 +164,13 @@ public class Connection implements Runnable {
     }
 
     /**
-     * Writes the HTTP Header to the outputstream
-     * @param mediaType MediaType to send - <a href="https://www.iana.org/assignments/media-types/media-types.xhtml">Documentation</a>
-     * @param contentLength Content Length
-     * @throws IOException if you do something stupid
+     * Writes an HTTP 200 OK response header to the output stream.
+     * The header includes Content-Type and Content-Length fields.
+     *
+     * @param mediaType The MIME type of the response body
+     * @param contentLength The length of the response body in bytes
+     * @throws IOException if an I/O error occurs while writing
+     * @see <a href="https://www.iana.org/assignments/media-types/media-types.xhtml">IANA Media Types</a>
      */
     private void writeHeader(String mediaType, long contentLength) throws IOException {
         // Note: Do not remove the spacing line below Content-Length, this is mandatory!!!!!
@@ -155,10 +183,12 @@ public class Connection implements Runnable {
     }
 
     /**
-     * Writes the given file to the output stream including the header of the media type
-     * @param file File to send to the client
-     * @param type Media Type of the File
-     * @throws IOException if you do something stupid
+     * Sends a file to the client with the appropriate HTTP headers.
+     * The file is read in chunks and streamed to the client.
+     *
+     * @param file The file to send
+     * @param type The MIME type of the file
+     * @throws IOException if an I/O error occurs while reading the file or writing to the client
      */
     private void writeFile(File file, String type) throws IOException {
         try (BufferedInputStream lBis = new BufferedInputStream(new FileInputStream(file))) {
@@ -199,9 +229,11 @@ public class Connection implements Runnable {
     }
 
     /**
-     * Reads a single line from the input stream
-     * @return single line from the input stream
-     * @throws IOException if you do something stupid
+     * Reads a single line of text from the input stream.
+     * Handles both \n and \r\n line endings.
+     *
+     * @return The line read from the input stream, or null if the socket times out
+     * @throws IOException if an I/O error occurs while reading
      */
     private String readLine() throws IOException {
         try {
@@ -227,9 +259,11 @@ public class Connection implements Runnable {
     }
 
     /**
-     * Reads the headers from a client request
-     * @return Key-Value Map of the header parameters
-     * @throws IOException if you do something stupid
+     * Reads and parses HTTP headers from the client request.
+     * Headers are read until an empty line is encountered.
+     *
+     * @return Map of header names to their values
+     * @throws IOException if an I/O error occurs while reading
      */
     private Map<String, String> readHeaders() throws IOException {
         Map<String, String> result = new HashMap<>();

@@ -17,6 +17,11 @@ import java.net.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Handles proxy configuration and management for the MediaManager application.
+ * Supports multiple proxy configurations with automatic Tor network verification.
+ * Proxies are managed in a round-robin fashion for load balancing.
+ */
 @Slf4j
 public class ProxyHandler {
 
@@ -24,9 +29,19 @@ public class ProxyHandler {
 	private static int cursor = 0;
 	private static final List<Proxy> proxies = new ArrayList<>();
 
+	/**
+	 * Private constructor to prevent instantiation
+	 */
 	private ProxyHandler() {
 	}
 
+	/**
+	 * Initializes the proxy handler with configurations from the TOML file.
+	 * Validates each proxy by checking if it's a Tor exit node.
+	 *
+	 * @param config The TOML configuration containing proxy settings
+	 * @throws IllegalArgumentException if the configuration is invalid
+	 */
 	public static void initialize(TomlParseResult config) {
 		TomlArray array = config.getArray("proxies");
 		if (array == null) {
@@ -49,6 +64,11 @@ public class ProxyHandler {
 		}
 	}
 
+	/**
+	 * Retrieves the next available proxy in a round-robin fashion.
+	 *
+	 * @return The next Proxy in the rotation, or null if no proxies are configured
+	 */
 	public static Proxy getNextProxy() {
 		synchronized (proxies) {
 			if (proxies.isEmpty())
@@ -59,12 +79,23 @@ public class ProxyHandler {
 		}
 	}
 
+	/**
+	 * Checks if any proxies are configured and available.
+	 *
+	 * @return true if proxies are available, false otherwise
+	 */
 	public static boolean hasProxies() {
 		synchronized (proxies) {
 			return !proxies.isEmpty();
 		}
 	}
 
+	/**
+	 * Verifies if a proxy is a valid Tor exit node by checking against the Tor Project's API.
+	 *
+	 * @param proxy The proxy to verify
+	 * @return true if the proxy is a valid Tor exit node, false otherwise
+	 */
 	private static boolean checkTorNetwork(Proxy proxy) {
 		try {
 			HTTPResult result = SmartHTTP.request(new HTTPRequestOptions("https://check.torproject.org/api/ip").setProxy(proxy));
@@ -78,7 +109,14 @@ public class ProxyHandler {
 		}
 	}
 
+	/**
+	 * Retrieves an unmodifiable list of all configured proxies.
+	 *
+	 * @return List of all configured Proxy instances
+	 */
 	public static List<Proxy> getProxies() {
-		return proxies;
+		synchronized (proxies) {
+			return new ArrayList<>(proxies);
+		}
 	}
 }
