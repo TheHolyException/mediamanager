@@ -1,4 +1,4 @@
-package de.theholyexception.mediamanager;
+package de.theholyexception.mediamanager.util;
 
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import lombok.Getter;

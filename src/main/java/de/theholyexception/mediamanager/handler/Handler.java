@@ -1,7 +1,7 @@
 package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.mediamanager.TargetSystem;
+import de.theholyexception.mediamanager.util.TargetSystem;
 import lombok.Getter;
 import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 

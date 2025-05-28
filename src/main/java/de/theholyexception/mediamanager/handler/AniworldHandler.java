@@ -1,9 +1,9 @@
 package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.mediamanager.WebSocketResponseException;
+import de.theholyexception.mediamanager.util.WebSocketResponseException;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
-import de.theholyexception.mediamanager.TargetSystem;
+import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;

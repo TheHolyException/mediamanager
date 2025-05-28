@@ -3,7 +3,7 @@ package de.theholyexception.mediamanager.settings;
 import de.theholyexception.holyapi.datastorage.file.ConfigJSON;
 import de.theholyexception.holyapi.datastorage.file.FileConfiguration;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.mediamanager.InitializationException;
+import de.theholyexception.mediamanager.util.InitializationException;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;

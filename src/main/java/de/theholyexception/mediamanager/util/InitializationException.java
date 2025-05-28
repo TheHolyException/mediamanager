@@ -1,4 +1,4 @@
-package de.theholyexception.mediamanager;
+package de.theholyexception.mediamanager.util;
 
 import lombok.Getter;
 

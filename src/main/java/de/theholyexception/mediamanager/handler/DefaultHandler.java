@@ -13,6 +13,7 @@ import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
+import de.theholyexception.mediamanager.util.*;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
@@ -333,6 +334,9 @@ public class DefaultHandler extends Handler {
             @Override
             public void onError(String s) {
                 if (tableItem.isRunning() && !tableItem.isDeleted()) {
+                    String line = s.split("\n")[0];
+                    if (line.length() > 50)
+                        s = s.substring(0, 50) + "\n" + s.substring(50);
                     changeObject(content, "state", "Error: " + s);
                     tableItem.update();
                 }
@@ -368,7 +372,7 @@ public class DefaultHandler extends Handler {
         downloader.setProxy(ProxyHandler.getNextProxy());
         tableItem.setDownloader(downloader);
 
-        if (!downloadTempFolder.mkdirs())
+        if (!downloadTempFolder.mkdirs() || !downloadTempFolder.exists())
             throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create temp folder"));
 
         try {
