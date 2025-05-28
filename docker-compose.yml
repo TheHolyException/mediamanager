@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  mediamanager:
+    build: .
+    container_name: mediamanager
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config:/home/mediamanager/config
+      - ./downloads:/home/mediamanager/downloads
+      - ./logs:/home/mediamanager/logs
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/mediamanager?useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=mediamanager
+      - SPRING_DATASOURCE_PASSWORD=your_secure_password
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+    depends_on:
+      - db
+    networks:
+      - mediamanager-network
+
+  db:
+    image: mariadb:10.11.2
+    container_name: mediamanager-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: mediamanager
+      MYSQL_USER: mediamanager
+      MYSQL_PASSWORD: your_secure_password
+      MYSQL_ROOT_PASSWORD: your_secure_root_password
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mediamanager-network
+
+networks:
+  mediamanager-network:
+    driver: bridge
+
+volumes:
+  db_data:
