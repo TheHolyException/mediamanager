@@ -136,6 +136,7 @@ public class AutoLoaderHandler extends Handler {
             case "getData" -> cmdGetData(socket);
             case "subscribe" -> cmdSubscribe(content);
             case "unsubscribe" -> cmdUnsubscribe(content);
+            case "modify" -> cmdModify(content);
             case "runDownload" -> cmdRunDownload(content);
             case "getAlternateProviders" -> cmdGetAlternateProviders(socket, content);
             default ->
@@ -223,6 +224,95 @@ public class AutoLoaderHandler extends Handler {
         } else {
             throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to unsubscribe from " + id + " this id does not exist!"));
         }
+        throw new WebSocketResponseException(WebSocketResponse.OK);
+    }
+
+    /**
+     * Handles the 'modify' command to update an existing anime subscription.
+     * Updates the anime's properties like directory. Note: language and excluded seasons
+     * cannot be modified as they are immutable properties set during construction.
+     *
+     * @param content JSON data containing the ID and updated properties of the anime
+     * @throws WebSocketResponseException if the anime ID is invalid
+     */
+    private void cmdModify(JSONObjectContainer content) {
+        log.info("cmdModify called with content: {}", content.getRaw());
+        int id = content.get("id", Integer.class);
+        log.info("Looking for anime with ID: {}", id);
+        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
+        
+        if (optAnime.isEmpty()) {
+            log.error("Anime with ID {} not found in subscribedAnimes list", id);
+            log.info("Available anime IDs: {}", subscribedAnimes.stream().map(Anime::getId).toList());
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to modify subscription " + id + " - anime not found!"));
+        }
+        
+        log.info("Found anime: {}", optAnime.get().getTitle());
+        
+        Anime anime = optAnime.get();
+        boolean modified = false;
+        
+        // Update language ID if provided
+        if (content.getRaw().containsKey("languageId")) {
+            int newLanguageId = content.get("languageId", Integer.class);
+            if (anime.getLanguageId() != newLanguageId) {
+                anime.setLanguageId(newLanguageId, true);
+                modified = true;
+                log.info("Updated language ID for '{}' from {} to {}", anime.getTitle(), anime.getLanguageId(), newLanguageId);
+            }
+        }
+        
+        // Update excluded seasons if provided
+        if (content.getRaw().containsKey("excludedSeasons")) {
+            List<Integer> newExcludedSeasons = new ArrayList<>();
+            String excludedSeasonsString = content.get("excludedSeasons", String.class);
+            if (excludedSeasonsString != null && !excludedSeasonsString.isEmpty()) {
+                String[] excludedSeasons = excludedSeasonsString.split(",");
+                for (String excludedSeason : excludedSeasons) {
+                    try {
+                        newExcludedSeasons.add(Integer.parseInt(excludedSeason.trim()));
+                    } catch (NumberFormatException e) {
+                        log.warn("Invalid excluded season number: " + excludedSeason);
+                    }
+                }
+            }
+            
+            if (!anime.getExcludedSeasons().equals(newExcludedSeasons)) {
+                anime.setExcludedSeasons(newExcludedSeasons, true);
+                modified = true;
+                log.info("Updated excluded seasons for '{}' to: {}", anime.getTitle(), newExcludedSeasons);
+            }
+        }
+        
+        // Update directory if provided
+        if (content.getRaw().containsKey("directory")) {
+            String newDirectory = content.get("directory", null, String.class);
+            if (newDirectory != null && newDirectory.isEmpty()) newDirectory = null;
+            
+            String currentDirectory = anime.getDirectory() != null ? anime.getDirectory().getName() : null;
+            if ((currentDirectory == null && newDirectory != null) || 
+                (currentDirectory != null && !currentDirectory.equals(newDirectory))) {
+                anime.setDirectoryPath(newDirectory, true);
+                modified = true;
+            }
+        }
+        
+        if (modified) {
+            log.info("Changes detected, applying modifications for: {}", anime.getTitle());
+            // Rescan episodes after modifications
+            anime.loadMissingEpisodes();
+            anime.scanDirectoryForExistingEpisodes();
+            anime.writeToDB(MediaManager.getInstance().getDb());
+            
+            // Notify all clients about the update
+            WebSocketUtils.sendAutoLoaderItem(null, anime);
+            
+            log.info("Successfully modified subscription for: {}", anime.getTitle());
+        } else {
+            log.info("No changes detected for: {}", anime.getTitle());
+        }
+        
+        log.info("cmdModify completed successfully");
         throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 

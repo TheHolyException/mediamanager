@@ -22,7 +22,7 @@ public class Anime {
     @Getter
     private final int id;
     @Getter
-    private final int languageId;
+    private int languageId;
     @Getter
     private final String title;
     @Getter
@@ -30,7 +30,7 @@ public class Anime {
     @Getter
     private File directory;
     @Getter
-    private final List<Integer> excludedSeasons;
+    private List<Integer> excludedSeasons;
     @Getter
     private final List<Season> seasonList = new ArrayList<>();
     private Long lastUpdate = 0L;
@@ -99,6 +99,34 @@ public class Anime {
             directory = new File(baseDirectory, overridePath);
         } else {
             directory = new File(baseDirectory, AniworldHelper.getSubdirectoryFromURL(url));
+        }
+    }
+
+    /**
+     * Sets the language ID for this anime subscription.
+     * This will affect which episodes are considered for download.
+     * 
+     * @param languageId The new language ID
+     * @param markDirty Whether to mark the object as dirty for database persistence
+     */
+    public void setLanguageId(int languageId, boolean markDirty) {
+        this.languageId = languageId;
+        if (markDirty) {
+            this.isDirty = true;
+        }
+    }
+
+    /**
+     * Sets the excluded seasons for this anime subscription.
+     * Episodes from excluded seasons will not be downloaded.
+     * 
+     * @param excludedSeasons List of season numbers to exclude
+     * @param markDirty Whether to mark the object as dirty for database persistence
+     */
+    public void setExcludedSeasons(List<Integer> excludedSeasons, boolean markDirty) {
+        this.excludedSeasons = new ArrayList<>(excludedSeasons);
+        if (markDirty) {
+            this.isDirty = true;
         }
     }
 
@@ -251,7 +279,12 @@ public class Anime {
         object.put("url", url);
         object.put("unloaded", getUnloadedEpisodeCount(true) + " [\uD83C\uDDE9\uD83C\uDDEA]  ("+getUnloadedEpisodeCount(false)+"[\uD83C\uDDEF\uD83C\uDDF5])");
         object.put("lastScan", lastUpdate);
-        object.put("directory", getDirectory().toString().replace(baseDirectory.toString(), ""));
+        String relativePath = getDirectory().toString().replace(baseDirectory.toString(), "");
+        // Remove leading path separators to avoid them being escaped as underscores
+        if (relativePath.startsWith("/") || relativePath.startsWith("\\")) {
+            relativePath = relativePath.substring(1);
+        }
+        object.put("directory", relativePath);
         object.put("excludedSeasons", Utils.intergerListToString(excludedSeasons));
         return new JSONObject(object);
     }
