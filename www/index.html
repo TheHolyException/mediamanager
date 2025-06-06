@@ -44,45 +44,98 @@
 </head>
 
 <body>
-    <header>
-        <div>
-            <div class="ws-state-container">
-                <p id="ws-state">
+    <header class="modern-header">
+        <div class="header-brand">
+            <div class="brand-logo">
+                <i class="fas fa-play-circle"></i>
+                <span class="brand-text">MediaManager</span>
+            </div>
+            <div class="connection-status">
+                <div class="status-indicator" id="ws-state">
                     <i id="ws-state-icon" class="fa-solid fa-spinner"></i>
-                </p>
+                    <span class="status-text">Connecting...</span>
+                </div>
             </div>
         </div>
-        <div>
-            <nav class="nav-bar embeded-widget-toolbar">
-                <a tab-name="downloads">Downloads</a>
-                <a tab-name="settings">Settings</a>
-                <a tab-name="statistics">Statistics</a>
-                <a tab-name="subscriptions">Subscriptions</a>
-            </nav>
-            <nav class="nav-bar widget-toolbar-bar">
-                <a class="grid-stack-item" widget-name="downloads">Downloads</a>
-                <a class="grid-stack-item" widget-name="settings">Settings</a>
-                <a class="grid-stack-item" widget-name="statistics">Statistics</a>
-                <a class="grid-stack-item" widget-name="subscriptions">Subscriptions</a>
-            </nav>
-        </div>
-        <div class="action-bar">
-            <nav class="action-bar-buttons">
-                <a>
+
+        <nav class="modern-nav">
+            <div class="nav-container">
+                <div class="nav-tabs embeded-widget-toolbar">
+                    <a class="nav-item" tab-name="downloads" data-tooltip="Downloads">
+                        <i class="fas fa-download"></i>
+                        <span class="nav-text">Downloads</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                    <a class="nav-item" tab-name="settings" data-tooltip="Settings">
+                        <i class="fas fa-cog"></i>
+                        <span class="nav-text">Settings</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                    <a class="nav-item" tab-name="statistics" data-tooltip="Statistics">
+                        <i class="fas fa-chart-bar"></i>
+                        <span class="nav-text">Statistics</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                    <a class="nav-item" tab-name="subscriptions" data-tooltip="Subscriptions">
+                        <i class="fas fa-bell"></i>
+                        <span class="nav-text">Subscriptions</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                </div>
+                
+                <div class="nav-tabs widget-toolbar-bar">
+                    <a class="nav-item grid-stack-item" widget-name="downloads" data-tooltip="Downloads Widget">
+                        <i class="fas fa-download"></i>
+                        <span class="nav-text">Downloads</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                    <a class="nav-item grid-stack-item" widget-name="settings" data-tooltip="Settings Widget">
+                        <i class="fas fa-cog"></i>
+                        <span class="nav-text">Settings</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                    <a class="nav-item grid-stack-item" widget-name="statistics" data-tooltip="Statistics Widget">
+                        <i class="fas fa-chart-bar"></i>
+                        <span class="nav-text">Statistics</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                    <a class="nav-item grid-stack-item" widget-name="subscriptions" data-tooltip="Subscriptions Widget">
+                        <i class="fas fa-bell"></i>
+                        <span class="nav-text">Subscriptions</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="header-actions">
+            <div class="action-buttons">
+                <button class="action-btn edit-save-btn" title="Toggle Edit Mode">
                     <label class="toggle-icon edit-save">
                         <i class="on fa-solid fa-floppy-disk"></i>
                         <i class="off fa-solid fa-pen"></i>
                         <input type="checkbox">
                     </label>
-                </a>
-            </nav>
-            <div class="slide-checkbox">
-                <label>
-                    <span class="slider"></span>
-                    <span class="opt off"><i class="fas fa-stream"></i></span>
-                    <span class="opt on"><i class="fas fa-grip-horizontal"></i></span>
-                    <input type="checkbox">
-                </label>
+                </button>
+            </div>
+            
+            <div class="view-toggle">
+                <div class="toggle-wrapper">
+                    <label class="modern-toggle">
+                        <input type="checkbox" class="toggle-input">
+                        <span class="toggle-slider">
+                            <span class="toggle-option toggle-stream">
+                                <i class="fas fa-stream"></i>
+                                <span class="toggle-label">Stream</span>
+                            </span>
+                            <span class="toggle-option toggle-grid">
+                                <i class="fas fa-grip-horizontal"></i>
+                                <span class="toggle-label">Grid</span>
+                            </span>
+                            <span class="toggle-indicator"></span>
+                        </span>
+                    </label>
+                </div>
             </div>
         </div>
     </header>

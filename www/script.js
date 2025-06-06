@@ -171,19 +171,23 @@ function onWSResponseDefault(cmd, content) {
 function setWebSocketStatusFeedback(status) {
     let statusElement = $('#ws-state');
     let statusIcon = $('#ws-state-icon');
+    let statusText = statusElement.find('.status-text');
 
     switch (status) {
         case 1:
-            statusElement.attr('class', 'connecting');
-            statusIcon.attr('class', 'fa-solid fa-spinner fa-spin');
+            statusElement.attr('class', 'status-indicator connecting');
+            statusIcon.attr('class', 'fa-solid fa-spinner');
+            statusText.text('Connecting...');
             break;
         case 2:
-            statusElement.attr('class', 'connected');
-            statusIcon.attr('class', 'fa-solid fa-plug');
+            statusElement.attr('class', 'status-indicator connected');
+            statusIcon.attr('class', 'fa-solid fa-wifi');
+            statusText.text('Connected');
             break;
         case 4:
-            statusElement.attr('class', 'failed');
-            statusIcon.attr('class', 'fa-solid fa-plug-circle-xmark');
+            statusElement.attr('class', 'status-indicator failed');
+            statusIcon.attr('class', 'fa-solid fa-wifi-slash');
+            statusText.text('Disconnected');
             break;
     }
 }

@@ -442,6 +442,9 @@ class SubscriptionsWidget extends BaseWidget {
                         <span class="status-badge status-${status}">${status}</span>
                     </div>
                     <div class="card-actions">
+                        <button class="action-btn scan-btn" title="Scan for new episodes">
+                            <i class="fa fa-search"></i>
+                        </button>
                         <button class="action-btn download-btn" title="Download now">
                             <i class="fa fa-download"></i>
                         </button>
@@ -509,6 +512,24 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     bindCardEvents(card, item) {
+        card.find('.scan-btn').click(() => {
+            const scanBtn = card.find('.scan-btn');
+            const originalIcon = scanBtn.find('i').attr('class');
+            
+            // Show loading state
+            scanBtn.prop('disabled', true);
+            scanBtn.find('i').attr('class', 'fa fa-spinner fa-spin');
+            
+            sendPacket("scan", "autoloader", { id: item.id });
+            this.showNotification('Scanning for new episodes...', 'info');
+            
+            // Reset button after 3 seconds
+            setTimeout(() => {
+                scanBtn.prop('disabled', false);
+                scanBtn.find('i').attr('class', originalIcon);
+            }, 3000);
+        });
+
         card.find('.download-btn').click(() => {
             sendPacket("runDownload", "autoloader", { id: item.id });
             this.showNotification('Download started', 'success');

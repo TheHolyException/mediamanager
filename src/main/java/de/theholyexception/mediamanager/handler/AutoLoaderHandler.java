@@ -141,6 +141,7 @@ public class AutoLoaderHandler extends Handler {
             case "getAlternateProviders" -> cmdGetAlternateProviders(socket, content);
             case "pause" -> cmdPause(content);
             case "resume" -> cmdResume(content);
+            case "scan" -> cmdScan(content);
             default ->
                 throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
         }
@@ -412,6 +413,61 @@ public class AutoLoaderHandler extends Handler {
             
             // Notify all clients about the update
             WebSocketUtils.sendAutoLoaderItem(null, anime);
+        }
+        
+        throw new WebSocketResponseException(WebSocketResponse.OK);
+    }
+
+    /**
+     * Handles the 'scan' command to manually scan for new episodes of a specific anime.
+     * Performs the same scanning logic as the automatic scanner but for a single anime.
+     *
+     * @param content JSON data containing the ID of the anime to scan
+     * @throws WebSocketResponseException if the anime ID is invalid
+     */
+    private void cmdScan(JSONObjectContainer content) {
+        int id = content.get("id", Integer.class);
+        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
+        if (optAnime.isEmpty()) {
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + id + " not found!"));
+        }
+
+        Anime anime = optAnime.get();
+        
+        log.info("Manual scan requested for anime: {}", anime.getTitle());
+        
+        try {
+            // Check for language updates on existing episodes
+            for (Season season : anime.getSeasonList()) {
+                for (Episode episode : season.getEpisodeList()) {
+                    if (episode.getLanguageIds().contains(anime.getLanguageId()))
+                        continue;
+                    episode.activeScanLanguageIDs();
+                }
+            }
+
+            // Scan for new episodes that are not in our data structure
+            anime.loadMissingEpisodes();
+            
+            // Scan directory for existing downloaded episodes
+            anime.scanDirectoryForExistingEpisodes();
+
+            if (anime.isDeepDirty()) {
+                anime.writeToDB(MediaManager.getInstance().getDb());
+            }
+            
+            // Update the last scan time
+            anime.updateLastUpdate();
+
+            log.info("Manual scan completed for anime: {} - Found {} unloaded episodes", 
+                    anime.getTitle(), anime.getUnloadedEpisodeCount(true));
+
+            // Notify all clients about the update
+            WebSocketUtils.sendAutoLoaderItem(null, anime);
+            
+        } catch (Exception ex) {
+            log.error("Error during manual scan for anime: {}", anime.getTitle(), ex);
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Scan failed: " + ex.getMessage()));
         }
         
         throw new WebSocketResponseException(WebSocketResponse.OK);
