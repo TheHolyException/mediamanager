@@ -1,99 +1,440 @@
-.queue-action-bar {
-    display: flex;
-    gap: 15px;
-
-    a {
-        font-size: 1.2em;
-        cursor: pointer;
-        border-radius: 10px;
-        padding: 10px;
+[widget-name="DownloadsWidget"] {
+    .downloads-content {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 15px;
+        height: 100%;
     }
-}
 
-.add-sources-btn {
-    background-color: var(--success);
-}
+    .downloads-header {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
 
-.commit-sources-btn {
-    background-color: var(--committed);
-}
+    .queue-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 15px;
+    }
 
-.retry-all-btn {
-    background-color: var(--processing);
-}
+    .stat-card {
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        padding: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transition: all 0.3s ease;
 
-.delete-all-btn {
-    background-color: var(--error);
-}
-
-.delete-completed-btn {
-    background-color: var(--error);
-}
-
-.queue-table {
-    table-layout: auto;
-    font-size: 1.2em;
-    tr {
-        &.failed {
-            background-color: var(--error);
-        }
-        
-        &.success {
-            background-color: var(--success);
-        }
-        
-        &.downlading {
-            background-color: var(--processing);
-        }
-        
-        &.committed {
-            background-color: var(--committed);
+        &:hover {
+            background: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
-        &:first-of-type {
+        .stat-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            
+            &:nth-child(1) { color: #007bff; background: rgba(0, 123, 255, 0.1); }
+        }
+
+        .stat-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+
+            .stat-value {
+                font-size: 24px;
+                font-weight: 700;
+                color: #ffffff;
+                font-family: 'Consolas', 'Monaco', monospace;
+            }
+
+            .stat-label {
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.7);
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+        }
+    }
+
+    /* Specific colors for different stat types */
+    .stat-card:nth-child(1) .stat-icon { color: #007bff; background: rgba(0, 123, 255, 0.1); }
+    .stat-card:nth-child(2) .stat-icon { color: #28a745; background: rgba(40, 167, 69, 0.1); }
+    .stat-card:nth-child(3) .stat-icon { color: #28a745; background: rgba(40, 167, 69, 0.1); }
+    .stat-card:nth-child(4) .stat-icon { color: #dc3545; background: rgba(220, 53, 69, 0.1); }
+
+    .queue-action-bar {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .action-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 16px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+
+        &:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        &:active {
+            transform: translateY(0);
+        }
+
+        i {
+            font-size: 16px;
+        }
+
+        span {
+            font-weight: 500;
+        }
+    }
+
+    .add-sources-btn {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border-color: #28a745;
+
+        &:hover {
+            background: linear-gradient(135deg, #20c997, #28a745);
+        }
+    }
+
+    .commit-sources-btn {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        border-color: #007bff;
+
+        &:hover {
+            background: linear-gradient(135deg, #0056b3, #007bff);
+        }
+    }
+
+    .retry-all-btn {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+        border-color: #ffc107;
+        color: #000;
+
+        &:hover {
+            background: linear-gradient(135deg, #e0a800, #ffc107);
+        }
+    }
+
+    .delete-all-btn, .delete-completed-btn {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        border-color: #dc3545;
+
+        &:hover {
+            background: linear-gradient(135deg, #c82333, #dc3545);
+        }
+    }
+
+    .table-container {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .queue-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+
+        thead {
+            background: rgba(255, 255, 255, 0.1);
             position: sticky;
             top: 0;
-            font-size: 1.5em;
-            background-color: var(--darkBGColor3);
-        }
-        
-        th {
-            padding: 10px 10px;
-            width: auto;
-        }
+            z-index: 10;
 
-        td {
-            padding: 10px 10px;
-            width: auto;
-        }
-
-        [col="actions"] {
-            width: 150px;
-            max-width: 150px;
-
-            &:is(td){
-                display: flex;
-                justify-content: center;
-                gap: 15px;
+            th {
+                padding: 16px 12px;
+                font-weight: 600;
+                text-align: left;
+                color: #ffffff;
+                border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+                font-size: 13px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
 
                 i {
-                    cursor: pointer;
+                    margin-right: 8px;
+                    opacity: 0.7;
+                }
+
+                &[col="actions"] {
+                    width: 140px;
+                    text-align: center;
+                }
+
+                &[col="state"] {
+                    width: 200px;
+                }
+
+                &[col="url"] {
+                    min-width: 300px;
+                }
+
+                &[col="target"] {
+                    min-width: 250px;
                 }
             }
         }
 
-        [col="url"] {
-            a {
-                color: var(--textColor);
+        tbody {
+            tr {
+                transition: all 0.2s ease;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+                &:hover {
+                    background: rgba(255, 255, 255, 0.03);
+                }
+
+                &.failed {
+                    background: rgba(220, 53, 69, 0.1);
+                    border-left: 4px solid #dc3545;
+                }
+                
+                &.success {
+                    background: rgba(40, 167, 69, 0.1);
+                    border-left: 4px solid #28a745;
+                }
+                
+                &.downlading {
+                    background: rgba(0, 123, 255, 0.1);
+                    border-left: 4px solid #007bff;
+                }
+                
+                &.committed {
+                    background: rgba(255, 193, 7, 0.1);
+                    border-left: 4px solid #ffc107;
+                }
+
+                td {
+                    padding: 12px;
+                    vertical-align: middle;
+                    color: #ffffff;
+                }
+            }
+        }
+    }
+
+    .toolbar {
+        text-align: center;
+
+        .action-icon-btn {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #ffffff;
+            padding: 8px;
+            margin: 0 2px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            width: 32px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            &:hover {
+                background: rgba(255, 255, 255, 0.1);
+                transform: scale(1.05);
+            }
+
+            &.delete-btn {
+                border-color: #dc3545;
+                color: #dc3545;
+
+                &:hover {
+                    background: rgba(220, 53, 69, 0.1);
+                }
+            }
+
+            &.retry-btn {
+                border-color: #ffc107;
+                color: #ffc107;
+
+                &:hover {
+                    background: rgba(255, 193, 7, 0.1);
+                }
+            }
+
+            &.stream-btn {
+                border-color: #17a2b8;
+                color: #17a2b8;
+
+                &:hover {
+                    background: rgba(23, 162, 184, 0.1);
+                }
+            }
+        }
+    }
+
+    .status-cell {
+        .status-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+
+            .status-indicator {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #6c757d;
+                flex-shrink: 0;
+            }
+
+            .status-text {
+                font-weight: 500;
+                cursor: pointer;
+                
+                &:hover {
+                    text-decoration: underline;
+                }
+            }
+        }
+    }
+
+    .url-cell {
+        .url-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            .url-icon {
+                color: rgba(255, 255, 255, 0.5);
+                flex-shrink: 0;
+            }
+
+            .url-link {
+                color: #007bff;
+                text-decoration: none;
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 12px;
+
+                &:hover {
+                    text-decoration: underline;
+                    color: #0056b3;
+                }
+            }
+        }
+    }
+
+    .target-cell {
+        .target-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            .target-icon {
+                color: rgba(255, 255, 255, 0.5);
+                flex-shrink: 0;
+            }
+
+            .target-path {
+                font-family: 'Consolas', 'Monaco', monospace;
+                font-size: 12px;
+                color: rgba(255, 255, 255, 0.8);
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+    }
+
+    /* Status indicators for different states */
+    tr.failed .status-indicator { background: #dc3545; }
+    tr.success .status-indicator { background: #28a745; }
+    tr.downlading .status-indicator { background: #007bff; animation: pulse 2s infinite; }
+    tr.committed .status-indicator { background: #ffc107; }
+
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.5; }
+        100% { opacity: 1; }
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+        .downloads-content {
+            padding: 10px;
+        }
+
+        .queue-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .queue-action-bar {
+            .action-btn {
+                padding: 10px 12px;
+                font-size: 13px;
+
+                span {
+                    display: none;
+                }
             }
         }
 
-        /* [col="state"] {
-            
+        .queue-table {
+            font-size: 12px;
+
+            thead th {
+                padding: 12px 8px;
+                font-size: 11px;
+
+                span {
+                    display: none;
+                }
+            }
+
+            tbody td {
+                padding: 8px;
+            }
+        }
+    }
+
+    @media (max-width: 480px) {
+        .queue-stats {
+            grid-template-columns: 1fr;
         }
 
-        [col="target"] {
-            
-        } */
+        .stat-card {
+            padding: 12px;
+
+            .stat-icon {
+                font-size: 20px;
+                width: 32px;
+                height: 32px;
+            }
+
+            .stat-value {
+                font-size: 20px;
+            }
+        }
     }
 }

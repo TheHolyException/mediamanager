@@ -139,6 +139,8 @@ public class AutoLoaderHandler extends Handler {
             case "modify" -> cmdModify(content);
             case "runDownload" -> cmdRunDownload(content);
             case "getAlternateProviders" -> cmdGetAlternateProviders(socket, content);
+            case "pause" -> cmdPause(content);
+            case "resume" -> cmdResume(content);
             default ->
                 throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
         }
@@ -358,6 +360,62 @@ public class AutoLoaderHandler extends Handler {
         payload.put("providers", array);
         WebSocketUtils.sendPacket("getAlternateProvidersResponse", TargetSystem.AUTOLOADER, payload, socket);
     }
+
+    /**
+     * Handles the 'pause' command to pause an anime subscription.
+     * When paused, the anime will not be included in automatic scanning and downloads.
+     *
+     * @param content JSON data containing the ID of the anime to pause
+     * @throws WebSocketResponseException if the anime ID is invalid
+     */
+    private void cmdPause(JSONObjectContainer content) {
+        int id = content.get("id", Integer.class);
+        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
+        if (optAnime.isEmpty()) {
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + id + " not found!"));
+        }
+
+        Anime anime = optAnime.get();
+        if (!anime.isPaused()) {
+            anime.setPaused(true, true);
+            anime.writeToDB(MediaManager.getInstance().getDb());
+            
+            log.info("Paused anime subscription: {}", anime.getTitle());
+            
+            // Notify all clients about the update
+            WebSocketUtils.sendAutoLoaderItem(null, anime);
+        }
+        
+        throw new WebSocketResponseException(WebSocketResponse.OK);
+    }
+
+    /**
+     * Handles the 'resume' command to resume a paused anime subscription.
+     * Once resumed, the anime will be included in automatic scanning and downloads again.
+     *
+     * @param content JSON data containing the ID of the anime to resume
+     * @throws WebSocketResponseException if the anime ID is invalid
+     */
+    private void cmdResume(JSONObjectContainer content) {
+        int id = content.get("id", Integer.class);
+        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
+        if (optAnime.isEmpty()) {
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + id + " not found!"));
+        }
+
+        Anime anime = optAnime.get();
+        if (anime.isPaused()) {
+            anime.setPaused(false, true);
+            anime.writeToDB(MediaManager.getInstance().getDb());
+            
+            log.info("Resumed anime subscription: {}", anime.getTitle());
+            
+            // Notify all clients about the update
+            WebSocketUtils.sendAutoLoaderItem(null, anime);
+        }
+        
+        throw new WebSocketResponseException(WebSocketResponse.OK);
+    }
     //endregion
 
 
@@ -373,6 +431,12 @@ public class AutoLoaderHandler extends Handler {
                 try {
                     boolean autoLoad = Boolean.TRUE.equals(spAutoDownload.getValue());
                     for (Anime anime : subscribedAnimes) {
+                        // Skip paused anime
+                        if (anime.isPaused()) {
+                            log.debug("Skipping paused anime: {}", anime.getTitle());
+                            continue;
+                        }
+
                         log.info("Scanning anime: " + anime.getTitle());
 
                         // Checks the episodes that do not have the requested language

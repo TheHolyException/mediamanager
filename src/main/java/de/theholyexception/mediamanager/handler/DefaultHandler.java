@@ -85,6 +85,10 @@ public class DefaultHandler extends Handler {
     private TimerTask task;
 
     private JSONObject torNetworkStatus;
+    
+    private final Queue<JSONObject> memoryHistory = new LinkedList<>();
+    private final Queue<JSONObject> downloadHistory = new LinkedList<>();
+    private static final int MAX_HISTORY_SIZE = 720; // Keep last 720 data points (60 minutes at 5-second intervals)
 
     /**
      * Creates a new DefaultHandler instance for the specified target system.
@@ -631,19 +635,44 @@ public class DefaultHandler extends Handler {
      */
     private JSONObject formatSystemInfo() {
         JSONObject response = new JSONObject();
+        long currentTime = System.currentTimeMillis();
 
         JSONObject torNetwork = torNetworkStatus;
         response.put("torNetwork", torNetwork);
 
+        Runtime runtime = Runtime.getRuntime();
+        long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        long totalMemory = runtime.totalMemory();
+        long maxMemory = runtime.maxMemory();
+        
         JSONObject memory = new JSONObject();
-        memory.put("current", GUIUtils.formatStorageSpace(Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory()));
-        memory.put("heap", GUIUtils.formatStorageSpace(Runtime.getRuntime().totalMemory()));
-        memory.put("max", GUIUtils.formatStorageSpace(Runtime.getRuntime().maxMemory()));
+        memory.put("current", GUIUtils.formatStorageSpace(usedMemory));
+        memory.put("heap", GUIUtils.formatStorageSpace(totalMemory));
+        memory.put("max", GUIUtils.formatStorageSpace(maxMemory));
+        memory.put("currentBytes", usedMemory);
+        memory.put("heapBytes", totalMemory);
+        memory.put("maxBytes", maxMemory);
+        memory.put("usagePercent", Math.round((double) usedMemory / maxMemory * 100.0));
         response.put("memory", memory);
+
+        // Store memory history
+        JSONObject memoryPoint = new JSONObject();
+        memoryPoint.put("timestamp", currentTime);
+        memoryPoint.put("usagePercent", Math.round((double) usedMemory / maxMemory * 100.0));
+        memoryPoint.put("usedBytes", usedMemory);
+        memoryHistory.offer(memoryPoint);
+        if (memoryHistory.size() > MAX_HISTORY_SIZE) {
+            memoryHistory.poll();
+        }
 
         JSONObject docker = new JSONObject();
         docker.put("memoryLimit", GUIUtils.formatStorageSpace(dockerMemoryLimit));
         docker.put("memoryUsage", GUIUtils.formatStorageSpace(dockerMemoryUsage));
+        docker.put("memoryLimitBytes", dockerMemoryLimit);
+        docker.put("memoryUsageBytes", dockerMemoryUsage);
+        if (dockerMemoryLimit > 0) {
+            docker.put("usagePercent", Math.round((double) dockerMemoryUsage / dockerMemoryLimit * 100.0));
+        }
         response.put("docker", docker);
 
         ThreadPoolExecutor threadPoolExecutor = ((ThreadPoolExecutor) downloadHandler.getExecutorService());
@@ -653,14 +682,45 @@ public class DefaultHandler extends Handler {
         for (Thread downloadThread : downloadHandler.getThreadList())
             map.computeIfAbsent(downloadThread.getState().toString(), k -> new AtomicInteger(0)).incrementAndGet();
 
-		threadPool.putAll(map);
+        threadPool.putAll(map);
         threadPool.put("max", threadPoolExecutor.getMaximumPoolSize());
+        threadPool.put("active", threadPoolExecutor.getActiveCount());
+        threadPool.put("queued", threadPoolExecutor.getQueue().size());
         threadPool.put("completed", threadPoolExecutor.getCompletedTaskCount());
         response.put("threadPool", threadPool);
+
+        JSONObject system = new JSONObject();
+        system.put("availableProcessors", runtime.availableProcessors());
+        system.put("totalDownloads", urls.size());
+        system.put("activeDownloads", (int) urls.values().stream().filter(TableItemDTO::isRunning).count());
+        system.put("failedDownloads", (int) urls.values().stream().filter(TableItemDTO::isFailed).count());
+        system.put("completedDownloads", (int) threadPoolExecutor.getCompletedTaskCount());
+        response.put("system", system);
+
+        // Store download history
+        JSONObject downloadPoint = new JSONObject();
+        downloadPoint.put("timestamp", currentTime);
+        downloadPoint.put("total", urls.size());
+        downloadPoint.put("active", (int) urls.values().stream().filter(TableItemDTO::isRunning).count());
+        downloadPoint.put("failed", (int) urls.values().stream().filter(TableItemDTO::isFailed).count());
+        downloadPoint.put("completed", (int) threadPoolExecutor.getCompletedTaskCount());
+        downloadHistory.offer(downloadPoint);
+        if (downloadHistory.size() > MAX_HISTORY_SIZE) {
+            downloadHistory.poll();
+        }
 
         JSONObject aniworld = new JSONObject();
         AniworldHelper.getStatistics().forEach((k, v) -> aniworld.put(k, v.get()));
         response.put("aniworld", aniworld);
+
+        // Add historical data
+        JSONArray memoryHistoryArray = new JSONArray();
+        memoryHistoryArray.addAll(memoryHistory);
+        response.put("memoryHistory", memoryHistoryArray);
+
+        JSONArray downloadHistoryArray = new JSONArray();
+        downloadHistoryArray.addAll(downloadHistory);
+        response.put("downloadHistory", downloadHistoryArray);
 
         return response;
     }

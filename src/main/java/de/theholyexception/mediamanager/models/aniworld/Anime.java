@@ -32,6 +32,8 @@ public class Anime {
     @Getter
     private List<Integer> excludedSeasons;
     @Getter
+    private boolean paused;
+    @Getter
     private final List<Season> seasonList = new ArrayList<>();
     private Long lastUpdate = 0L;
 
@@ -71,6 +73,7 @@ public class Anime {
         isDirty = true;
         this.id = Anime.getAndAddCurrentID();
         this.excludedSeasons = excludedSeasons;
+        this.paused = false;
         setDirectoryPath(null, false);
     }
 
@@ -87,6 +90,8 @@ public class Anime {
             for (String s : szExcludedSeasonsString.split(","))
                 this.excludedSeasons.add(Integer.parseInt(s));
         }
+        Boolean pausedValue = row.get("bPaused", Boolean.class);
+        this.paused = pausedValue != null && pausedValue;
         this.isDirty = false;
         setDirectoryPath(overridePath, false);
     }
@@ -125,6 +130,20 @@ public class Anime {
      */
     public void setExcludedSeasons(List<Integer> excludedSeasons, boolean markDirty) {
         this.excludedSeasons = new ArrayList<>(excludedSeasons);
+        if (markDirty) {
+            this.isDirty = true;
+        }
+    }
+
+    /**
+     * Sets the paused state for this anime subscription.
+     * When paused, the anime will not be included in automatic downloads.
+     * 
+     * @param paused Whether the subscription should be paused
+     * @param markDirty Whether to mark the object as dirty for database persistence
+     */
+    public void setPaused(boolean paused, boolean markDirty) {
+        this.paused = paused;
         if (markDirty) {
             this.isDirty = true;
         }
@@ -253,13 +272,14 @@ public class Anime {
     public void writeToDB(DataBaseInterface db) {
         if (isDirty) {
             log.debug("Writing anime to db: " + this);
-            db.executeSafe("call addAnime(?, ?, ?, ?, ?, ?)",
+            db.executeSafe("call addAnime(?, ?, ?, ?, ?, ?, ?)",
                     id,
                     languageId,
                     title,
                     url,
                     customDirectory == null ?"" : customDirectory,
-                    Utils.intergerListToString(excludedSeasons));
+                    Utils.intergerListToString(excludedSeasons),
+                    paused ? 1 : 0);
             isDirty = false;
         }
 
@@ -286,6 +306,7 @@ public class Anime {
         }
         object.put("directory", relativePath);
         object.put("excludedSeasons", Utils.intergerListToString(excludedSeasons));
+        object.put("paused", paused);
         return new JSONObject(object);
     }
 

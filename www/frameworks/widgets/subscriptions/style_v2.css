@@ -1,0 +1,615 @@
+[widget-name="SubscriptionsWidget"] {
+    .widget-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0;
+        
+        h1 {
+            margin: 0;
+        }
+        
+        .widget-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9em;
+            
+            .stat-item {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                color: var(--darkerTextColor);
+                
+                i {
+                    color: var(--selectedBorderColor);
+                }
+            }
+        }
+    }
+
+    .toolbar {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 15px;
+        background-color: var(--darkBGColor2);
+        border-radius: 8px;
+        
+        .search-section {
+            flex: 1;
+            min-width: 200px;
+        }
+        
+        .filter-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .search-box {
+            position: relative;
+            display: flex;
+            align-items: center;
+            
+            i.fa-search {
+                position: absolute;
+                left: 12px;
+                color: var(--darkerTextColor);
+                z-index: 1;
+            }
+            
+            .search-input {
+                width: 100%;
+                padding: 10px 15px 10px 40px;
+                border: 2px solid var(--darkBGColor3);
+                border-radius: 25px;
+                background-color: var(--darkBGColor1);
+                color: var(--textColor);
+                font-size: 0.95em;
+                
+                &:focus {
+                    outline: none;
+                    border-color: var(--selectedBorderColor);
+                }
+                
+                &::placeholder {
+                    color: var(--darkerTextColor);
+                }
+            }
+            
+            .clear-search {
+                position: absolute;
+                right: 8px;
+                background: none;
+                border: none;
+                color: var(--darkerTextColor);
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 50%;
+                
+                &:hover {
+                    background-color: var(--darkBGColor3);
+                    color: var(--textColor);
+                }
+            }
+        }
+        
+        select {
+            padding: 8px 12px;
+            border: 2px solid var(--darkBGColor3);
+            border-radius: 6px;
+            background-color: var(--darkBGColor1);
+            color: var(--textColor);
+            font-size: 0.9em;
+            
+            &:focus {
+                outline: none;
+                border-color: var(--selectedBorderColor);
+            }
+        }
+        
+        .sort-order-btn {
+            padding: 8px 10px;
+            border: 2px solid var(--darkBGColor3);
+            border-radius: 6px;
+            background-color: var(--darkBGColor1);
+            color: var(--textColor);
+            cursor: pointer;
+            
+            &:hover {
+                border-color: var(--selectedBorderColor);
+            }
+        }
+    }
+
+    .primary-btn {
+        background-color: var(--selectedBorderColor);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s ease;
+        
+        &:hover {
+            background-color: var(--hover-color);
+            transform: translateY(-1px);
+        }
+        
+        &:active {
+            transform: translateY(0);
+        }
+        
+        &:disabled {
+            background-color: var(--darkerTextColor);
+            cursor: not-allowed;
+            transform: none;
+        }
+    }
+
+    .add-subscription-form, .edit-subscription-form {
+        background-color: var(--darkBGColor2);
+        border-radius: 12px;
+        padding: 20px;
+        margin: 15px 0;
+        border: 2px solid var(--darkBGColor3);
+        
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--darkBGColor3);
+            
+            h3 {
+                margin: 0;
+                color: var(--selectedBorderColor);
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            .close-form-btn {
+                background: none;
+                border: none;
+                color: var(--darkerTextColor);
+                cursor: pointer;
+                padding: 5px;
+                border-radius: 4px;
+                
+                &:hover {
+                    background-color: var(--darkBGColor3);
+                    color: var(--textColor);
+                }
+            }
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+            
+            .form-group {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                
+                &.quality-group {
+                    grid-column: 1 / -1;
+                }
+                
+                label {
+                    font-weight: 500;
+                    color: var(--textColor);
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    
+                    i {
+                        color: var(--selectedBorderColor);
+                        width: 16px;
+                    }
+                }
+                
+                input, select {
+                    padding: 12px 15px;
+                    border: 2px solid var(--darkBGColor3);
+                    border-radius: 8px;
+                    background-color: var(--darkBGColor1);
+                    color: var(--textColor);
+                    font-size: 0.95em;
+                    
+                    &:focus {
+                        outline: none;
+                        border-color: var(--selectedBorderColor);
+                    }
+                    
+                    &::placeholder {
+                        color: var(--darkerTextColor);
+                    }
+                    
+                    &:disabled {
+                        background-color: var(--darkBGColor3);
+                        color: var(--darkerTextColor);
+                        cursor: not-allowed;
+                        opacity: 0.6;
+                    }
+                }
+                
+                .input-hint {
+                    font-size: 0.85em;
+                    color: var(--darkerTextColor);
+                    font-style: italic;
+                }
+            }
+        }
+        
+        .quality-options {
+            display: flex;
+            gap: 15px;
+            
+            .quality-option {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                cursor: pointer;
+                padding: 8px 12px;
+                border-radius: 6px;
+                border: 2px solid var(--darkBGColor3);
+                background-color: var(--darkBGColor1);
+                transition: all 0.2s ease;
+                
+                &:hover {
+                    border-color: var(--selectedBorderColor);
+                }
+                
+                input[type="radio"] {
+                    margin: 0;
+                    padding: 0;
+                    
+                    &:checked + span {
+                        color: var(--selectedBorderColor);
+                        font-weight: 500;
+                    }
+                }
+            }
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            
+            .checkmark {
+                width: 20px;
+                height: 20px;
+                border: 2px solid var(--darkBGColor3);
+                border-radius: 4px;
+                background-color: var(--darkBGColor1);
+                position: relative;
+                
+                &::after {
+                    content: "✓";
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    color: var(--selectedBorderColor);
+                    font-weight: bold;
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                }
+            }
+            
+            input[type="checkbox"] {
+                display: none;
+                
+                &:checked + .checkmark {
+                    border-color: var(--selectedBorderColor);
+                    background-color: var(--selectedBorderColor);
+                    
+                    &::after {
+                        opacity: 1;
+                        color: white;
+                    }
+                }
+            }
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--darkBGColor3);
+            
+            .cancel-btn {
+                background: none;
+                border: 2px solid var(--darkerTextColor);
+                color: var(--darkerTextColor);
+                padding: 10px 20px;
+                border-radius: 6px;
+                cursor: pointer;
+                
+                &:hover {
+                    border-color: var(--textColor);
+                    color: var(--textColor);
+                }
+            }
+        }
+    }
+
+    .subscriptions-container {
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--darkerTextColor);
+            
+            i {
+                font-size: 4em;
+                margin-bottom: 20px;
+                color: var(--darkBGColor3);
+            }
+            
+            h3 {
+                margin: 0 0 10px 0;
+                color: var(--textColor);
+            }
+            
+            p {
+                margin: 0 0 30px 0;
+                font-size: 0.95em;
+            }
+        }
+        
+        .subscriptions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+            padding: 15px 0;
+        }
+    }
+
+    .subscription-card {
+        background-color: var(--darkBGColor2);
+        border: 2px solid var(--darkBGColor3);
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        
+        &:hover {
+            border-color: var(--selectedBorderColor);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            
+            .title-section {
+                flex: 1;
+                margin-right: 15px;
+                
+                .anime-title {
+                    margin: 0 0 8px 0;
+                    font-size: 1.1em;
+                    font-weight: 600;
+                    color: var(--textColor);
+                    line-height: 1.3;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    cursor: help;
+                }
+                
+                .folder-path {
+                    font-size: 0.85em;
+                    color: var(--darkerTextColor);
+                    margin: 4px 0;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 100%;
+                    cursor: help;
+                    padding: 2px 4px;
+                    border-radius: 4px;
+                    background-color: var(--darkBGColor1);
+                }
+                
+                .status-badge {
+                    font-size: 0.8em;
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-weight: 500;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    
+                    &.status-active {
+                        background-color: var(--success);
+                        color: white;
+                    }
+                    
+                    &.status-pending {
+                        background-color: var(--processing);
+                        color: white;
+                    }
+                    
+                    &.status-paused {
+                        background-color: var(--darkerTextColor);
+                        color: white;
+                    }
+                    
+                    &.status-error {
+                        background-color: var(--error);
+                        color: white;
+                    }
+                }
+            }
+            
+            .card-actions {
+                display: flex;
+                gap: 8px;
+                
+                .action-btn {
+                    background: none;
+                    border: 1px solid var(--darkBGColor3);
+                    color: var(--darkerTextColor);
+                    padding: 8px 10px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 0.9em;
+                    transition: all 0.2s ease;
+                    
+                    &:hover {
+                        border-color: var(--selectedBorderColor);
+                        color: var(--selectedBorderColor);
+                    }
+                    
+                    &.delete-btn:hover {
+                        border-color: var(--error);
+                        color: var(--error);
+                    }
+                }
+            }
+        }
+        
+        .card-content {
+            margin-bottom: 15px;
+            
+            .info-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin-bottom: 15px;
+                
+                .info-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 0.9em;
+                    
+                    i {
+                        color: var(--selectedBorderColor);
+                        width: 16px;
+                        text-align: center;
+                    }
+                    
+                    .label {
+                        color: var(--darkerTextColor);
+                        font-weight: 500;
+                    }
+                    
+                    .value {
+                        color: var(--textColor);
+                        
+                        &.link {
+                            color: var(--selectedBorderColor);
+                            text-decoration: none;
+                            
+                            &:hover {
+                                text-decoration: underline;
+                            }
+                        }
+                        
+                        &.episodes-count {
+                            font-weight: 600;
+                        }
+                        
+                        &.folder-path {
+                            max-width: 150px;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            cursor: help;
+                            display: inline-block;
+                        }
+                    }
+                }
+            }
+            
+            .excluded-seasons {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.85em;
+                color: var(--darkerTextColor);
+                background-color: var(--darkBGColor1);
+                padding: 8px 12px;
+                border-radius: 6px;
+                
+                i {
+                    color: var(--error);
+                }
+            }
+        }
+        
+        .card-footer {
+            .progress-section {
+                .progress-bar {
+                    height: 6px;
+                    background-color: var(--darkBGColor1);
+                    border-radius: 3px;
+                    overflow: hidden;
+                    margin-bottom: 8px;
+                    
+                    .progress-fill {
+                        height: 100%;
+                        background-color: var(--selectedBorderColor);
+                        transition: width 0.3s ease;
+                        border-radius: 3px;
+                    }
+                }
+                
+                .progress-text {
+                    font-size: 0.85em;
+                    color: var(--darkerTextColor);
+                }
+            }
+        }
+    }
+
+    @media (max-width: 768px) {
+        .toolbar {
+            flex-direction: column;
+            align-items: stretch;
+            
+            .search-section, .filter-section {
+                width: 100%;
+            }
+            
+            .filter-section {
+                justify-content: space-between;
+            }
+        }
+        
+        .add-subscription-form .form-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .subscriptions-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .subscription-card .card-header {
+            flex-direction: column;
+            gap: 15px;
+            
+            .card-actions {
+                align-self: flex-end;
+            }
+        }
+    }
+}
