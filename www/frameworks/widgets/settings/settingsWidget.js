@@ -40,23 +40,10 @@ class SettingsWidget extends BaseWidget {
         
         let widget = $(`
         <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="SettingsWidget">
-            <div class="settings-header">
-                <div class="settings-title">
+            <div class="widget-header">
+                <div class="widget-title">
                     <i class="fas fa-cog"></i>
                     <h1 class="widget-handle">System Settings</h1>
-                </div>
-                <div class="settings-actions">
-                    <button class="reset-settings-btn" title="Reset to defaults">
-                        <i class="fas fa-undo"></i>
-                        Reset
-                    </button>
-                    <button class="save-settings-btn" title="Save changes">
-                        <i class="fas fa-save"></i>
-                        <span class="btn-text">Save Changes</span>
-                        <div class="loading-spinner hidden">
-                            <i class="fas fa-spinner fa-spin"></i>
-                        </div>
-                    </button>
                 </div>
             </div>
             <div class="settings-container">

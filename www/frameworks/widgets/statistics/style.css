@@ -8,7 +8,7 @@
     
     .chart-grid {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 20px;
         margin-bottom: 20px;
     }
@@ -39,14 +39,14 @@
         }
     }
     
-    .memory-details, .system-details {
+    .memory-details, .system-details, .thread-details {
         margin-top: 15px;
         display: flex;
         flex-direction: column;
         gap: 8px;
     }
     
-    .memory-item, .system-item {
+    .memory-item, .system-item, .thread-item {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -145,7 +145,7 @@
             padding: 12px;
         }
         
-        .memory-item, .system-item {
+        .memory-item, .system-item, .thread-item {
             padding: 6px 10px;
             
             .label, .value {

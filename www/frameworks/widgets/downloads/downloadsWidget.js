@@ -8,7 +8,12 @@ class DownloadsWidget extends BaseWidget {
     render() {
         let widget = $(`
         <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="DownloadsWidget">
-            <h1 class="widget-handle">Download Manager</h1>
+            <div class="widget-header">
+                <div class="widget-title">
+                    <i class="fas fa-download"></i>
+                    <h1 class="widget-handle">Download Manager</h1>
+                </div>
+            </div>
             <div class="downloads-content">
                 <div class="downloads-header">
                     <div class="queue-stats">
@@ -176,7 +181,13 @@ class DownloadsWidget extends BaseWidget {
                     targetCol.text(dirPath + subPath);
 
                     let btnResent = row.find('[action="resend"]');
-                    btnResent.css('display', item.state.startsWith('Error') ? 'block' : 'none');
+                    btnResent.css('display', 'block'); // Always visible
+                    // Update disabled state based on current item state
+                    if (item.state === "new" || item.state.includes("Downloading")) {
+                        btnResent.addClass('disabled');
+                    } else {
+                        btnResent.removeClass('disabled');
+                    }
 
                     let resentStream = row.find('[action="resendOtherStream"]')
                     resentStream.css('display', item.autoloaderData != undefined && item.state.startsWith('Error') ? 'block' : 'none')
@@ -250,15 +261,21 @@ class DownloadsWidget extends BaseWidget {
             .attr('title', 'Restart Download')
             .addClass('action-icon-btn retry-btn')
             .append($('<i>').addClass('fa fa-rotate-right'))
-            .css('display', item.state.startsWith('Error') ? 'block' : 'none')
+            .css('display', 'block') // Always visible
             .click(function () {
                 let data = DownloadsWidget.indexes.get(item.uuid);
-                if (!data.state.startsWith("Error")) return;
+                // Don't allow retry if disabled or for certain states
+                if ($(this).hasClass('disabled') || data.state === "new" || data.state.includes("Downloading")) return;
                 data.state = "new";
                 sendPacket("put", "default", {
                     "list": [data]
                 });
             });
+        
+        // Set initial disabled state based on item state
+        if (item.state === "new" || item.state.includes("Downloading")) {
+            resentBtn.addClass('disabled');
+        }
 
         //Column - toolbar - resend with other stream
         let resentWithOtherStreamBtn = $('<button>')

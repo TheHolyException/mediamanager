@@ -88,6 +88,7 @@ public class DefaultHandler extends Handler {
     
     private final Queue<JSONObject> memoryHistory = new LinkedList<>();
     private final Queue<JSONObject> downloadHistory = new LinkedList<>();
+    private final Queue<JSONObject> threadHistory = new LinkedList<>();
     private static final int MAX_HISTORY_SIZE = 720; // Keep last 720 data points (60 minutes at 5-second intervals)
 
     /**
@@ -689,6 +690,19 @@ public class DefaultHandler extends Handler {
         threadPool.put("completed", threadPoolExecutor.getCompletedTaskCount());
         response.put("threadPool", threadPool);
 
+        // Store thread history (excluding completed counter)
+        JSONObject threadPoint = new JSONObject();
+        threadPoint.put("timestamp", currentTime);
+        threadPoint.putAll(map); // Thread states (NEW, RUNNABLE, BLOCKED, WAITING, TIMED_WAITING, TERMINATED)
+        threadPoint.put("max", threadPoolExecutor.getMaximumPoolSize());
+        threadPoint.put("active", threadPoolExecutor.getActiveCount());
+        threadPoint.put("queued", threadPoolExecutor.getQueue().size());
+        // Explicitly exclude completed counter from history
+        threadHistory.offer(threadPoint);
+        if (threadHistory.size() > MAX_HISTORY_SIZE) {
+            threadHistory.poll();
+        }
+
         JSONObject system = new JSONObject();
         system.put("availableProcessors", runtime.availableProcessors());
         system.put("totalDownloads", urls.size());
@@ -721,6 +735,10 @@ public class DefaultHandler extends Handler {
         JSONArray downloadHistoryArray = new JSONArray();
         downloadHistoryArray.addAll(downloadHistory);
         response.put("downloadHistory", downloadHistoryArray);
+
+        JSONArray threadHistoryArray = new JSONArray();
+        threadHistoryArray.addAll(threadHistory);
+        response.put("threadHistory", threadHistoryArray);
 
         return response;
     }

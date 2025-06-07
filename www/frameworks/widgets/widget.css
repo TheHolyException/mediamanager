@@ -42,6 +42,122 @@
     }
 }
 
+/* Widget Header Styles */
+.widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, var(--darkBGColor2) 0%, var(--darkBGColor3) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px 12px 0 0;
+    margin: -10px -10px 0 -10px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+}
+
+.widget-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 1;
+}
+
+.widget-title i {
+    font-size: 1.25rem;
+    color: var(--selectedBorderColor);
+}
+
+.widget-title h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0;
+    background: linear-gradient(45deg, var(--textColor), var(--darkerTextColor));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Widget Stats (for subscription widget) */
+.widget-stats {
+    display: flex;
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.85rem;
+    color: var(--darkerTextColor);
+}
+
+.stat-item i {
+    font-size: 0.9rem;
+    color: var(--selectedBorderColor);
+}
+
+.stat-item .active-count,
+.stat-item .pending-count {
+    font-weight: 600;
+    color: var(--textColor);
+}
+
+/* Beautiful Light Blue Scrollbar for all widgets */
+.widget::-webkit-scrollbar,
+.widget *::-webkit-scrollbar,
+.table-container::-webkit-scrollbar,
+.subscriptions-container::-webkit-scrollbar,
+.settings-container::-webkit-scrollbar,
+.statistics::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.widget::-webkit-scrollbar-track,
+.widget *::-webkit-scrollbar-track,
+.table-container::-webkit-scrollbar-track,
+.subscriptions-container::-webkit-scrollbar-track,
+.settings-container::-webkit-scrollbar-track,
+.statistics::-webkit-scrollbar-track {
+    background: var(--darkBGColor1);
+    border-radius: 3px;
+}
+
+.widget::-webkit-scrollbar-thumb,
+.widget *::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb,
+.subscriptions-container::-webkit-scrollbar-thumb,
+.settings-container::-webkit-scrollbar-thumb,
+.statistics::-webkit-scrollbar-thumb {
+    background: var(--selectedBorderColor);
+    border-radius: 3px;
+    transition: background-color 0.3s ease;
+}
+
+.widget::-webkit-scrollbar-thumb:hover,
+.widget *::-webkit-scrollbar-thumb:hover,
+.table-container::-webkit-scrollbar-thumb:hover,
+.subscriptions-container::-webkit-scrollbar-thumb:hover,
+.settings-container::-webkit-scrollbar-thumb:hover,
+.statistics::-webkit-scrollbar-thumb:hover {
+    background: var(--hover-color);
+}
+
+/* Sticky toolbars within widgets */
+.widget .toolbar {
+    position: sticky;
+    top: 60px; /* Position below the widget header */
+    z-index: 9;
+    background: rgba(28, 32, 40, 0.95);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 0 -15px;
+    padding: 1rem 15px;
+}
+
 :is(.grid-stack .widget):not(:is(.grid-stack-static .widget)){
     border: 2px solid var(--darkerTextColor);
 

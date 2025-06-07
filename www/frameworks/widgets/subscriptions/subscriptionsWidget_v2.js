@@ -14,7 +14,10 @@ class SubscriptionsWidget extends BaseWidget {
         let widget = $(`
         <div class="widget subscriptions-widget scrollbar-on-hover custom-scrollbar" widget-name="SubscriptionsWidget">
             <div class="widget-header">
-                <h1 class="widget-handle">Subscriptions</h1>
+                <div class="widget-title">
+                    <i class="fas fa-bell"></i>
+                    <h1 class="widget-handle">Subscriptions</h1>
+                </div>
                 <div class="widget-stats">
                     <span class="stat-item">
                         <i class="fa fa-play-circle"></i>
@@ -425,7 +428,11 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     addSubscriptionCard(item) {
-        const widget = $('[widget-name="SubscriptionsWidget"]');
+        const widget = $('[widget-name="SubscriptionsWidget"]').first();
+        this.addSubscriptionCardToWidget(widget, item);
+    }
+
+    addSubscriptionCardToWidget(widget, item) {
         const container = widget.find('.subscriptions-grid');
         
         // Remove existing card
@@ -536,8 +543,21 @@ class SubscriptionsWidget extends BaseWidget {
         });
 
         card.find('.pause-btn').click(() => {
-            const action = item.status === 'paused' ? 'resume' : 'pause';
+            const pauseBtn = card.find('.pause-btn');
+            const action = item.paused ? 'resume' : 'pause';
+            console.log('Pause button clicked. Current paused state:', item.paused, 'Action:', action);
+            
+            // Optimistically update the button icon
+            const newIcon = item.paused ? 'fa-pause' : 'fa-play';
+            pauseBtn.find('i').attr('class', `fa ${newIcon}`);
+            
+            // Update the item's paused state locally for immediate feedback
+            item.paused = !item.paused;
+            
             sendPacket(action, "autoloader", { id: item.id });
+            
+            const actionText = action === 'pause' ? 'paused' : 'resumed';
+            this.showNotification(`Subscription ${actionText}`, 'info');
         });
 
         card.find('.delete-btn').click(() => {
@@ -660,28 +680,36 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     static onWSResponse(cmd, content) {
-        const widget = $('[widget-name="SubscriptionsWidget"]');
-        if (!widget.length) return;
+        // Find all subscription widgets (could be in stream view and/or grid view)
+        const widgets = $('[widget-name="SubscriptionsWidget"]');
+        if (!widgets.length) return;
         
         const instance = new SubscriptionsWidget();
         
-        switch (cmd) {
-            case "syn":
-                content.items?.forEach(item => {
-                    instance.addSubscriptionCard(item);
-                });
-                break;
-            case "del":
-                widget.find(`[data-id="${content.id}"]`).fadeOut(300, function() {
-                    $(this).remove();
-                    instance.updateEmptyState(widget);
-                    instance.updateStats(widget);
-                });
-                break;
-            case "update":
-                instance.addSubscriptionCard(content);
-                instance.showNotification('Subscription updated', 'success');
-                break;
-        }
+        // Process each widget separately to avoid double counting
+        widgets.each(function() {
+            const widget = $(this);
+            
+            switch (cmd) {
+                case "syn":
+                    // Clear existing cards first to avoid duplicates
+                    widget.find('.subscription-card').remove();
+                    content.items?.forEach(item => {
+                        instance.addSubscriptionCardToWidget(widget, item);
+                    });
+                    break;
+                case "del":
+                    widget.find(`[data-id="${content.id}"]`).fadeOut(300, function() {
+                        $(this).remove();
+                        instance.updateEmptyState(widget);
+                        instance.updateStats(widget);
+                    });
+                    break;
+                case "update":
+                    instance.addSubscriptionCardToWidget(widget, content);
+                    instance.showNotification('Subscription updated', 'success');
+                    break;
+            }
+        });
     }
 }

@@ -3,12 +3,18 @@ class StatisticsWidget extends BaseWidget {
         super(name);
         this.memoryChart = null;
         this.systemChart = null;
+        this.threadChart = null;
     }
 
     render() {
         let widget = $(`
         <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="StatisticsWidget">
-            <h1 class="widget-handle">System Statistics</h1>
+            <div class="widget-header">
+                <div class="widget-title">
+                    <i class="fas fa-chart-bar"></i>
+                    <h1 class="widget-handle">System Statistics</h1>
+                </div>
+            </div>
             <div class="statistics">
                 <div class="chart-grid">
                     <div class="chart-container">
@@ -36,6 +42,20 @@ class StatisticsWidget extends BaseWidget {
                             <div class="system-item">
                                 <span class="label">Active Now:</span>
                                 <span class="value" id="active-downloads">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Thread Pool History</h3>
+                        <canvas id="threadChart" width="300" height="200"></canvas>
+                        <div class="thread-details">
+                            <div class="thread-item">
+                                <span class="label">Max Threads:</span>
+                                <span class="value" id="max-threads">-</span>
+                            </div>
+                            <div class="thread-item">
+                                <span class="label">Active:</span>
+                                <span class="value" id="active-threads">-</span>
                             </div>
                         </div>
                     </div>
@@ -79,6 +99,10 @@ class StatisticsWidget extends BaseWidget {
             this.systemChart.destroy();
             this.systemChart = null;
         }
+        if (this.threadChart) {
+            this.threadChart.destroy();
+            this.threadChart = null;
+        }
         // Clear global reference
         if (window.statisticsWidgetInstance === this) {
             window.statisticsWidgetInstance = null;
@@ -89,8 +113,9 @@ class StatisticsWidget extends BaseWidget {
     initCharts() {
         const memoryCtx = document.getElementById('memoryChart');
         const systemCtx = document.getElementById('systemChart');
+        const threadCtx = document.getElementById('threadChart');
 
-        if (!memoryCtx || !systemCtx) return;
+        if (!memoryCtx || !systemCtx || !threadCtx) return;
 
         // Memory Usage Historical Chart
         this.memoryChart = new Chart(memoryCtx, {
@@ -273,6 +298,113 @@ class StatisticsWidget extends BaseWidget {
                 }
             }
         });
+
+        // Thread Pool Historical Chart
+        this.threadChart = new Chart(threadCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Active Threads',
+                        data: [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: 'Queued Tasks',
+                        data: [],
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: 'RUNNABLE',
+                        data: [],
+                        borderColor: '#17a2b8',
+                        backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: 'WAITING',
+                        data: [],
+                        borderColor: '#6f42c1',
+                        backgroundColor: 'rgba(111, 66, 193, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.4,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'second',
+                            displayFormats: {
+                                second: 'HH:mm:ss'
+                            }
+                        },
+                        ticks: {
+                            color: '#ffffff',
+                            font: { size: 10 },
+                            maxTicksLimit: 8
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            color: '#ffffff',
+                            font: { size: 10 },
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: 'rgba(255, 255, 255, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#ffffff',
+                            font: { size: 11 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: '#ffffff',
+                        borderWidth: 1
+                    }
+                }
+            }
+        });
     }
 
     static updateStatistics(responseData) {
@@ -321,6 +453,30 @@ class StatisticsWidget extends BaseWidget {
             chart.update('none');
         }
 
+        // Update thread historical chart
+        if (responseData.threadHistory && window.statisticsWidgetInstance && window.statisticsWidgetInstance.threadChart) {
+            const threadData = responseData.threadHistory;
+            const chart = window.statisticsWidgetInstance.threadChart;
+            
+            // Clear existing data
+            chart.data.labels = [];
+            chart.data.datasets.forEach(dataset => {
+                dataset.data = [];
+            });
+            
+            // Add historical data points
+            threadData.forEach(point => {
+                const timestamp = new Date(point.timestamp);
+                chart.data.labels.push(timestamp);
+                chart.data.datasets[0].data.push(point.active || 0);         // Active Threads
+                chart.data.datasets[1].data.push(point.queued || 0);         // Queued Tasks
+                chart.data.datasets[2].data.push(point.RUNNABLE || 0);       // RUNNABLE threads
+                chart.data.datasets[3].data.push(point.WAITING || 0);        // WAITING threads
+            });
+            
+            chart.update('none');
+        }
+
         // Update current memory information
         if (responseData.memory) {
             $('#memory-used').text(responseData.memory.current || '-');
@@ -333,9 +489,15 @@ class StatisticsWidget extends BaseWidget {
             $('#active-downloads').text(responseData.system.activeDownloads || 0);
         }
 
+        // Update current thread information
+        if (responseData.threadPool) {
+            $('#max-threads').text(responseData.threadPool.max || '-');
+            $('#active-threads').text(responseData.threadPool.active || 0);
+        }
+
         // Update tables for other data
         let groups = [];
-        const excludeGroups = ['memory', 'system', 'docker', 'memoryHistory', 'downloadHistory'];
+        const excludeGroups = ['memory', 'system', 'docker', 'memoryHistory', 'downloadHistory', 'threadHistory'];
         
         for (let groupName in responseData) {
             if (excludeGroups.includes(groupName)) continue;

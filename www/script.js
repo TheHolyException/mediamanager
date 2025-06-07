@@ -1,5 +1,5 @@
 const yeti = new Yeti();
-let grid = undefined;
+let grid;
 let targetFolders = [];
 
 const settings = [
@@ -27,32 +27,64 @@ $(document).ready(function () {
 });
 
 function initUI() {
-    let mainTabBar = new TabBar($('.embeded-widget-toolbar'), $('.embeded-widget'), true, {
+    // Initialize tab navigation - TabBar constructor initializes itself
+    const tabNavigation = new TabBar($('.embeded-widget-toolbar'), $('.embeded-widget'), true, {
         downloads: function () { $('.embeded-widget').html(new DownloadsWidget().render()); },
         settings: function () { $('.embeded-widget').html(new SettingsWidget().render()); },
         statistics: function () { $('.embeded-widget').html(new StatisticsWidget().render()); },
         subscriptions: function () { $('.embeded-widget').html(new SubscriptionsWidget().render()); },
     });
+    // TabBar instance stored for potential future use
+    window.tabNavigation = tabNavigation;
 
-    $('.toggle-icon.edit-save').click(function(){
-        let self = $(this);
-        let isEditing = self.find('[type="checkbox"]').prop('checked');
-        grid.setStatic(!isEditing);
+    $('.edit-save-btn').click(function(){
+        let editCheckbox = $(this).find('.edit-checkbox');
+        let isEditing = editCheckbox.prop('checked');
+        let newEditingState = !isEditing;
+        
+        editCheckbox.prop('checked', newEditingState);
+        
+        // Update button appearance
+        let editIcon = $(this).find('.edit-icon');
+        let saveIcon = $(this).find('.save-icon');
+        let btnText = $(this).find('.btn-text');
+        
+        if(newEditingState) {
+            editIcon.addClass('hidden');
+            saveIcon.removeClass('hidden');
+            btnText.text('Save');
+            $(this).attr('title', 'Save Changes');
+        } else {
+            editIcon.removeClass('hidden');
+            saveIcon.addClass('hidden');
+            btnText.text('Edit');
+            $(this).attr('title', 'Toggle Edit Mode');
+        }
+        
+        grid.setStatic(!newEditingState);
 
-        if(!isEditing){
+        if(!newEditingState){
             localStorage.setItem('dashboard-content', JSON.stringify(grid.save()));
         }
     })
 
-    let slideCheckbox = $('.slide-checkbox');
+    // Modern toggle handling
+    let modernToggle = $('.toggle-input');
     if(localStorage.getItem('show-dashboard') == 'true'){
-        slideCheckbox.find('[type="checkbox"]').prop('checked', true);
+        modernToggle.prop('checked', true);
+        $('body').addClass('grid-view');
     }
     
-    slideCheckbox.click(function(){
-        let self = $(this);
-        let showDashboard = self.find('[type="checkbox"]').prop('checked');
-        localStorage.setItem('show-dashboard', showDashboard);
+    modernToggle.change(function(){
+        let isGridView = $(this).prop('checked');
+        localStorage.setItem('show-dashboard', isGridView);
+        
+        // Toggle grid-view class on body for responsive styling
+        if(isGridView) {
+            $('body').addClass('grid-view');
+        } else {
+            $('body').removeClass('grid-view');
+        }
     })
 
 
@@ -107,7 +139,7 @@ function setupGridstack() {
 
     let dashboardData = localStorage.getItem('dashboard-content');
     if(dashboardData){
-        dashboardItems = JSON.parse(dashboardData);
+        let dashboardItems = JSON.parse(dashboardData);
         for(let item of dashboardItems){
             grid.addWidget(WidgetManager.getWidget(item.widgetName, "").render(), {
                 x: item.x,
@@ -153,8 +185,8 @@ function onWSResponseDefault(cmd, content) {
             SettingsWidget.updateSettings(content.settings);
 
             break;
-        case "requestSubfoldersResponse":
-            subfolderSelection = $('.subfolder.download')
+        case "requestSubfoldersResponse": {
+            let subfolderSelection = $('.subfolder.download');
             subfolderSelection.empty();
             subfolderSelection.append($('<option>'));
 
@@ -165,6 +197,7 @@ function onWSResponseDefault(cmd, content) {
                 subfolderSelection.append(option);
             }
             break;
+        }
     }
 }
 

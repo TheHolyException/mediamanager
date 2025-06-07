@@ -2,7 +2,7 @@
     padding: 0;
     overflow: hidden;
 
-    /* Header Styling */
+    /* Header Styling - removed sticky as it's now handled centrally */
     .settings-header {
         background: linear-gradient(135deg, var(--darkBGColor2) 0%, var(--darkBGColor3) 100%);
         padding: 20px 24px;
@@ -10,9 +10,6 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        position: sticky;
-        top: 0;
-        z-index: 10;
     }
 
     .settings-title {
@@ -320,22 +317,4 @@
         transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, transform 0.3s ease;
     }
 
-    /* Scrollbar Styling for Container */
-    .settings-container::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    .settings-container::-webkit-scrollbar-track {
-        background: var(--darkBGColor1);
-        border-radius: 3px;
-    }
-
-    .settings-container::-webkit-scrollbar-thumb {
-        background: var(--selectedBorderColor);
-        border-radius: 3px;
-        
-        &:hover {
-            background: var(--hover-color);
-        }
-    }
 }

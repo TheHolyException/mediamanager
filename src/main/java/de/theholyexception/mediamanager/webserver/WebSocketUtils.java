@@ -210,10 +210,18 @@ public class WebSocketUtils {
         return content;
     }
 
+    private static List<Anime> lastSendAnimes = new ArrayList<>();
+
     public static void sendAutoLoaderItem(WebSocketBasic socket, Anime anime) {
-         sendAutoLoaderItem(socket, Arrays.stream(new Anime[]{anime}).toList());
+        List<Anime> packet = new ArrayList<>(lastSendAnimes);
+        packet.removeIf(anime2 -> anime2.getId() == anime.getId());
+        packet.add(anime);
+        lastSendAnimes = packet;
+        sendAutoLoaderItem(socket, anime);
     }
+
     public static void sendAutoLoaderItem(WebSocketBasic socket, List<Anime> animes) {
+        lastSendAnimes = animes;
         JSONObjectContainer response = new JSONObjectContainer();
         JSONArrayContainer items = new JSONArrayContainer();
         for (Anime anime : animes) {

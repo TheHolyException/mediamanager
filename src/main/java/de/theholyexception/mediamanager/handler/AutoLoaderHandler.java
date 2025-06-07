@@ -200,7 +200,7 @@ public class AutoLoaderHandler extends Handler {
         MediaManager.getInstance().getDb().getExecutorHandler().awaitGroup(-1);
 
         // Inform everyone about the new item
-        WebSocketUtils.sendAutoLoaderItem(null, anime);
+        WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
         throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 
@@ -308,7 +308,7 @@ public class AutoLoaderHandler extends Handler {
             anime.writeToDB(MediaManager.getInstance().getDb());
             
             // Notify all clients about the update
-            WebSocketUtils.sendAutoLoaderItem(null, anime);
+            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
             
             log.info("Successfully modified subscription for: {}", anime.getTitle());
         } else {
@@ -384,7 +384,7 @@ public class AutoLoaderHandler extends Handler {
             log.info("Paused anime subscription: {}", anime.getTitle());
             
             // Notify all clients about the update
-            WebSocketUtils.sendAutoLoaderItem(null, anime);
+            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
         }
         
         throw new WebSocketResponseException(WebSocketResponse.OK);
@@ -412,7 +412,7 @@ public class AutoLoaderHandler extends Handler {
             log.info("Resumed anime subscription: {}", anime.getTitle());
             
             // Notify all clients about the update
-            WebSocketUtils.sendAutoLoaderItem(null, anime);
+            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
         }
         
         throw new WebSocketResponseException(WebSocketResponse.OK);
@@ -463,7 +463,7 @@ public class AutoLoaderHandler extends Handler {
                     anime.getTitle(), anime.getUnloadedEpisodeCount(true));
 
             // Notify all clients about the update
-            WebSocketUtils.sendAutoLoaderItem(null, anime);
+            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
             
         } catch (Exception ex) {
             log.error("Error during manual scan for anime: {}", anime.getTitle(), ex);
