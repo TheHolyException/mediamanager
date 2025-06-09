@@ -132,7 +132,7 @@ class DownloadsWidget extends BaseWidget {
         });
 
         widgetContent.find('.delete-completed-btn').click(function () {
-            widget.find('.success [action="delete"]').click();
+            widgetContent.find('.success [action="delete"]').click();
         });
 
         sendPacket("syn", "default");
@@ -365,6 +365,10 @@ class DownloadsWidget extends BaseWidget {
     }
 
     static addNewElement(urls, settings, targetSelection, subfolder) {
+        if (!urls) {
+            console.error("No URLs provided to addNewElement");
+            return;
+        }
         let urlArray = urls.split(";");
 
         for (let urlElement of urlArray) {
