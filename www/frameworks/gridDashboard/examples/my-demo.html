@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cell Height Consistency Test</title>
+    
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+
+        .test-container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-container {
+            height: 500px;
+            border: 2px solid #007acc;
+            border-radius: 8px;
+            overflow: auto;
+            margin: 20px 0;
+        }
+
+        .controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #007acc;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #005999;
+        }
+
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .issue-demo {
+            background: #fff3e0;
+            border: 1px solid #ff9800;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .fix-demo {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+<div class="controls">
+    <button id="addSingleHeightWidget">Add 1×1 Widget</button>
+    <button id="addDoubleHeightWidget">Add 1×2 Widget</button>
+    <button id="addLongTextWidget">Add Long Text Widget</button>
+    <button id="addMinimalWidget">Add Minimal Widget</button>
+    <button id="clearAllWidgets">Clear All</button>
+</div>
+
+<div id="widget-palette">
+    <div
+        class="widget-palette-item"
+        widget-type="text-widget"
+        data-drag-image-html="<div style='padding: 12px 16px; background: #4CAF50; color: white; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); font-size: 14px; font-weight: bold;'>📝 Dragging Text Widget</div>"
+    >Text</div>
+    <div 
+        class="widget-palette-item" 
+        widget-type="chart-widget"
+    >Chart</div>
+    <div 
+        class="widget-palette-item" 
+        widget-type="image-widget"
+    >Image</div>
+</div>
+
+<div class="test-container">
+    <div class="dashboard-container" id="dashboard"></div>
+</div>
+
+<script src="gridWidget.js"></script>
+<script src="gridDashboard.js"></script>
+<script src="customHTMLWidgetPalette.js"></script>
+
+<script>
+    $(document).ready(function() {
+        const dashboard = new GridDashboard('#dashboard', 4, 3, {
+            useCSSAuto: true,
+            gap: 10,
+            editMode: true,
+            showGridLines: true
+        });
+
+        // Create and add a widget
+        const widget = new GridWidget({
+            title: 'My Widget',
+            width: 2,
+            height: 1,
+            content: '<div style="padding: 20px;">Hello World!</div>'
+        });
+
+        $('#addMinimalWidget').on('click', function(){
+            dashboard.addWidget(new GridWidget({
+                title: 'My Widget',
+                width: 2,
+                height: 1,
+                content: '<div style="padding: 20px;">Hello World!</div>'
+            }));
+        });
+
+
+
+        // Create a custom HTML palette
+        const customPalette = new CustomHTMLWidgetPalette('#widget-palette', {
+            widgetSelector: '[widget-type]',
+            enableClickToAdd: true,
+            enableHoverEffects: true
+        });
+
+        customPalette.registerWidgetTemplate("text-widget", new TextWidget())
+
+        // Register with a dashboard
+        customPalette.registerDashboard(dashboard);
+    });
+</script>
+</body>
+</html>

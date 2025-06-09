@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Auto Sizing Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .demo-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .demo-section {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .section-header h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .demo-content {
+            padding: 20px;
+        }
+
+        .controls-panel {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .controls-panel h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            min-width: 120px;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.success {
+            background: #28a745;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #4a90e2;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .slider {
+            width: 150px;
+            height: 6px;
+            border-radius: 3px;
+            background: #e1e5e9;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+        }
+
+        .dashboard-container {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            min-height: 400px;
+            position: relative;
+            overflow: auto;
+        }
+
+        .stats-panel {
+            background: #e7f3ff;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 4px;
+        }
+
+        .drop-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #6c757d;
+            pointer-events: none;
+        }
+
+        .drop-indicator .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .viewport-demo {
+            border: 2px solid #4a90e2;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .viewport-header {
+            background: #4a90e2;
+            color: white;
+            padding: 10px 15px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .viewport-content {
+            padding: 15px;
+            min-height: 300px;
+            overflow: auto;
+        }
+
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            background: #4a90e2;
+            cursor: nw-resize;
+            clip-path: polygon(100% 0, 0 100%, 100% 100%);
+        }
+
+        @media (max-width: 768px) {
+            .demo-sections {
+                grid-template-columns: 1fr;
+            }
+            
+            .comparison-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="index.html" class="back-link">← Back to Examples</a>
+            <h1>📐 CSS Auto Sizing</h1>
+            <p>Responsive grid layouts that adapt to container size automatically</p>
+        </div>
+
+        <div class="info-panel">
+            <h4>📖 What you'll learn:</h4>
+            <ul>
+                <li>CSS Grid auto-sizing with repeat(auto-fit, minmax())</li>
+                <li>Container-based responsive design</li>
+                <li>Dynamic cell sizing based on content</li>
+                <li>Viewport-independent grid layouts</li>
+                <li>Comparing fixed vs auto-sizing approaches</li>
+                <li>Performance considerations for responsive grids</li>
+            </ul>
+        </div>
+
+        <div class="demo-sections">
+            <!-- Fixed Size Demo -->
+            <div class="demo-section">
+                <div class="section-header">
+                    <h3>📏 Fixed Size Dashboard</h3>
+                    <p>Traditional fixed cell size approach</p>
+                </div>
+                <div class="demo-content">
+                    <div class="controls-panel">
+                        <h4>🎛️ Fixed Size Controls</h4>
+                        <div class="control-group">
+                            <label>Cell Size:</label>
+                            <input type="range" class="slider" id="fixedCellSizeSlider" min="60" max="200" value="100">
+                            <span id="fixedCellSizeValue">100px</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Grid Columns:</label>
+                            <input type="range" class="slider" id="fixedColumnsSlider" min="3" max="8" value="6">
+                            <span id="fixedColumnsValue">6</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Edit Mode:</label>
+                            <div class="toggle-switch active" id="fixedEditToggle"></div>
+                            <label>Grid Lines:</label>
+                            <div class="toggle-switch" id="fixedGridToggle"></div>
+                        </div>
+                        <div class="control-group">
+                            <button class="btn" id="addFixedWidget">Add Widget</button>
+                            <button class="btn danger" id="clearFixed">Clear All</button>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-container" id="fixedDashboard">
+                        <div class="drop-indicator" id="fixedIndicator">
+                            <div class="icon">📏</div>
+                            <div>Fixed Size Dashboard</div>
+                            <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">
+                                Cell size and columns are manually controlled
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-panel">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="fixedWidgets">0</div>
+                                <div class="stat-label">Widgets</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="fixedDimensions">6×4</div>
+                                <div class="stat-label">Grid Size</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="fixedCellSize">100px</div>
+                                <div class="stat-label">Cell Size</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Auto Size Demo -->
+            <div class="demo-section">
+                <div class="section-header">
+                    <h3>📐 Auto Size Dashboard</h3>
+                    <p>Modern CSS auto-sizing with container queries</p>
+                </div>
+                <div class="demo-content">
+                    <div class="controls-panel">
+                        <h4>🤖 Auto Size Controls</h4>
+                        <div class="control-group">
+                            <label>Min Cell Size:</label>
+                            <input type="range" class="slider" id="autoMinSizeSlider" min="60" max="150" value="80">
+                            <span id="autoMinSizeValue">80px</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Max Cell Size:</label>
+                            <input type="range" class="slider" id="autoMaxSizeSlider" min="120" max="300" value="200">
+                            <span id="autoMaxSizeValue">200px</span>
+                        </div>
+                        <div class="control-group">
+                            <label>Edit Mode:</label>
+                            <div class="toggle-switch active" id="autoEditToggle"></div>
+                            <label>Grid Lines:</label>
+                            <div class="toggle-switch" id="autoGridToggle"></div>
+                        </div>
+                        <div class="control-group">
+                            <button class="btn" id="addAutoWidget">Add Widget</button>
+                            <button class="btn danger" id="clearAuto">Clear All</button>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-container" id="autoDashboard">
+                        <div class="drop-indicator" id="autoIndicator">
+                            <div class="icon">📐</div>
+                            <div>Auto Size Dashboard</div>
+                            <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">
+                                Grid adapts automatically to container size
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-panel">
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value" id="autoWidgets">0</div>
+                                <div class="stat-label">Widgets</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="autoDimensions">Auto</div>
+                                <div class="stat-label">Grid Size</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="autoActualSize">Auto</div>
+                                <div class="stat-label">Actual Size</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Responsive Comparison -->
+        <div class="demo-section">
+            <div class="section-header">
+                <h3>📱 Responsive Comparison</h3>
+                <p>See how both approaches handle different viewport sizes</p>
+            </div>
+            <div class="demo-content">
+                <div class="controls-panel">
+                    <h4>📱 Viewport Simulation</h4>
+                    <div class="control-group">
+                        <label>Viewport Width:</label>
+                        <input type="range" class="slider" id="viewportSlider" min="320" max="1200" value="800">
+                        <span id="viewportValue">800px</span>
+                    </div>
+                    <div class="control-group">
+                        <button class="btn" id="mobilePreset">📱 Mobile (375px)</button>
+                        <button class="btn" id="tabletPreset">📱 Tablet (768px)</button>
+                        <button class="btn" id="desktopPreset">🖥️ Desktop (1200px)</button>
+                        <button class="btn success" id="addComparisonWidgets">Add Sample Widgets</button>
+                    </div>
+                </div>
+
+                <div class="comparison-grid" id="comparisonGrid">
+                    <div class="viewport-demo" id="fixedViewport">
+                        <div class="viewport-header">Fixed Size Approach</div>
+                        <div class="viewport-content" id="fixedComparison"></div>
+                        <div class="resize-handle"></div>
+                    </div>
+                    <div class="viewport-demo" id="autoViewport">
+                        <div class="viewport-header">Auto Size Approach</div>
+                        <div class="viewport-content" id="autoComparison"></div>
+                        <div class="resize-handle"></div>
+                    </div>
+                </div>
+
+                <div class="stats-panel">
+                    <h4 style="margin-bottom: 15px; color: #333;">📊 Performance & Behavior Analysis</h4>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="fixedOverflow">0</div>
+                            <div class="stat-label">Fixed Overflow</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="autoAdaptations">0</div>
+                            <div class="stat-label">Auto Adaptations</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="responsiveScore">100%</div>
+                            <div class="stat-label">Responsive Score</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="layoutStability">High</div>
+                            <div class="stat-label">Layout Stability</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../customWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+
+    <script>
+        let fixedDashboard = null;
+        let autoDashboard = null;
+        let fixedComparisonDashboard = null;
+        let autoComparisonDashboard = null;
+
+        function initDemo() {
+            // Create fixed size dashboard
+            fixedDashboard = new GridDashboard('#fixedDashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: false,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: false,
+                autoResizeHeight: false,
+                editMode: true,
+                showGridLines: false,
+                useCSSAuto: false,
+                minCellSize: 60,
+                maxCellSize: 200
+            });
+
+            // Create auto size dashboard
+            autoDashboard = new GridDashboard('#autoDashboard', 6, 4, {
+                cellWidth: 'auto',  // Responsive width
+                cellHeight: 'auto', // Responsive height
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: false
+            });
+
+            // Create comparison dashboards
+            fixedComparisonDashboard = new GridDashboard('#fixedComparison', 6, 4, {
+                cellWidth: 80,
+                    cellHeight: 80,
+                gap: 8,
+                autoResize: false,
+                enableDragDrop: false,
+                allowOverlapping: false,
+                autoResizeWidth: false,
+                autoResizeHeight: false,
+                editMode: false,
+                showGridLines: true,
+                useCSSAuto: false
+            });
+
+            autoComparisonDashboard = new GridDashboard('#autoComparison', 6, 4, {
+                cellWidth: 'auto',  // Responsive width
+                cellHeight: 'auto', // Responsive height
+                gap: 8,
+                autoResize: true,
+                enableDragDrop: false,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: false,
+                showGridLines: true
+            });
+
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Initialize viewport simulation
+            updateViewportSize(800);
+            
+            // Update stats
+            updateAllStats();
+        }
+
+        function setupEventListeners() {
+            // Fixed dashboard controls
+            document.getElementById('fixedCellSizeSlider').addEventListener('input', (e) => {
+                const size = parseInt(e.target.value);
+                document.getElementById('fixedCellSizeValue').textContent = size + 'px';
+                fixedDashboard.setCellSize(size);
+                updateFixedStats();
+            });
+
+            document.getElementById('fixedColumnsSlider').addEventListener('input', (e) => {
+                const cols = parseInt(e.target.value);
+                document.getElementById('fixedColumnsValue').textContent = cols;
+                fixedDashboard.setGridDimensions(cols, 4);
+                updateFixedStats();
+            });
+
+            document.getElementById('fixedEditToggle').addEventListener('click', (e) => {
+                fixedDashboard.toggleEditMode();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('fixedGridToggle').addEventListener('click', (e) => {
+                fixedDashboard.toggleGridLines();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('addFixedWidget').addEventListener('click', () => {
+                addSampleWidget(fixedDashboard);
+                updateFixedStats();
+            });
+
+            document.getElementById('clearFixed').addEventListener('click', () => {
+                clearDashboard(fixedDashboard);
+                updateFixedStats();
+            });
+
+            // Auto dashboard controls
+            document.getElementById('autoMinSizeSlider').addEventListener('input', (e) => {
+                const size = parseInt(e.target.value);
+                document.getElementById('autoMinSizeValue').textContent = size + 'px';
+                autoDashboard.options.minCellSize = size;
+                autoDashboard.updateLayout();
+                updateAutoStats();
+            });
+
+            document.getElementById('autoMaxSizeSlider').addEventListener('input', (e) => {
+                const size = parseInt(e.target.value);
+                document.getElementById('autoMaxSizeValue').textContent = size + 'px';
+                autoDashboard.options.maxCellSize = size;
+                autoDashboard.updateLayout();
+                updateAutoStats();
+            });
+
+            document.getElementById('autoEditToggle').addEventListener('click', (e) => {
+                autoDashboard.toggleEditMode();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('autoGridToggle').addEventListener('click', (e) => {
+                autoDashboard.toggleGridLines();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('addAutoWidget').addEventListener('click', () => {
+                addSampleWidget(autoDashboard);
+                updateAutoStats();
+            });
+
+            document.getElementById('clearAuto').addEventListener('click', () => {
+                clearDashboard(autoDashboard);
+                updateAutoStats();
+            });
+
+            // Viewport controls
+            document.getElementById('viewportSlider').addEventListener('input', (e) => {
+                const width = parseInt(e.target.value);
+                updateViewportSize(width);
+            });
+
+            document.getElementById('mobilePreset').addEventListener('click', () => {
+                updateViewportSize(375);
+                document.getElementById('viewportSlider').value = 375;
+            });
+
+            document.getElementById('tabletPreset').addEventListener('click', () => {
+                updateViewportSize(768);
+                document.getElementById('viewportSlider').value = 768;
+            });
+
+            document.getElementById('desktopPreset').addEventListener('click', () => {
+                updateViewportSize(1200);
+                document.getElementById('viewportSlider').value = 1200;
+            });
+
+            document.getElementById('addComparisonWidgets').addEventListener('click', () => {
+                addComparisonWidgets();
+                updateComparisonStats();
+            });
+
+            // Dashboard event listeners
+            [fixedDashboard, autoDashboard].forEach(dashboard => {
+                dashboard.container.addEventListener('gridDashboard:widgetCreated', () => {
+                    updateAllStats();
+                });
+                dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                    updateAllStats();
+                });
+                dashboard.container.addEventListener('gridDashboard:layoutChanged', () => {
+                    updateAllStats();
+                });
+            });
+
+            // Window resize listener for live responsive testing
+            window.addEventListener('resize', () => {
+                updateAllStats();
+                updateComparisonStats();
+            });
+        }
+
+        function addSampleWidget(dashboard) {
+            const widgetTypes = [
+                () => new TextWidget({
+                    title: 'Sample Text',
+                    text: 'This is a sample text widget that demonstrates responsive behavior.',
+                    width: 2,
+                    height: 2
+                }),
+                () => new ChartWidget({
+                    title: 'Sample Chart',
+                    width: 3,
+                    height: 2,
+                    chartType: 'bar'
+                }),
+                () => new GridWidget({
+                    title: 'Custom Widget',
+                    content: `
+                        <div style="padding: 20px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">📊</div>
+                            <h4>Responsive Widget</h4>
+                            <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                                This widget adapts to different grid sizes automatically.
+                            </p>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 2
+                })
+            ];
+
+            const randomWidget = widgetTypes[Math.floor(Math.random() * widgetTypes.length)]();
+            dashboard.addWidget(randomWidget);
+        }
+
+        function clearDashboard(dashboard) {
+            if (confirm('Clear all widgets?')) {
+                const widgets = Array.from(dashboard.widgets.keys());
+                widgets.forEach(id => dashboard.removeWidget(id));
+            }
+        }
+
+        function updateViewportSize(width) {
+            document.getElementById('viewportValue').textContent = width + 'px';
+            
+            // Update comparison containers
+            const fixed = document.getElementById('fixedViewport');
+            const auto = document.getElementById('autoViewport');
+            
+            fixed.style.width = width + 'px';
+            auto.style.width = width + 'px';
+            
+            // Force layout recalculation
+            setTimeout(() => {
+                if (fixedComparisonDashboard) fixedComparisonDashboard.updateLayout();
+                if (autoComparisonDashboard) autoComparisonDashboard.updateLayout();
+                updateComparisonStats();
+            }, 100);
+        }
+
+        function addComparisonWidgets() {
+            // Clear existing widgets
+            [fixedComparisonDashboard, autoComparisonDashboard].forEach(dashboard => {
+                const widgets = Array.from(dashboard.widgets.keys());
+                widgets.forEach(id => dashboard.removeWidget(id));
+            });
+
+            // Add same widgets to both dashboards
+            const widgets = [
+                new TextWidget({
+                    title: 'Text Widget',
+                    text: 'Sample content',
+                    width: 2,
+                    height: 1
+                }),
+                new GridWidget({
+                    title: 'Chart Widget',
+                    content: '<div style="padding: 20px; text-align: center;"><div style="font-size: 32px;">📊</div><div>Chart Data</div></div>',
+                    width: 2,
+                    height: 2
+                }),
+                new TextWidget({
+                    title: 'Info Widget',
+                    text: 'Info panel',
+                    width: 1,
+                    height: 1
+                }),
+                new GridWidget({
+                    title: 'Dashboard',
+                    content: '<div style="padding: 15px; text-align: center;"><div style="font-size: 24px;">📈</div><div>Dashboard</div></div>',
+                    width: 3,
+                    height: 2
+                })
+            ];
+
+            widgets.forEach(widget => {
+                fixedComparisonDashboard.addWidget(widget.clone());
+                autoComparisonDashboard.addWidget(widget.clone());
+            });
+        }
+
+        function updateFixedStats() {
+            const dimensions = fixedDashboard.getGridDimensions();
+            document.getElementById('fixedWidgets').textContent = fixedDashboard.widgets.size;
+            document.getElementById('fixedDimensions').textContent = `${dimensions.width}×${dimensions.height}`;
+            document.getElementById('fixedCellSize').textContent = fixedDashboard.options.cellSize + 'px';
+            updateDropIndicator('fixedIndicator', fixedDashboard.widgets.size > 0);
+        }
+
+        function updateAutoStats() {
+            const dimensions = autoDashboard.getGridDimensions();
+            document.getElementById('autoWidgets').textContent = autoDashboard.widgets.size;
+            document.getElementById('autoDimensions').textContent = autoDashboard.options.useCSSAuto ? 'Auto' : `${dimensions.width}×${dimensions.height}`;
+            
+            // Calculate actual cell size for auto dashboard
+            const container = autoDashboard.container;
+            const containerWidth = container.offsetWidth - 40; // Account for padding
+            const gap = autoDashboard.options.gap;
+            const minCells = Math.max(1, Math.floor((containerWidth + gap) / (autoDashboard.options.minCellSize + gap)));
+            const actualCellSize = Math.floor((containerWidth - (minCells - 1) * gap) / minCells);
+            
+            document.getElementById('autoActualSize').textContent = autoDashboard.options.useCSSAuto ? 
+                Math.min(actualCellSize, autoDashboard.options.maxCellSize) + 'px' : 
+                autoDashboard.options.cellSize + 'px';
+            
+            updateDropIndicator('autoIndicator', autoDashboard.widgets.size > 0);
+        }
+
+        function updateComparisonStats() {
+            // Calculate overflow and adaptation metrics
+            const fixedContainer = document.getElementById('fixedComparison');
+            const autoContainer = document.getElementById('autoComparison');
+            
+            const fixedWidth = fixedContainer.offsetWidth;
+            const autoWidth = autoContainer.offsetWidth;
+            
+            // Simulate overflow detection for fixed layout
+            const fixedCellSize = 80;
+            const gap = 8;
+            const fixedCols = Math.floor((fixedWidth + gap) / (fixedCellSize + gap));
+            const fixedOverflow = Math.max(0, 6 - fixedCols); // Assuming 6 desired columns
+            
+            // Auto adaptation count (how many times layout would change)
+            const minSize = 60;
+            const maxSize = 150;
+            const autoCols = Math.floor((autoWidth + gap) / (minSize + gap));
+            const autoAdaptations = Math.abs(autoCols - 6);
+            
+            // Responsive score calculation
+            const responsiveScore = Math.max(0, 100 - (fixedOverflow * 20) - (autoAdaptations * 5));
+            
+            document.getElementById('fixedOverflow').textContent = fixedOverflow;
+            document.getElementById('autoAdaptations').textContent = autoAdaptations;
+            document.getElementById('responsiveScore').textContent = responsiveScore + '%';
+            document.getElementById('layoutStability').textContent = autoAdaptations === 0 ? 'High' : autoAdaptations <= 2 ? 'Medium' : 'Low';
+        }
+
+        function updateDropIndicator(id, hasWidgets) {
+            const indicator = document.getElementById(id);
+            if (indicator) {
+                indicator.style.display = hasWidgets ? 'none' : 'block';
+            }
+        }
+
+        function updateAllStats() {
+            updateFixedStats();
+            updateAutoStats();
+        }
+
+        // Add CSS auto sizing demonstration
+        function demonstrateCSSAuto() {
+            const style = document.createElement('style');
+            style.textContent = `
+                .css-auto-demo {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                    gap: 10px;
+                    padding: 20px;
+                    background: #f8f9fa;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                }
+                
+                .css-auto-item {
+                    background: #4a90e2;
+                    color: white;
+                    padding: 20px;
+                    border-radius: 6px;
+                    text-align: center;
+                    font-weight: 600;
+                }
+                
+                @container (max-width: 400px) {
+                    .css-auto-demo {
+                        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+                    }
+                }
+                
+                @container (max-width: 300px) {
+                    .css-auto-demo {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initDemo();
+            demonstrateCSSAuto();
+        });
+
+        // Add resize observers for real-time updates
+        if ('ResizeObserver' in window) {
+            const resizeObserver = new ResizeObserver(() => {
+                updateAutoStats();
+                updateComparisonStats();
+            });
+            
+            // Observe auto dashboard container
+            const autoContainer = document.getElementById('autoDashboard');
+            if (autoContainer) {
+                resizeObserver.observe(autoContainer);
+            }
+        }
+    </script>
+</body>
+</html>

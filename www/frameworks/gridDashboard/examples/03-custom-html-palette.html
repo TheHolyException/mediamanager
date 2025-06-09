@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom HTML Palette Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 300px 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .palette-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 12px;
+        }
+
+        .dashboard-container {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .dashboard-controls {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #4a90e2;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .grid-dashboard-container {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            min-height: 400px;
+            position: relative;
+            overflow: auto;
+        }
+
+        .drop-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #6c757d;
+            pointer-events: none;
+            font-size: 16px;
+            opacity: 0.7;
+        }
+
+        .drop-indicator .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        /* Custom HTML Palette Styles */
+        .custom-palette-container {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .custom-widget-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .custom-widget-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .custom-widget-card:hover::before {
+            opacity: 1;
+        }
+
+        .custom-widget-card .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .custom-widget-card .card-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-widget-card .card-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .custom-widget-card .card-description {
+            font-size: 14px;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+
+        .custom-widget-card .card-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* Compact Widget Style */
+        .compact-widget {
+            background: white;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .compact-widget:hover {
+            border-color: #4a90e2;
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(74, 144, 226, 0.2);
+        }
+
+        .compact-widget .widget-icon {
+            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .compact-widget .widget-info {
+            flex: 1;
+        }
+
+        .compact-widget .widget-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 2px;
+        }
+
+        .compact-widget .widget-desc {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .stats-bar {
+            background: #e9ecef;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .stats-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stats-item .value {
+            font-weight: 600;
+            color: #4a90e2;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 280px 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .palette-section:first-child {
+                grid-column: 1 / -1;
+                max-height: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto 1fr;
+            }
+
+            .palette-section {
+                max-height: 250px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>🛠️ Custom HTML Palette</h1>
+        <p>Beautiful custom widget palettes with styled HTML elements</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>📖 What you'll learn:</h4>
+        <ul>
+            <li>Creating custom HTML widget palettes</li>
+            <li>Advanced styling and hover effects</li>
+            <li>Custom drag feedback system</li>
+            <li>Multiple palette styles (cards, compact, grid)</li>
+            <li>Widget registration with direct instances</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <!-- Standard Widget Palette -->
+        <div class="palette-section">
+            <div class="section-header">
+                <h2>🎨 Standard Palette</h2>
+                <p>Auto-generated widget items</p>
+            </div>
+            <div id="standard-palette"></div>
+        </div>
+
+        <!-- Custom HTML Widget Palette -->
+        <div class="palette-section">
+            <div class="section-header">
+                <h2>🛠️ Custom HTML Palette</h2>
+                <p>Custom styled widget items</p>
+            </div>
+            <div class="custom-palette-container">
+                <!-- Card Style Widgets -->
+                <div class="custom-widget-card" 
+                     widget-type="custom-dashboard"
+                     data-drag-image-html="<div style='padding: 10px; background: #667eea; color: white; border-radius: 6px; font-weight: bold;'>📊 Analytics Dashboard</div>">
+                    <div class="card-badge">Pro</div>
+                    <div class="card-header">
+                        <div class="card-icon">📊</div>
+                        <div class="card-title">Analytics Dashboard</div>
+                    </div>
+                    <div class="card-description">
+                        Advanced analytics with real-time data visualization and interactive charts.
+                    </div>
+                </div>
+
+                <div class="custom-widget-card" 
+                     widget-type="custom-chart"
+                     data-drag-image-html="<div style='padding: 10px; background: #ff6b6b; color: white; border-radius: 6px; font-weight: bold;'>📈 Interactive Chart</div>"
+                     style="background: linear-gradient(135deg, #ff6b6b 0%, #ffa726 100%);">
+                    <div class="card-badge">New</div>
+                    <div class="card-header">
+                        <div class="card-icon">📈</div>
+                        <div class="card-title">Interactive Chart</div>
+                    </div>
+                    <div class="card-description">
+                        Dynamic charts with hover effects, zoom, and multiple data series support.
+                    </div>
+                </div>
+
+                <!-- Compact Style Widgets -->
+                <div class="compact-widget" 
+                     widget-type="custom-notification"
+                     data-drag-image-html="<div style='padding: 8px 12px; background: #28a745; color: white; border-radius: 6px; font-weight: bold;'>🔔 Notifications</div>">
+                    <div class="widget-icon">🔔</div>
+                    <div class="widget-info">
+                        <div class="widget-name">Notifications</div>
+                        <div class="widget-desc">Real-time alerts and messages</div>
+                    </div>
+                </div>
+
+                <div class="compact-widget" 
+                     widget-type="custom-calendar"
+                     data-drag-image-html="<div style='padding: 8px 12px; background: #6f42c1; color: white; border-radius: 6px; font-weight: bold;'>📅 Calendar</div>">
+                    <div class="widget-icon">📅</div>
+                    <div class="widget-info">
+                        <div class="widget-name">Calendar</div>
+                        <div class="widget-desc">Schedule and event management</div>
+                    </div>
+                </div>
+
+                <div class="compact-widget" 
+                     widget-type="custom-weather"
+                     data-drag-image-html="<div style='padding: 8px 12px; background: #17a2b8; color: white; border-radius: 6px; font-weight: bold;'>🌤️ Weather</div>">
+                    <div class="widget-icon">🌤️</div>
+                    <div class="widget-info">
+                        <div class="widget-name">Weather</div>
+                        <div class="widget-desc">Current conditions and forecast</div>
+                    </div>
+                </div>
+
+                <div class="compact-widget" 
+                     widget-type="custom-notes"
+                     data-drag-image-html="<div style='padding: 8px 12px; background: #28a745; color: white; border-radius: 6px; font-weight: bold;'>📝 Notes</div>">
+                    <div class="widget-icon">📝</div>
+                    <div class="widget-info">
+                        <div class="widget-name">Notes</div>
+                        <div class="widget-desc">Rich text editor with save functionality</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard Area -->
+        <div class="main-content">
+            <div class="section-header">
+                <h2>📊 Interactive Dashboard</h2>
+                <p>Drag widgets from either palette</p>
+            </div>
+            
+            <div class="dashboard-controls">
+                <div class="control-group">
+                    <label>Edit Mode:</label>
+                    <div class="toggle-switch active" id="editModeToggle"></div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Grid Lines:</label>
+                    <div class="toggle-switch" id="gridLinesToggle"></div>
+                </div>
+                
+                <button class="btn" id="clearDashboard">🗑️ Clear</button>
+                <button class="btn secondary" id="refreshPalettes">🔄 Refresh</button>
+            </div>
+
+            <div class="dashboard-container">
+                <div class="grid-dashboard-container" id="dashboard">
+                    <div class="drop-indicator" id="dropIndicator">
+                        <div class="icon">🎯</div>
+                        <div>Drag widgets from any palette to get started</div>
+                        <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">
+                            Standard palette: drag or click • Custom palette: styled HTML items
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-bar">
+                <div class="stats-item">
+                    <span>Widgets:</span>
+                    <span class="value" id="widgetCount">0</span>
+                </div>
+                <div class="stats-item">
+                    <span>Grid Size:</span>
+                    <span class="value" id="gridSize">6×4</span>
+                </div>
+                <div class="stats-item">
+                    <span>Sources:</span>
+                    <span class="value">Standard + Custom HTML</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../customWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+    <script src="../widgetPalette.js"></script>
+    <script src="../customHTMLWidgetPalette.js"></script>
+
+    <script>
+        // Initialize the demo
+        let dashboard = null;
+        let standardPalette = null;
+        let customPalette = null;
+
+        function initDemo() {
+            // Create the dashboard
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: false,
+                useCSSAuto: true,
+                minCellSize: 80,
+                maxCellSize: 200
+            });
+
+            // Create standard widget palette
+            standardPalette = new WidgetPalette('#standard-palette', {
+                title: 'Standard Widgets',
+                layout: 'grid',
+                itemsPerRow: 2,
+                collapsible: false,
+                searchable: true,
+                categories: true,
+                showPreview: true
+            });
+
+            // Create custom HTML widget palette
+            customPalette = new CustomHTMLWidgetPalette('.custom-palette-container', {
+                widgetSelector: '[widget-type]',
+                enableHoverEffects: true,
+                enableClickToAdd: false,
+                autoSetDraggable: true,
+                enableCustomDragFeedback: true
+            });
+
+            // Register custom widget templates with the palette FIRST
+            registerCustomWidgetTemplates();
+
+            // Register both palettes with the dashboard
+            dashboard.registerWidgetPalette('standard-palette', standardPalette);
+            customPalette.registerDashboard(dashboard);
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Initialize controls and stats
+            updateControls();
+            updateStats();
+            updateDropIndicator();
+        }
+
+        function registerCustomWidgetTemplates() {
+            // Register widgets directly - much simpler!
+            
+            // Analytics Dashboard
+            customPalette.registerWidgetTemplate('custom-dashboard', new CustomWidget({
+                title: 'Analytics Dashboard',
+                content: `
+                    <div style="padding: 20px; text-align: center;">
+                        <div style="font-size: 24px; margin-bottom: 10px;">📊</div>
+                        <h3>Analytics Dashboard</h3>
+                        <p>Real-time data visualization</p>
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 4px; margin-top: 10px;">
+                            <small>Users: 1,234 • Sales: $45,678</small>
+                        </div>
+                    </div>
+                `,
+                width: 4,
+                height: 3,
+                headerConfig: {
+                    backgroundColor: '#667eea',
+                    icon: '📊'
+                }
+            }));
+
+            // Interactive Chart
+            customPalette.registerWidgetTemplate('custom-chart', new ChartWidget({
+                title: 'Interactive Chart',
+                width: 3,
+                height: 2,
+                chartType: 'line',
+                chartData: [10, 25, 40, 30, 55, 45, 60]
+            }));
+
+            // Notification Center
+            customPalette.registerWidgetTemplate('custom-notification', new TextWidget({
+                title: 'Notifications',
+                text: '🔔 3 new notifications\n📧 New message\n⚠️ System alert',
+                width: 2,
+                height: 2,
+                textAlign: 'left'
+            }));
+
+            // Event Calendar
+            customPalette.registerWidgetTemplate('custom-calendar', new GridWidget({
+                title: 'Calendar',
+                content: `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">📅</div>
+                        <h3>December 2024</h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                            <div style="margin-bottom: 8px;"><strong>Today:</strong> Team Meeting</div>
+                            <div style="margin-bottom: 8px;"><strong>Tomorrow:</strong> Project Review</div>
+                            <div><strong>Friday:</strong> Client Presentation</div>
+                        </div>
+                    </div>
+                `,
+                width: 3,
+                height: 3
+            }));
+
+            // Weather Widget
+            customPalette.registerWidgetTemplate('custom-weather', new GridWidget({
+                title: 'Weather',
+                content: `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">🌤️</div>
+                        <h2 style="margin-bottom: 5px;">22°C</h2>
+                        <p style="color: #666; margin-bottom: 15px;">Partly Cloudy</p>
+                        <div style="display: flex; justify-content: space-around; font-size: 12px;">
+                            <div>🌅 6:30</div>
+                            <div>💧 65%</div>
+                            <div>🌅 18:45</div>
+                        </div>
+                    </div>
+                `,
+                width: 2,
+                height: 2
+            }));
+
+            // Quick Notes with Event Handling
+            const notesWidget = new GridWidget({
+                title: 'Notes',
+                content: `
+                    <div style="padding: 15px;">
+                        <textarea id="notes-textarea" style="width: 100%; height: 80px; border: 1px solid #ddd; border-radius: 4px; padding: 8px; resize: none;" placeholder="Write your notes here...">Meeting notes:
+- Discuss Q4 targets
+- Review budget allocation
+- Plan team building event</textarea>
+                        <div style="margin-top: 10px; display: flex; gap: 5px;">
+                            <button id="save-btn" style="padding: 4px 8px; border: none; background: #4a90e2; color: white; border-radius: 3px; font-size: 12px;">Save</button>
+                            <button id="clear-btn" style="padding: 4px 8px; border: 1px solid #ddd; background: white; border-radius: 3px; font-size: 12px;">Clear</button>
+                        </div>
+                    </div>
+                `,
+                width: 3,
+                height: 2
+            });
+
+            // Override the onRender method to add event listeners
+            notesWidget.onRender = function() {
+                // Call the parent onRender first
+                GridWidget.prototype.onRender.call(this);
+                
+                // Add event listeners for buttons
+                const saveBtn = this.element.querySelector('#save-btn');
+                const clearBtn = this.element.querySelector('#clear-btn');
+                const textarea = this.element.querySelector('#notes-textarea');
+                
+                if (saveBtn) {
+                    saveBtn.addEventListener('click', () => {
+                        const content = textarea.value;
+                        
+                        // Save to localStorage
+                        localStorage.setItem('widget-notes', content);
+                        
+                        // Visual feedback
+                        saveBtn.textContent = 'Saved!';
+                        saveBtn.style.background = '#28a745';
+                        setTimeout(() => {
+                            saveBtn.textContent = 'Save';
+                            saveBtn.style.background = '#4a90e2';
+                        }, 1000);
+                    });
+                }
+                
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', () => {
+                        if (confirm('Clear all notes?')) {
+                            textarea.value = '';
+                        }
+                    });
+                }
+                
+                // Load saved notes on render
+                const savedNotes = localStorage.getItem('widget-notes');
+                if (savedNotes && textarea) {
+                    textarea.value = savedNotes;
+                }
+            };
+
+            customPalette.registerWidgetTemplate('custom-notes', notesWidget);
+        }
+
+        function setupEventListeners() {
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', (e) => {
+                const widget = e.detail.widget;
+                widget.element.style.animation = 'widgetCreate 0.4s ease-out';
+                
+                updateStats();
+                updateDropIndicator();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:layoutChanged', () => {
+                updateStats();
+            });
+
+            // Custom palette events
+            customPalette.container.addEventListener('customWidgetPalette:dragStart', (e) => {
+                console.log('Custom palette drag start:', e.detail);
+            });
+
+            customPalette.container.addEventListener('customWidgetPalette:widgetAdded', (e) => {
+                console.log('Widget added from custom palette:', e.detail);
+            });
+
+            // Control event listeners
+            document.getElementById('editModeToggle').addEventListener('click', () => {
+                dashboard.toggleEditMode();
+                updateControls();
+                updateStats();
+            });
+
+            document.getElementById('gridLinesToggle').addEventListener('click', () => {
+                dashboard.toggleGridLines();
+                updateControls();
+            });
+
+            document.getElementById('clearDashboard').addEventListener('click', () => {
+                if (confirm('Clear all widgets?')) {
+                    const widgets = Array.from(dashboard.widgets.keys());
+                    widgets.forEach(id => dashboard.removeWidget(id));
+                    updateStats();
+                    updateDropIndicator();
+                }
+            });
+
+            document.getElementById('refreshPalettes').addEventListener('click', () => {
+                standardPalette.renderPalette();
+                customPalette.refresh();
+                console.log('Palettes refreshed');
+            });
+        }
+
+        function updateControls() {
+            const editModeToggle = document.getElementById('editModeToggle');
+            const gridLinesToggle = document.getElementById('gridLinesToggle');
+            
+            editModeToggle.classList.toggle('active', dashboard.getEditMode());
+            gridLinesToggle.classList.toggle('active', dashboard.getShowGridLines());
+        }
+
+        function updateStats() {
+            document.getElementById('widgetCount').textContent = dashboard.widgets.size;
+            
+            const dimensions = dashboard.getGridDimensions();
+            document.getElementById('gridSize').textContent = `${dimensions.width}×${dimensions.height}`;
+        }
+
+        function updateDropIndicator() {
+            const indicator = document.getElementById('dropIndicator');
+            const hasWidgets = dashboard.widgets.size > 0;
+            indicator.style.display = hasWidgets ? 'none' : 'block';
+        }
+
+        // Add some demo widgets after initialization
+        function addDemoWidgets() {
+            setTimeout(() => {
+                // Add a welcome widget
+                const welcomeWidget = new TextWidget({
+                    title: 'Welcome! 👋',
+                    text: 'Try both widget palettes!\n\n• Left: Standard auto-generated\n• Center: Custom HTML styled\n• Drag to add widgets',
+                    textAlign: 'left',
+                    width: 3,
+                    height: 2
+                });
+                dashboard.addWidget(welcomeWidget, { x: 0, y: 0 });
+
+                updateStats();
+                updateDropIndicator();
+            }, 500);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initDemo();
+            addDemoWidgets();
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 'e':
+                        e.preventDefault();
+                        dashboard.toggleEditMode();
+                        updateControls();
+                        break;
+                    case 'g':
+                        e.preventDefault();
+                        dashboard.toggleGridLines();
+                        updateControls();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        standardPalette.renderPalette();
+                        customPalette.refresh();
+                        break;
+                }
+            }
+        });
+    </script>
+
+    <style>
+        @keyframes widgetCreate {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) translateY(-20px);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    </style>
+</body>
+</html>

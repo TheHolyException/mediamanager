@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cell Dimensions Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../gridDashboard.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 12px;
+        }
+
+        .controls-panel {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        .control-group {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .control-group h4 {
+            margin-bottom: 12px;
+            color: #495057;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .range-control {
+            margin-bottom: 15px;
+        }
+
+        .range-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: #495057;
+        }
+
+        .range-value {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .range-input {
+            width: 100%;
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .range-input::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #4a90e2;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .range-input::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #4a90e2;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .preset-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 8px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: background 0.2s;
+        }
+
+        .preset-btn:hover {
+            background: #5a6268;
+        }
+
+        .preset-btn.active {
+            background: #4a90e2;
+        }
+
+        .control-btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-bottom: 8px;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .control-btn:hover {
+            background: #357abd;
+        }
+
+        .control-btn.danger {
+            background: #dc3545;
+        }
+
+        .control-btn.danger:hover {
+            background: #c82333;
+        }
+
+        .control-btn.success {
+            background: #28a745;
+        }
+
+        .control-btn.success:hover {
+            background: #218838;
+        }
+
+        .dashboard-area {
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .dashboard-controls {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .dimension-display {
+            background: #e8f5e8;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        .dimension-display h5 {
+            color: #2e7d32;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .dimension-values {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .dimension-value {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #1b5e20;
+        }
+
+        .code-example {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            margin-top: 10px;
+            overflow-x: auto;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+                max-height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>📏 Cell Dimensions Control</h1>
+        <p>Configure cell width and height independently</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>🆕 Enhanced Cell Dimension API:</h4>
+        <ul>
+            <li><strong>setCellWidth(width|"auto")</strong> - Set cell width (pixels or responsive)</li>
+            <li><strong>setCellHeight(height|"auto")</strong> - Set cell height (pixels or responsive)</li>
+            <li><strong>getCellWidth() / getCellHeight()</strong> - Get current dimensions</li>
+            <li><strong>setCellDimensions(width, height)</strong> - Set both at once</li>
+            <li><strong>setAutoMode(enabled)</strong> - Toggle auto mode for both dimensions</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section-header">
+                <h2>📏 Dimension Controls</h2>
+                <p>Adjust cell width and height</p>
+            </div>
+            <div class="controls-panel">
+                <div class="control-group">
+                    <h4><i class="fas fa-arrows-alt-h"></i> Cell Width</h4>
+                    <div class="range-control">
+                        <div class="range-label">
+                            <span>Width</span>
+                            <span class="range-value" id="widthValue">100px</span>
+                        </div>
+                        <input type="range" class="range-input" id="widthSlider" 
+                               min="50" max="300" value="100" step="10">
+                    </div>
+                    <div class="preset-buttons">
+                        <button class="preset-btn" onclick="setWidth(80)">Small</button>
+                        <button class="preset-btn active" onclick="setWidth(100)">Default</button>
+                        <button class="preset-btn" onclick="setWidth(150)">Large</button>
+                        <button class="preset-btn" onclick="setWidth(200)">XL</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-arrows-alt-v"></i> Cell Height</h4>
+                    <div class="range-control">
+                        <div class="range-label">
+                            <span>Height</span>
+                            <span class="range-value" id="heightValue">100px</span>
+                        </div>
+                        <input type="range" class="range-input" id="heightSlider" 
+                               min="50" max="300" value="100" step="10">
+                    </div>
+                    <div class="preset-buttons">
+                        <button class="preset-btn" onclick="setHeight(60)">Thin</button>
+                        <button class="preset-btn active" onclick="setHeight(100)">Square</button>
+                        <button class="preset-btn" onclick="setHeight(150)">Tall</button>
+                        <button class="preset-btn" onclick="setHeight(200)">XL</button>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-th"></i> Aspect Ratios</h4>
+                    <button class="control-btn" onclick="setAspectRatio(1, 1)">1:1 Square</button>
+                    <button class="control-btn" onclick="setAspectRatio(16, 9)">16:9 Wide</button>
+                    <button class="control-btn" onclick="setAspectRatio(4, 3)">4:3 Classic</button>
+                    <button class="control-btn" onclick="setAspectRatio(3, 4)">3:4 Portrait</button>
+                    <button class="control-btn" onclick="setAspectRatio(2, 1)">2:1 Banner</button>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-info-circle"></i> Current Dimensions</h4>
+                    <div class="dimension-display">
+                        <h5>Active Cell Size</h5>
+                        <div class="dimension-values">
+                            <div class="dimension-value">W: <span id="currentWidth">100px</span></div>
+                            <div class="dimension-value">H: <span id="currentHeight">100px</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-magic"></i> Auto Mode</h4>
+                    <button class="control-btn" onclick="setAutoWidth()">Auto Width</button>
+                    <button class="control-btn" onclick="setAutoHeight()">Auto Height</button>
+                    <button class="control-btn" onclick="setAutoBoth()">Auto Both</button>
+                    <button class="control-btn" onclick="setFixedBoth()">Fixed Both</button>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-plus"></i> Widget Actions</h4>
+                    <button class="control-btn success" onclick="addSampleWidget()">Add Widget</button>
+                    <button class="control-btn" onclick="addMultipleWidgets()">Add Multiple</button>
+                    <button class="control-btn danger" onclick="clearDashboard()">Clear All</button>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-code"></i> API Example</h4>
+                    <div class="code-example" id="codeExample">
+// Set dimensions independently
+dashboard.setCellWidth(120);
+dashboard.setCellHeight(80);
+
+// Or use "auto" for responsive
+dashboard.setCellWidth("auto");
+dashboard.setCellHeight("auto");
+
+// Set both at once
+dashboard.setCellDimensions(120, 80);
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section-header">
+                <h2>📊 Dynamic Grid</h2>
+                <p>See cell dimensions change in real-time</p>
+            </div>
+            
+            <div class="dashboard-controls">
+                <button class="btn" onclick="toggleCSSAuto()">Toggle CSS Auto Mode</button>
+                <button class="btn" onclick="showDimensions()">Show Dimensions</button>
+                <button class="btn" onclick="resetToDefaults()">Reset Defaults</button>
+                <div style="margin-left: auto;">
+                    <span style="font-size: 14px; color: #666;">
+                        Mode: <span id="modeDisplay">CSS Auto</span> | 
+                        Grid: <span id="gridInfo">6x4</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="dashboard-area">
+                <div id="dashboard" style="width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+
+    <script>
+        let dashboard = null;
+        let widgetCounter = 0;
+
+        function initDemo() {
+            // Create the dashboard with CSS Auto disabled to show fixed dimensions
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                editMode: true,
+                showGridLines: true,
+                useCSSAuto: false  // Start with fixed sizing to demo cell dimensions
+            });
+
+            // Set up event listeners
+            setupEventListeners();
+            updateDisplays();
+        }
+
+        function setupEventListeners() {
+            // Range sliders
+            document.getElementById('widthSlider').addEventListener('input', (e) => {
+                setWidth(parseInt(e.target.value));
+            });
+
+            document.getElementById('heightSlider').addEventListener('input', (e) => {
+                setHeight(parseInt(e.target.value));
+            });
+
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:cellWidthChanged', (event) => {
+                console.log('Cell width changed:', event.detail);
+                updateDisplays();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:cellHeightChanged', (event) => {
+                console.log('Cell height changed:', event.detail);
+                updateDisplays();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:cellDimensionsChanged', (event) => {
+                console.log('Cell dimensions changed:', event.detail);
+                updateDisplays();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:cssAutoModeChanged', (event) => {
+                console.log('CSS Auto mode changed:', event.detail);
+                updateDisplays();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', () => {
+                updateWidgetCount();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                updateWidgetCount();
+            });
+        }
+
+        function setWidth(width) {
+            dashboard.setCellWidth(width);
+            document.getElementById('widthSlider').value = width;
+            updatePresetButtons('width', width);
+        }
+
+        function setHeight(height) {
+            dashboard.setCellHeight(height);
+            document.getElementById('heightSlider').value = height;
+            updatePresetButtons('height', height);
+        }
+
+        function setAspectRatio(widthRatio, heightRatio) {
+            // Base size for aspect ratio calculations
+            const baseSize = 100;
+            const width = Math.round(baseSize * Math.sqrt(widthRatio / heightRatio));
+            const height = Math.round(baseSize * Math.sqrt(heightRatio / widthRatio));
+            
+            dashboard.setCellDimensions(width, height);
+            document.getElementById('widthSlider').value = width;
+            document.getElementById('heightSlider').value = height;
+            updatePresetButtons('both', { width, height });
+        }
+
+        function updatePresetButtons(type, value) {
+            // Update width presets
+            if (type === 'width' || type === 'both') {
+                const widthValue = type === 'both' ? value.width : value;
+                document.querySelectorAll('.control-group:nth-child(1) .preset-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                // Highlight if matches a preset
+                const widthPresets = { 80: 0, 100: 1, 150: 2, 200: 3 };
+                if (widthPresets[widthValue] !== undefined) {
+                    document.querySelectorAll('.control-group:nth-child(1) .preset-btn')[widthPresets[widthValue]].classList.add('active');
+                }
+            }
+
+            // Update height presets
+            if (type === 'height' || type === 'both') {
+                const heightValue = type === 'both' ? value.height : value;
+                document.querySelectorAll('.control-group:nth-child(2) .preset-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                // Highlight if matches a preset
+                const heightPresets = { 60: 0, 100: 1, 150: 2, 200: 3 };
+                if (heightPresets[heightValue] !== undefined) {
+                    document.querySelectorAll('.control-group:nth-child(2) .preset-btn')[heightPresets[heightValue]].classList.add('active');
+                }
+            }
+        }
+
+        function updateDisplays() {
+            const dimensions = dashboard.getCellDimensions();
+            
+            // Update range values
+            document.getElementById('widthValue').textContent = `${dimensions.width}px`;
+            document.getElementById('heightValue').textContent = `${dimensions.height}px`;
+            
+            // Update current dimensions display
+            document.getElementById('currentWidth').textContent = `${dimensions.width}px`;
+            document.getElementById('currentHeight').textContent = `${dimensions.height}px`;
+            
+            // Update mode display
+            document.getElementById('modeDisplay').textContent = dashboard.getCSSAutoMode() ? 'CSS Auto' : 'Fixed Size';
+            
+            // Update code example
+            updateCodeExample(dimensions.width, dimensions.height);
+        }
+
+        function updateCodeExample(width, height) {
+            const code = `// Set dimensions independently
+dashboard.setCellWidth(${width});
+dashboard.setCellHeight(${height});
+
+// Or set both at once
+dashboard.setCellDimensions(${width}, ${height});
+
+// Get current dimensions
+const dims = dashboard.getCellDimensions();
+// Returns: { width: ${width}, height: ${height} }`;
+            
+            document.getElementById('codeExample').textContent = code;
+        }
+
+        function addSampleWidget() {
+            widgetCounter++;
+            
+            const dimensions = dashboard.getCellDimensions();
+            const widget = new GridWidget({
+                title: `Widget ${widgetCounter}`,
+                content: `
+                    <div style="text-align: center; padding: 15px; height: 100%;">
+                        <h4>Sample ${widgetCounter}</h4>
+                        <div style="margin: 10px 0; font-size: 12px; color: #666;">
+                            <div>Cell: ${dimensions.width}×${dimensions.height}px</div>
+                            <div>Grid: ${dashboard.gridWidth}×${dashboard.gridHeight}</div>
+                        </div>
+                        <div style="font-size: 11px; color: #999; position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);">
+                            Created: ${new Date().toLocaleTimeString()}
+                        </div>
+                    </div>
+                `,
+                width: Math.floor(Math.random() * 2) + 1,
+                height: Math.floor(Math.random() * 2) + 1
+            });
+
+            dashboard.addWidget(widget);
+        }
+
+        function addMultipleWidgets() {
+            for (let i = 0; i < 4; i++) {
+                setTimeout(() => addSampleWidget(), i * 200);
+            }
+        }
+
+        function clearDashboard() {
+            if (confirm('Clear all widgets?')) {
+                const widgets = Array.from(dashboard.widgets.keys());
+                widgets.forEach(id => dashboard.removeWidget(id));
+                widgetCounter = 0;
+            }
+        }
+
+        function toggleCSSAuto() {
+            dashboard.toggleCSSAutoMode();
+            updateDisplays();
+        }
+
+        function showDimensions() {
+            const dims = dashboard.getCellDimensions();
+            const mode = dashboard.getCSSAutoMode() ? 'CSS Auto' : 'Fixed Size';
+            alert(`Current Cell Dimensions:\n\nWidth: ${dims.width}px\nHeight: ${dims.height}px\nMode: ${mode}\n\nGrid: ${dashboard.gridWidth}×${dashboard.gridHeight} cells`);
+        }
+
+        function resetToDefaults() {
+            dashboard.setCellDimensions(100, 100);
+            dashboard.setCSSAutoMode(false);
+            document.getElementById('widthSlider').value = 100;
+            document.getElementById('heightSlider').value = 100;
+            updatePresetButtons('both', { width: 100, height: 100 });
+        }
+
+        function updateWidgetCount() {
+            const count = dashboard.widgets.size;
+            document.getElementById('gridInfo').textContent = `${dashboard.gridWidth}×${dashboard.gridHeight} (${count} widgets)`;
+        }
+
+        function setAutoWidth() {
+            dashboard.setCellWidth('auto');
+            updateDisplays();
+        }
+
+        function setAutoHeight() {
+            dashboard.setCellHeight('auto');
+            updateDisplays();
+        }
+
+        function setAutoBoth() {
+            dashboard.setCellDimensions('auto', 'auto');
+            updateDisplays();
+        }
+
+        function setFixedBoth() {
+            dashboard.setCellDimensions(100, 100);
+            document.getElementById('widthSlider').value = 100;
+            document.getElementById('heightSlider').value = 100;
+            updateDisplays();
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initDemo();
+            
+            // Add some initial widgets with varying sizes
+            setTimeout(() => {
+                addSampleWidget();
+                
+                setTimeout(() => {
+                    addSampleWidget();
+                    
+                    setTimeout(() => {
+                        addSampleWidget();
+                    }, 300);
+                }, 300);
+            }, 500);
+        });
+    </script>
+</body>
+</html>

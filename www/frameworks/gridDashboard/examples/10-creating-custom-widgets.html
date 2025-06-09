@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creating Custom Widgets Tutorial</title>
+    <link rel="stylesheet" href="../gridDashboard.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 12px;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .tutorial-panel {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tutorial-step {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+
+        .step-header {
+            background: #4a90e2;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .step-header:hover {
+            background: #357abd;
+        }
+
+        .step-number {
+            background: rgba(255,255,255,0.2);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .step-title {
+            flex: 1;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .step-indicator {
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+
+        .step-content {
+            padding: 20px;
+            display: none;
+        }
+
+        .step-content.active {
+            display: block;
+        }
+
+        .step-header.active .step-indicator {
+            transform: rotate(180deg);
+        }
+
+        .code-block {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            margin: 15px 0;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .code-block .line-numbers {
+            position: absolute;
+            left: 0;
+            top: 20px;
+            padding: 0 15px;
+            color: #6a737d;
+            font-size: 12px;
+            line-height: 1.6;
+            user-select: none;
+        }
+
+        .code-block .code-content {
+            padding-left: 50px;
+        }
+
+        .code-block .keyword {
+            color: #569cd6;
+        }
+
+        .code-block .string {
+            color: #ce9178;
+        }
+
+        .code-block .comment {
+            color: #6a9955;
+        }
+
+        .code-block .function {
+            color: #dcdcaa;
+        }
+
+        .code-block .variable {
+            color: #9cdcfe;
+        }
+
+        .try-it-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 15px;
+            transition: all 0.2s ease;
+        }
+
+        .try-it-button:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .widget-preview {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            text-align: center;
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .widget-preview.populated {
+            border: 2px solid #28a745;
+            background: #f8fff9;
+        }
+
+        .dashboard-area {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .dashboard-controls {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.success {
+            background: #28a745;
+        }
+
+        .drop-zone {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .drop-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #6c757d;
+            pointer-events: none;
+        }
+
+        .drop-indicator .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .example-output {
+            background: #e7f3ff;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .example-output h5 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+
+        .tip {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #f39c12;
+        }
+
+        .tip .tip-icon {
+            color: #f39c12;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .warning {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 15px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .warning .warning-icon {
+            color: #dc3545;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+                max-height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>🛠️ Creating Custom Widgets</h1>
+        <p>Step-by-step tutorial for building your own custom widgets</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>📖 What you'll learn:</h4>
+        <ul>
+            <li>Building custom widgets from scratch</li>
+            <li>Widget lifecycle and event handling</li>
+            <li>Advanced widget patterns and inheritance</li>
+            <li>Data binding and state management</li>
+            <li>Performance optimization techniques</li>
+            <li>Testing and debugging custom widgets</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section-header">
+                <h2>🛠️ Widget Tutorial</h2>
+                <p>Follow the steps to create custom widgets</p>
+            </div>
+            <div class="tutorial-panel">
+                <!-- Step 1: Basic Widget -->
+                <div class="tutorial-step">
+                    <div class="step-header" onclick="toggleStep(1)">
+                        <div class="step-number">1</div>
+                        <div class="step-title">Basic Custom Widget</div>
+                        <div class="step-indicator">▼</div>
+                    </div>
+                    <div class="step-content" id="step1">
+                        <p>Let's start by creating a simple custom widget that displays a message.</p>
+                        
+                        <div class="code-block">
+                            <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12</div>
+                            <div class="code-content">
+<span class="comment">// Create a basic custom widget</span>
+<span class="keyword">const</span> <span class="variable">myWidget</span> = <span class="keyword">new</span> <span class="function">GridWidget</span>({
+    <span class="variable">title</span>: <span class="string">'My First Widget'</span>,
+    <span class="variable">content</span>: <span class="string">`
+        &lt;div style="padding: 20px; text-align: center;"&gt;
+            &lt;h3&gt;Hello World!&lt;/h3&gt;
+            &lt;p&gt;This is my first custom widget.&lt;/p&gt;
+        &lt;/div&gt;
+    `</span>,
+    <span class="variable">width</span>: <span class="string">2</span>,
+    <span class="variable">height</span>: <span class="string">2</span>
+});
+                            </div>
+                        </div>
+
+                        <div class="tip">
+                            <span class="tip-icon">💡</span>
+                            The content property accepts HTML strings, allowing you to create rich widget interfaces.
+                        </div>
+
+                        <button class="try-it-button" onclick="createBasicWidget()">Try It: Create Basic Widget</button>
+                        
+                        <div class="widget-preview" id="preview1">
+                            <div style="color: #6c757d;">Click "Try It" to see the widget preview</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Widget with Events -->
+                <div class="tutorial-step">
+                    <div class="step-header" onclick="toggleStep(2)">
+                        <div class="step-number">2</div>
+                        <div class="step-title">Adding Event Handlers</div>
+                        <div class="step-indicator">▼</div>
+                    </div>
+                    <div class="step-content" id="step2">
+                        <p>Now let's add interactive elements with event handlers using the onRender method.</p>
+                        
+                        <div class="code-block">
+                            <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21<br>22</div>
+                            <div class="code-content">
+<span class="keyword">const</span> <span class="variable">counterWidget</span> = <span class="keyword">new</span> <span class="function">GridWidget</span>({
+    <span class="variable">title</span>: <span class="string">'Counter Widget'</span>,
+    <span class="variable">content</span>: <span class="string">`
+        &lt;div style="padding: 20px; text-align: center;"&gt;
+            &lt;div class="counter-display" style="font-size: 32px; font-weight: bold; margin-bottom: 15px;"&gt;0&lt;/div&gt;
+            &lt;button class="counter-btn increment" style="margin: 5px; padding: 8px 16px;"&gt;+&lt;/button&gt;
+            &lt;button class="counter-btn decrement" style="margin: 5px; padding: 8px 16px;"&gt;-&lt;/button&gt;
+            &lt;button class="counter-btn reset" style="margin: 5px; padding: 8px 16px;"&gt;Reset&lt;/button&gt;
+        &lt;/div&gt;
+    `</span>,
+    <span class="variable">width</span>: <span class="string">2</span>,
+    <span class="variable">height</span>: <span class="string">2</span>
+});
+
+<span class="comment">// Add event handling</span>
+<span class="variable">counterWidget</span>.<span class="function">onRender</span> = <span class="keyword">function</span>() {
+    <span class="keyword">let</span> <span class="variable">count</span> = <span class="string">0</span>;
+    <span class="keyword">const</span> <span class="variable">display</span> = <span class="keyword">this</span>.<span class="variable">element</span>.<span class="function">querySelector</span>(<span class="string">'.counter-display'</span>);
+    
+    <span class="keyword">this</span>.<span class="variable">element</span>.<span class="function">addEventListener</span>(<span class="string">'click'</span>, (<span class="variable">e</span>) => {
+        <span class="keyword">if</span> (<span class="variable">e</span>.<span class="variable">target</span>.<span class="function">classList</span>.<span class="function">contains</span>(<span class="string">'increment'</span>)) <span class="variable">count</span>++;
+        <span class="keyword">if</span> (<span class="variable">e</span>.<span class="variable">target</span>.<span class="function">classList</span>.<span class="function">contains</span>(<span class="string">'decrement'</span>)) <span class="variable">count</span>--;
+        <span class="keyword">if</span> (<span class="variable">e</span>.<span class="variable">target</span>.<span class="function">classList</span>.<span class="function">contains</span>(<span class="string">'reset'</span>)) <span class="variable">count</span> = <span class="string">0</span>;
+        <span class="variable">display</span>.<span class="variable">textContent</span> = <span class="variable">count</span>;
+    });
+};
+                            </div>
+                        </div>
+
+                        <div class="tip">
+                            <span class="tip-icon">💡</span>
+                            The onRender method is called after the widget is added to the dashboard. Use it to set up event listeners and initialize widget state.
+                        </div>
+
+                        <button class="try-it-button" onclick="createCounterWidget()">Try It: Create Counter Widget</button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Custom Widget Class -->
+                <div class="tutorial-step">
+                    <div class="step-header" onclick="toggleStep(3)">
+                        <div class="step-number">3</div>
+                        <div class="step-title">Custom Widget Class</div>
+                        <div class="step-indicator">▼</div>
+                    </div>
+                    <div class="step-content" id="step3">
+                        <p>Create a reusable widget class with custom methods and properties.</p>
+                        
+                        <div class="code-block">
+                            <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21<br>22<br>23<br>24<br>25<br>26<br>27<br>28<br>29<br>30</div>
+                            <div class="code-content">
+<span class="keyword">class</span> <span class="function">TaskWidget</span> <span class="keyword">extends</span> <span class="function">GridWidget</span> {
+    <span class="function">constructor</span>(<span class="variable">options</span>) {
+        <span class="keyword">super</span>({
+            <span class="variable">title</span>: <span class="string">'Task Manager'</span>,
+            <span class="variable">content</span>: <span class="string">`
+                &lt;div style="padding: 15px;"&gt;
+                    &lt;input type="text" class="task-input" placeholder="Add new task..." style="width: 100%; margin-bottom: 10px; padding: 8px;"&gt;
+                    &lt;div class="task-list"&gt;&lt;/div&gt;
+                &lt;/div&gt;
+            `</span>,
+            <span class="variable">width</span>: <span class="string">3</span>,
+            <span class="variable">height</span>: <span class="string">3</span>,
+            ...<span class="variable">options</span>
+        });
+        
+        <span class="keyword">this</span>.<span class="variable">tasks</span> = [];
+    }
+    
+    <span class="function">onRender</span>() {
+        <span class="keyword">super</span>.<span class="function">onRender</span>();
+        
+        <span class="keyword">const</span> <span class="variable">input</span> = <span class="keyword">this</span>.<span class="variable">element</span>.<span class="function">querySelector</span>(<span class="string">'.task-input'</span>);
+        <span class="variable">input</span>.<span class="function">addEventListener</span>(<span class="string">'keypress'</span>, (<span class="variable">e</span>) => {
+            <span class="keyword">if</span> (<span class="variable">e</span>.<span class="variable">key</span> === <span class="string">'Enter'</span> && <span class="variable">input</span>.<span class="variable">value</span>.<span class="function">trim</span>()) {
+                <span class="keyword">this</span>.<span class="function">addTask</span>(<span class="variable">input</span>.<span class="variable">value</span>.<span class="function">trim</span>());
+                <span class="variable">input</span>.<span class="variable">value</span> = <span class="string">''</span>;
+            }
+        });
+        
+        <span class="keyword">this</span>.<span class="function">renderTasks</span>();
+    }
+    
+    <span class="function">addTask</span>(<span class="variable">text</span>) {
+        <span class="keyword">this</span>.<span class="variable">tasks</span>.<span class="function">push</span>({ <span class="variable">text</span>, <span class="variable">completed</span>: <span class="keyword">false</span>, <span class="variable">id</span>: <span class="function">Date</span>.<span class="function">now</span>() });
+        <span class="keyword">this</span>.<span class="function">renderTasks</span>();
+    }
+    
+    <span class="function">renderTasks</span>() {
+        <span class="comment">// Implementation for rendering task list...</span>
+    }
+}
+                            </div>
+                        </div>
+
+                        <button class="try-it-button" onclick="createTaskWidget()">Try It: Create Task Widget</button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Data Persistence -->
+                <div class="tutorial-step">
+                    <div class="step-header" onclick="toggleStep(4)">
+                        <div class="step-number">4</div>
+                        <div class="step-title">Data Persistence</div>
+                        <div class="step-indicator">▼</div>
+                    </div>
+                    <div class="step-content" id="step4">
+                        <p>Add data persistence using localStorage to maintain widget state.</p>
+                        
+                        <div class="code-block">
+                            <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20</div>
+                            <div class="code-content">
+<span class="keyword">class</span> <span class="function">PersistentWidget</span> <span class="keyword">extends</span> <span class="function">GridWidget</span> {
+    <span class="function">constructor</span>(<span class="variable">options</span>) {
+        <span class="keyword">super</span>(<span class="variable">options</span>);
+        <span class="keyword">this</span>.<span class="variable">storageKey</span> = <span class="string">`widget-${</span><span class="keyword">this</span>.<span class="variable">id</span><span class="string">}`</span>;
+    }
+    
+    <span class="function">saveData</span>(<span class="variable">data</span>) {
+        <span class="function">localStorage</span>.<span class="function">setItem</span>(<span class="keyword">this</span>.<span class="variable">storageKey</span>, <span class="function">JSON</span>.<span class="function">stringify</span>(<span class="variable">data</span>));
+    }
+    
+    <span class="function">loadData</span>() {
+        <span class="keyword">const</span> <span class="variable">saved</span> = <span class="function">localStorage</span>.<span class="function">getItem</span>(<span class="keyword">this</span>.<span class="variable">storageKey</span>);
+        <span class="keyword">return</span> <span class="variable">saved</span> ? <span class="function">JSON</span>.<span class="function">parse</span>(<span class="variable">saved</span>) : <span class="keyword">null</span>;
+    }
+    
+    <span class="function">onRemove</span>() {
+        <span class="comment">// Clean up when widget is removed</span>
+        <span class="function">localStorage</span>.<span class="function">removeItem</span>(<span class="keyword">this</span>.<span class="variable">storageKey</span>);
+        <span class="keyword">super</span>.<span class="function">onRemove</span>();
+    }
+}
+                            </div>
+                        </div>
+
+                        <button class="try-it-button" onclick="createPersistentWidget()">Try It: Create Persistent Widget</button>
+                    </div>
+                </div>
+
+                <!-- Step 5: Advanced Features -->
+                <div class="tutorial-step">
+                    <div class="step-header" onclick="toggleStep(5)">
+                        <div class="step-number">5</div>
+                        <div class="step-title">Advanced Features</div>
+                        <div class="step-indicator">▼</div>
+                    </div>
+                    <div class="step-content" id="step5">
+                        <p>Add advanced features like real-time updates, API integration, and custom styling.</p>
+                        
+                        <div class="code-block">
+                            <div class="line-numbers">1<br>2<br>3<br>4<br>5<br>6<br>7<br>8<br>9<br>10<br>11<br>12<br>13<br>14<br>15<br>16<br>17<br>18<br>19<br>20<br>21<br>22<br>23<br>24<br>25</div>
+                            <div class="code-content">
+<span class="keyword">class</span> <span class="function">WeatherWidget</span> <span class="keyword">extends</span> <span class="function">GridWidget</span> {
+    <span class="function">constructor</span>(<span class="variable">options</span>) {
+        <span class="keyword">super</span>({
+            <span class="variable">title</span>: <span class="string">'Weather'</span>,
+            <span class="variable">content</span>: <span class="string">`&lt;div class="weather-container" style="padding: 20px;"&gt;Loading...&lt;/div&gt;`</span>,
+            ...<span class="variable">options</span>
+        });
+        <span class="keyword">this</span>.<span class="variable">updateInterval</span> = <span class="keyword">null</span>;
+    }
+    
+    <span class="function">onRender</span>() {
+        <span class="keyword">super</span>.<span class="function">onRender</span>();
+        <span class="keyword">this</span>.<span class="function">fetchWeatherData</span>();
+        <span class="keyword">this</span>.<span class="function">startAutoUpdate</span>();
+    }
+    
+    <span class="keyword">async</span> <span class="function">fetchWeatherData</span>() {
+        <span class="comment">// Simulate API call</span>
+        <span class="keyword">const</span> <span class="variable">mockData</span> = { <span class="variable">temp</span>: <span class="string">22</span>, <span class="variable">condition</span>: <span class="string">'Sunny'</span>, <span class="variable">icon</span>: <span class="string">'☀️'</span> };
+        <span class="keyword">this</span>.<span class="function">updateDisplay</span>(<span class="variable">mockData</span>);
+    }
+    
+    <span class="function">startAutoUpdate</span>() {
+        <span class="keyword">this</span>.<span class="variable">updateInterval</span> = <span class="function">setInterval</span>(() => {
+            <span class="keyword">this</span>.<span class="function">fetchWeatherData</span>();
+        }, <span class="string">60000</span>); <span class="comment">// Update every minute</span>
+    }
+    
+    <span class="function">onRemove</span>() {
+        <span class="keyword">if</span> (<span class="keyword">this</span>.<span class="variable">updateInterval</span>) <span class="function">clearInterval</span>(<span class="keyword">this</span>.<span class="variable">updateInterval</span>);
+        <span class="keyword">super</span>.<span class="function">onRemove</span>();
+    }
+}
+                            </div>
+                        </div>
+
+                        <div class="warning">
+                            <span class="warning-icon">⚠️</span>
+                            Always clean up timers and event listeners in the onRemove method to prevent memory leaks.
+                        </div>
+
+                        <button class="try-it-button" onclick="createWeatherWidget()">Try It: Create Weather Widget</button>
+                    </div>
+                </div>
+
+                <!-- Step 6: Best Practices -->
+                <div class="tutorial-step">
+                    <div class="step-header" onclick="toggleStep(6)">
+                        <div class="step-number">6</div>
+                        <div class="step-title">Best Practices</div>
+                        <div class="step-indicator">▼</div>
+                    </div>
+                    <div class="step-content" id="step6">
+                        <h4>Performance Tips:</h4>
+                        <ul>
+                            <li>Use event delegation instead of multiple event listeners</li>
+                            <li>Debounce frequent updates (like real-time data)</li>
+                            <li>Clean up resources in onRemove method</li>
+                            <li>Optimize DOM manipulations with DocumentFragment</li>
+                        </ul>
+
+                        <h4>Code Organization:</h4>
+                        <ul>
+                            <li>Keep widget logic in separate methods</li>
+                            <li>Use meaningful class and method names</li>
+                            <li>Document your widget's public API</li>
+                            <li>Handle errors gracefully</li>
+                        </ul>
+
+                        <h4>Accessibility:</h4>
+                        <ul>
+                            <li>Add proper ARIA labels and roles</li>
+                            <li>Ensure keyboard navigation support</li>
+                            <li>Use semantic HTML elements</li>
+                            <li>Provide alternative text for images</li>
+                        </ul>
+
+                        <div class="example-output">
+                            <h5>Example: Accessible Widget Template</h5>
+                            <div class="code-block" style="font-size: 12px;">
+                                <div class="code-content">
+<span class="keyword">const</span> <span class="variable">accessibleWidget</span> = <span class="keyword">new</span> <span class="function">GridWidget</span>({
+    <span class="variable">content</span>: <span class="string">`
+        &lt;div role="region" aria-labelledby="widget-title"&gt;
+            &lt;h3 id="widget-title"&gt;Widget Title&lt;/h3&gt;
+            &lt;button aria-describedby="help-text"&gt;Action&lt;/button&gt;
+            &lt;div id="help-text" class="sr-only"&gt;Helpful description&lt;/div&gt;
+        &lt;/div&gt;
+    `</span>
+});
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section-header">
+                <h2>🎯 Interactive Dashboard</h2>
+                <p>Test your custom widgets here</p>
+            </div>
+            
+            <div class="dashboard-controls">
+                <button class="btn success" id="addRandomWidget">Add Random Widget</button>
+                <button class="btn" id="exportWidgets">Export Widgets</button>
+                <button class="btn danger" id="clearDashboard">Clear Dashboard</button>
+                <div style="margin-left: auto;">
+                    <span style="font-size: 14px; color: #666;">Widgets: <span id="widgetCount">0</span></span>
+                </div>
+            </div>
+
+            <div class="dashboard-area">
+                <div class="drop-zone" id="dashboard">
+                    <div class="drop-indicator" id="dropIndicator">
+                        <div class="icon">🛠️</div>
+                        <div>Create Custom Widgets</div>
+                        <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">
+                            Follow the tutorial steps to build and test your widgets
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../customWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+
+    <script>
+        let dashboard = null;
+        let currentStep = 0;
+
+        function initDemo() {
+            // Create the dashboard
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: false,
+                useCSSAuto: true
+            });
+
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Initialize first step
+            toggleStep(1);
+            
+            // Update stats
+            updateStats();
+        }
+
+        function setupEventListeners() {
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', () => {
+                updateStats();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                updateStats();
+            });
+
+            // Control buttons
+            document.getElementById('addRandomWidget').addEventListener('click', () => {
+                const widgets = [createBasicWidget, createCounterWidget, createTaskWidget, createPersistentWidget, createWeatherWidget];
+                const randomWidget = widgets[Math.floor(Math.random() * widgets.length)];
+                randomWidget();
+            });
+
+            document.getElementById('exportWidgets').addEventListener('click', () => {
+                exportWidgets();
+            });
+
+            document.getElementById('clearDashboard').addEventListener('click', () => {
+                if (confirm('Clear all widgets?')) {
+                    const widgets = Array.from(dashboard.widgets.keys());
+                    widgets.forEach(id => dashboard.removeWidget(id));
+                    updateStats();
+                }
+            });
+        }
+
+        function toggleStep(stepNumber) {
+            // Close all steps
+            document.querySelectorAll('.step-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.step-header').forEach(header => {
+                header.classList.remove('active');
+            });
+
+            // Open selected step
+            const stepContent = document.getElementById(`step${stepNumber}`);
+            const stepHeader = stepContent.previousElementSibling;
+            
+            stepContent.classList.add('active');
+            stepHeader.classList.add('active');
+            
+            currentStep = stepNumber;
+        }
+
+        function createBasicWidget() {
+            const widget = new GridWidget({
+                title: 'My First Widget',
+                content: `
+                    <div style="padding: 20px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
+                        <h3 style="margin-bottom: 10px;">Hello World! 👋</h3>
+                        <p style="opacity: 0.9;">This is my first custom widget.</p>
+                        <div style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
+                            Created at: ${new Date().toLocaleTimeString()}
+                        </div>
+                    </div>
+                `,
+                width: 2,
+                height: 2
+            });
+
+            dashboard.addWidget(widget);
+            updatePreview(1, 'Basic widget created! ✅');
+            return widget;
+        }
+
+        function createCounterWidget() {
+            const widget = new GridWidget({
+                title: 'Counter Widget',
+                content: `
+                    <div style="padding: 20px; text-align: center; background: #f8f9fa; border-radius: 8px;">
+                        <div class="counter-display" style="font-size: 36px; font-weight: bold; margin-bottom: 15px; color: #4a90e2;">0</div>
+                        <div style="margin-bottom: 15px;">
+                            <button class="counter-btn increment" style="margin: 5px; padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">+</button>
+                            <button class="counter-btn decrement" style="margin: 5px; padding: 8px 16px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">-</button>
+                        </div>
+                        <button class="counter-btn reset" style="padding: 6px 12px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button>
+                    </div>
+                `,
+                width: 2,
+                height: 2
+            });
+
+            // Add event handling
+            widget.onRender = function() {
+                GridWidget.prototype.onRender.call(this);
+                
+                let count = 0;
+                const display = this.element.querySelector('.counter-display');
+                
+                this.element.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('increment')) count++;
+                    if (e.target.classList.contains('decrement')) count--;
+                    if (e.target.classList.contains('reset')) count = 0;
+                    display.textContent = count;
+                });
+            };
+
+            dashboard.addWidget(widget);
+            updatePreview(2, 'Interactive counter widget created! ✅');
+            return widget;
+        }
+
+        function createTaskWidget() {
+            class TaskWidget extends GridWidget {
+                constructor(options) {
+                    super({
+                        title: 'Task Manager',
+                        content: `
+                            <div style="padding: 15px; background: #fff; border-radius: 8px;">
+                                <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+                                    <input type="text" class="task-input" placeholder="Add new task..." style="flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                                    <button class="add-task-btn" style="padding: 8px 12px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer;">Add</button>
+                                </div>
+                                <div class="task-list" style="max-height: 120px; overflow-y: auto;"></div>
+                                <div class="task-stats" style="margin-top: 10px; font-size: 12px; color: #666; text-align: center;"></div>
+                            </div>
+                        `,
+                        width: 3,
+                        height: 3,
+                        ...options
+                    });
+                    
+                    this.tasks = [];
+                }
+                
+                onRender() {
+                    super.onRender();
+                    
+                    const input = this.element.querySelector('.task-input');
+                    const addBtn = this.element.querySelector('.add-task-btn');
+                    
+                    const addTask = () => {
+                        const text = input.value.trim();
+                        if (text) {
+                            this.addTask(text);
+                            input.value = '';
+                        }
+                    };
+                    
+                    addBtn.addEventListener('click', addTask);
+                    input.addEventListener('keypress', (e) => {
+                        if (e.key === 'Enter') addTask();
+                    });
+                    
+                    this.renderTasks();
+                }
+                
+                addTask(text) {
+                    this.tasks.push({ 
+                        text, 
+                        completed: false, 
+                        id: Date.now() + Math.random() 
+                    });
+                    this.renderTasks();
+                }
+                
+                renderTasks() {
+                    const listEl = this.element.querySelector('.task-list');
+                    const statsEl = this.element.querySelector('.task-stats');
+                    
+                    listEl.innerHTML = '';
+                    
+                    this.tasks.forEach((task, index) => {
+                        const taskEl = document.createElement('div');
+                        taskEl.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px;';
+                        taskEl.innerHTML = `
+                            <input type="checkbox" ${task.completed ? 'checked' : ''} data-index="${index}">
+                            <span style="flex: 1; font-size: 13px; ${task.completed ? 'text-decoration: line-through; color: #666;' : ''}">${task.text}</span>
+                            <button data-delete="${index}" style="padding: 2px 6px; background: #dc3545; color: white; border: none; border-radius: 2px; cursor: pointer; font-size: 10px;">×</button>
+                        `;
+                        listEl.appendChild(taskEl);
+                    });
+                    
+                    // Event delegation for task actions
+                    listEl.addEventListener('change', (e) => {
+                        if (e.target.type === 'checkbox') {
+                            const index = parseInt(e.target.dataset.index);
+                            this.tasks[index].completed = e.target.checked;
+                            this.renderTasks();
+                        }
+                    });
+                    
+                    listEl.addEventListener('click', (e) => {
+                        if (e.target.dataset.delete !== undefined) {
+                            const index = parseInt(e.target.dataset.delete);
+                            this.tasks.splice(index, 1);
+                            this.renderTasks();
+                        }
+                    });
+                    
+                    // Update stats
+                    const completed = this.tasks.filter(t => t.completed).length;
+                    statsEl.textContent = `${this.tasks.length} tasks • ${completed} completed`;
+                }
+            }
+
+            const widget = new TaskWidget();
+            dashboard.addWidget(widget);
+            updatePreview(3, 'Task widget class created! ✅');
+            return widget;
+        }
+
+        function createPersistentWidget() {
+            class PersistentNoteWidget extends GridWidget {
+                constructor(options) {
+                    super({
+                        title: 'Persistent Notes',
+                        content: `
+                            <div style="padding: 15px; background: #fff; border-radius: 8px;">
+                                <textarea class="note-content" placeholder="Write your notes here..." style="width: 100%; height: 100px; border: 1px solid #ddd; border-radius: 4px; padding: 8px; resize: none; font-size: 13px;"></textarea>
+                                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                                    <button class="save-btn" style="flex: 1; padding: 6px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Save</button>
+                                    <button class="clear-btn" style="flex: 1; padding: 6px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear</button>
+                                </div>
+                                <div class="save-status" style="margin-top: 8px; font-size: 11px; color: #666; text-align: center;"></div>
+                            </div>
+                        `,
+                        width: 3,
+                        height: 2,
+                        ...options
+                    });
+                    
+                    this.storageKey = `persistent-note-${this.id}`;
+                }
+                
+                onRender() {
+                    super.onRender();
+                    
+                    const textarea = this.element.querySelector('.note-content');
+                    const saveBtn = this.element.querySelector('.save-btn');
+                    const clearBtn = this.element.querySelector('.clear-btn');
+                    const statusEl = this.element.querySelector('.save-status');
+                    
+                    // Load saved content
+                    const savedContent = this.loadData();
+                    if (savedContent) {
+                        textarea.value = savedContent.content || '';
+                        statusEl.textContent = `Last saved: ${new Date(savedContent.timestamp).toLocaleTimeString()}`;
+                    }
+                    
+                    saveBtn.addEventListener('click', () => {
+                        this.saveData({
+                            content: textarea.value,
+                            timestamp: Date.now()
+                        });
+                        statusEl.textContent = `Saved: ${new Date().toLocaleTimeString()}`;
+                        statusEl.style.color = '#28a745';
+                    });
+                    
+                    clearBtn.addEventListener('click', () => {
+                        if (confirm('Clear all notes?')) {
+                            textarea.value = '';
+                            localStorage.removeItem(this.storageKey);
+                            statusEl.textContent = 'Cleared';
+                            statusEl.style.color = '#dc3545';
+                        }
+                    });
+                    
+                    // Auto-save every 30 seconds
+                    this.autoSaveInterval = setInterval(() => {
+                        if (textarea.value.trim()) {
+                            this.saveData({
+                                content: textarea.value,
+                                timestamp: Date.now()
+                            });
+                            statusEl.textContent = `Auto-saved: ${new Date().toLocaleTimeString()}`;
+                            statusEl.style.color = '#6c757d';
+                        }
+                    }, 30000);
+                }
+                
+                saveData(data) {
+                    localStorage.setItem(this.storageKey, JSON.stringify(data));
+                }
+                
+                loadData() {
+                    const saved = localStorage.getItem(this.storageKey);
+                    return saved ? JSON.parse(saved) : null;
+                }
+                
+                onRemove() {
+                    if (this.autoSaveInterval) {
+                        clearInterval(this.autoSaveInterval);
+                    }
+                    super.onRemove();
+                }
+            }
+
+            const widget = new PersistentNoteWidget();
+            dashboard.addWidget(widget);
+            updatePreview(4, 'Persistent widget with localStorage created! ✅');
+            return widget;
+        }
+
+        function createWeatherWidget() {
+            class WeatherWidget extends GridWidget {
+                constructor(options) {
+                    super({
+                        title: 'Live Weather',
+                        content: `
+                            <div style="padding: 20px; text-align: center; background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%); color: white; border-radius: 8px;">
+                                <div class="weather-icon" style="font-size: 48px; margin-bottom: 10px;">🌤️</div>
+                                <div class="temperature" style="font-size: 32px; font-weight: bold; margin-bottom: 5px;">--°</div>
+                                <div class="condition" style="font-size: 16px; opacity: 0.9; margin-bottom: 10px;">Loading...</div>
+                                <div class="location" style="font-size: 12px; opacity: 0.8; margin-bottom: 10px;">--</div>
+                                <div class="last-update" style="font-size: 10px; opacity: 0.7;">--</div>
+                            </div>
+                        `,
+                        width: 2,
+                        height: 2,
+                        ...options
+                    });
+                    
+                    this.updateInterval = null;
+                    this.weatherData = null;
+                }
+                
+                onRender() {
+                    super.onRender();
+                    this.fetchWeatherData();
+                    this.startAutoUpdate();
+                }
+                
+                async fetchWeatherData() {
+                    try {
+                        // Simulate API call with mock data
+                        await new Promise(resolve => setTimeout(resolve, 1000)); // Loading delay
+                        
+                        const mockWeatherData = [
+                            { temp: 22, condition: 'Sunny', icon: '☀️', location: 'New York' },
+                            { temp: 18, condition: 'Cloudy', icon: '☁️', location: 'London' },
+                            { temp: 25, condition: 'Partly Cloudy', icon: '⛅', location: 'Tokyo' },
+                            { temp: 15, condition: 'Rainy', icon: '🌧️', location: 'Seattle' },
+                            { temp: 28, condition: 'Hot', icon: '🌡️', location: 'Phoenix' }
+                        ];
+                        
+                        const randomData = mockWeatherData[Math.floor(Math.random() * mockWeatherData.length)];
+                        this.weatherData = randomData;
+                        this.updateDisplay();
+                        
+                    } catch (error) {
+                        console.error('Failed to fetch weather data:', error);
+                        this.showError();
+                    }
+                }
+                
+                updateDisplay() {
+                    if (!this.weatherData) return;
+                    
+                    const iconEl = this.element.querySelector('.weather-icon');
+                    const tempEl = this.element.querySelector('.temperature');
+                    const conditionEl = this.element.querySelector('.condition');
+                    const locationEl = this.element.querySelector('.location');
+                    const updateEl = this.element.querySelector('.last-update');
+                    
+                    iconEl.textContent = this.weatherData.icon;
+                    tempEl.textContent = `${this.weatherData.temp}°C`;
+                    conditionEl.textContent = this.weatherData.condition;
+                    locationEl.textContent = this.weatherData.location;
+                    updateEl.textContent = `Updated: ${new Date().toLocaleTimeString()}`;
+                }
+                
+                showError() {
+                    const conditionEl = this.element.querySelector('.condition');
+                    conditionEl.textContent = 'Failed to load';
+                    conditionEl.style.color = '#ffcccb';
+                }
+                
+                startAutoUpdate() {
+                    this.updateInterval = setInterval(() => {
+                        this.fetchWeatherData();
+                    }, 60000); // Update every minute
+                }
+                
+                onRemove() {
+                    if (this.updateInterval) {
+                        clearInterval(this.updateInterval);
+                    }
+                    super.onRemove();
+                }
+            }
+
+            const widget = new WeatherWidget();
+            dashboard.addWidget(widget);
+            updatePreview(5, 'Advanced weather widget with real-time updates created! ✅');
+            return widget;
+        }
+
+        function updatePreview(stepNumber, message) {
+            const preview = document.getElementById(`preview${stepNumber}`);
+            if (preview) {
+                preview.innerHTML = `<div style="color: #28a745; font-weight: 600;">${message}</div>`;
+                preview.classList.add('populated');
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('widgetCount').textContent = dashboard.widgets.size;
+            
+            // Update drop indicator
+            const indicator = document.getElementById('dropIndicator');
+            const hasWidgets = dashboard.widgets.size > 0;
+            indicator.style.display = hasWidgets ? 'none' : 'block';
+        }
+
+        function exportWidgets() {
+            const layout = dashboard.exportLayout();
+            const exportData = {
+                layout,
+                tutorial: 'Custom Widget Creation',
+                widgets: dashboard.widgets.size,
+                exported: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+                type: 'application/json'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `custom-widgets-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDemo);
+
+        // Add some sample widgets after initialization
+        setTimeout(() => {
+            if (dashboard && dashboard.widgets.size === 0) {
+                // Add a welcome widget
+                const welcomeWidget = new GridWidget({
+                    title: 'Welcome to Widget Creation! 🎉',
+                    content: `
+                        <div style="padding: 20px; text-align: center; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 8px;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">🛠️</div>
+                            <h3 style="margin-bottom: 10px;">Start Creating!</h3>
+                            <p style="opacity: 0.9; margin-bottom: 15px;">Follow the tutorial steps in the sidebar to learn how to build custom widgets.</p>
+                            <div style="font-size: 12px; opacity: 0.8;">
+                                Pro tip: Each step builds on the previous one
+                            </div>
+                        </div>
+                    `,
+                    width: 3,
+                    height: 2
+                });
+                dashboard.addWidget(welcomeWidget, { x: 1, y: 1 });
+                updateStats();
+            }
+        }, 500);
+    </script>
+</body>
+</html>

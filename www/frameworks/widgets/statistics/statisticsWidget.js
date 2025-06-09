@@ -1,12 +1,17 @@
 class StatisticsWidget extends BaseWidget {
-    constructor(name = "Statistics") {
-        super(name);
+    constructor(options = {}) {
+        super({
+            type: 'statistics',
+            width: 2,
+            height: 2,
+            ...options
+        });
         this.memoryChart = null;
         this.systemChart = null;
         this.threadChart = null;
     }
 
-    render() {
+    createContent() {
         let widget = $(`
         <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="StatisticsWidget">
             <div class="widget-header">
@@ -88,7 +93,6 @@ class StatisticsWidget extends BaseWidget {
         sendPacket('systemInfo', 'default');
         return widget.get(0);
     }
-
 
     destroy() {
         if (this.memoryChart) {
@@ -526,17 +530,4 @@ class StatisticsWidget extends BaseWidget {
         container.empty();
         container.append(groups);
     }
-}
-
-// Include Chart.js and time adapter if not already loaded
-if (typeof Chart === 'undefined') {
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
-    script.onload = () => {
-        // Load time adapter after Chart.js
-        const timeScript = document.createElement('script');
-        timeScript.src = 'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js';
-        document.head.appendChild(timeScript);
-    };
-    document.head.appendChild(script);
 }

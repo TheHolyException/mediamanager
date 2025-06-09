@@ -316,6 +316,10 @@ body:not(.grid-view) .nav-container {
     }
 }
 
+.dashboard{
+    display: none!important;
+}
+
 /* Responsive Design */
 @media (max-width: 1200px) {
     body:not(.grid-view) .modern-header {
@@ -509,8 +513,8 @@ body:has(.toggle-input:checked) {
         display: none;
     }
 
-    .grid-stack {
-        display: block;
+    .dashboard {
+        display: grid!important;
     }
 
     .grid-only {
@@ -543,3 +547,6 @@ body:not(:has(.toggle-input:checked)) .grid-only {
     padding: 50px;
 }
 
+.dashboard {
+    height: calc(100vh - 170px)!important;
+}

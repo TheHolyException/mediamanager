@@ -1,17 +1,22 @@
-class DownloadsWidget extends BaseWidget {
+/**
+ * Downloads Widget for Grid Dashboard
+ * Converted from legacy BaseWidget to GridWidget compatible format
+ * Maintains original class name for full compatibility
+ */
+class DownloadsWidget extends GridWidget {
     static indexes = new Map();
-
-    constructor(options = {}) {
+    
+    constructor(name = "Statistics") {
         super({
-            type: 'downloads',
-            width: 2,
-            height: 2,
-            ...options
+            title: 'Download Manager',
+            content: '',
+            width: 4,
+            height: 4
         });
     }
 
-    createContent() {
-        let widgetContent = $(`
+    render() {
+        let widget = $(`
         <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="DownloadsWidget">
             <div class="widget-header">
                 <div class="widget-title">
@@ -104,9 +109,9 @@ class DownloadsWidget extends BaseWidget {
         </div>
         `);
 
-        widgetContent.find('.add-sources-btn').click(function () {
+        widget.find('.add-sources-btn').click(function() {
             // Simple function call with timeout fallback
-            setTimeout(function () {
+            setTimeout(function() {
                 if (typeof window.openAddSourcePopup === 'function') {
                     window.openAddSourcePopup();
                 } else if (typeof openAddSourcePopup === 'function') {
@@ -119,26 +124,27 @@ class DownloadsWidget extends BaseWidget {
             }, 100);
         });
 
-        widgetContent.find('.commit-sources-btn').click(function () {
+        widget.find('.commit-sources-btn').click(function () {
             DownloadsWidget.commit();
         });
 
-        widgetContent.find('.retry-all-btn').click(function () {
-            widgetContent.find('.failed [action="resend"]').click();
+        widget.find('.retry-all-btn').click(function(){
+            widget.find('.failed [action="resend"]').click();
         });
 
-        widgetContent.find('.delete-all-btn').click(function () {
+        widget.find('.delete-all-btn').click(function(){
             sendPacket("del-all", "default");
         });
 
-        widgetContent.find('.delete-completed-btn').click(function () {
-            widgetContent.find('.success [action="delete"]').click();
+        widget.find('.delete-completed-btn').click(function(){
+            widget.find('.success [action="delete"]').click();
         });
 
         sendPacket("syn", "default");
-        return widgetContent.get(0);
+        return widget.get(0);
     }
-
+    
+    // Keep the static methods exactly as they were in the original
     static commit() {
         let commitPacket = [];
         for (let [uuid, data] of DownloadsWidget.indexes) {
@@ -170,15 +176,15 @@ class DownloadsWidget extends BaseWidget {
             if (!subPath)
                 subPath = '?';
 
-            for (let t of tableBodies) {
+            for(let t of tableBodies){
                 let tableBody = $(t);
                 row = tableBody.find('[uuid="' + item.uuid + '"]');
 
-                if (row.length == 0) {
+                if(row.length == 0){
                     row = DownloadsWidget.createNewRow(item);
                     tableBody.append(row);
                 }
-                else {
+                else{
                     let stateCol = row.find('[col="state"]');
                     stateCol.text(item.state.split('\n')[0]);
 
@@ -365,10 +371,6 @@ class DownloadsWidget extends BaseWidget {
     }
 
     static addNewElement(urls, settings, targetSelection, subfolder) {
-        if (!urls) {
-            console.error("No URLs provided to addNewElement");
-            return;
-        }
         let urlArray = urls.split(";");
 
         for (let urlElement of urlArray) {
@@ -402,7 +404,7 @@ class DownloadsWidget extends BaseWidget {
                 }
                 break;
             case "del":
-                for (let uuid of content.list) {
+                for(let uuid of content.list){
                     DownloadsWidget.indexes.delete(uuid);
                     $('.queue-table [uuid="' + uuid + '"]').remove();
                 }
@@ -410,4 +412,9 @@ class DownloadsWidget extends BaseWidget {
                 break;
         }
     }
+}
+
+// Register the widget in the global scope
+if (typeof window !== 'undefined') {
+    window.DownloadsWidget = DownloadsWidget;
 }

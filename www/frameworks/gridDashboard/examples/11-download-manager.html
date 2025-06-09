@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Manager Widget Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../gridDashboard.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 12px;
+        }
+
+        .controls-panel {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .control-group {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .control-group h4 {
+            margin-bottom: 10px;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .control-btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-bottom: 8px;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .control-btn:hover {
+            background: #357abd;
+        }
+
+        .control-btn.danger {
+            background: #dc3545;
+        }
+
+        .control-btn.danger:hover {
+            background: #c82333;
+        }
+
+        .control-btn.success {
+            background: #28a745;
+        }
+
+        .control-btn.success:hover {
+            background: #218838;
+        }
+
+        .dashboard-area {
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .dashboard-controls {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .status-indicator {
+            padding: 15px;
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>📥 Download Manager Widget</h1>
+        <p>Converted legacy widget to GridDashboard compatible format</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>🔄 Widget Conversion Features:</h4>
+        <ul>
+            <li>Converted from BaseWidget to GridWidget inheritance</li>
+            <li>Added proper lifecycle management (onRender, onRemove)</li>
+            <li>Modernized event handling with native DOM APIs</li>
+            <li>Responsive design with grid-compatible styling</li>
+            <li>Mock data simulation for demonstration</li>
+            <li>Unique widget instance support (multiple widgets possible)</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section-header">
+                <h2>🎛️ Demo Controls</h2>
+                <p>Test the download manager functionality</p>
+            </div>
+            <div class="controls-panel">
+                <div class="control-group">
+                    <h4>Widget Management</h4>
+                    <button class="control-btn" id="addWidget">Add Download Manager</button>
+                    <button class="control-btn danger" id="removeAll">Remove All Widgets</button>
+                </div>
+
+                <div class="control-group">
+                    <h4>Download Actions</h4>
+                    <button class="control-btn success" id="addMockDownload">Add Mock Download</button>
+                    <button class="control-btn" id="simulateProgress">Simulate Progress</button>
+                    <button class="control-btn" id="simulateComplete">Complete Random</button>
+                    <button class="control-btn danger" id="simulateError">Simulate Error</button>
+                </div>
+
+                <div class="control-group">
+                    <h4>Statistics</h4>
+                    <div style="font-size: 12px; color: #666;">
+                        <div>Widgets: <span id="widgetCount">0</span></div>
+                        <div>Total Downloads: <span id="totalDownloads">0</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section-header">
+                <h2>📊 Dashboard Demo</h2>
+                <p>Interactive download management widgets</p>
+            </div>
+            
+            <div class="dashboard-controls">
+                <button class="btn" id="exportLayout">Export Layout</button>
+                <button class="btn" id="resetDashboard">Reset Dashboard</button>
+                <div style="margin-left: auto;">
+                    <span style="font-size: 14px; color: #666;">Dashboard Size: <span id="dashboardInfo">6x4</span></span>
+                </div>
+            </div>
+
+            <div class="dashboard-area">
+                <div id="dashboard" style="width: 100%; height: 100%;"></div>
+                <div id="noWidgets" class="status-indicator">
+                    Click "Add Download Manager" to create your first widget
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../gridWidget.js"></script>
+    <script src="../customWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+    <script src="../downloadWidget.js"></script>
+
+    <script>
+        let dashboard = null;
+        let widgetCounter = 0;
+        
+        // Mock sendPacket function for demo purposes
+        window.sendPacket = function(cmd, target, data = {}) {
+            console.log('Mock sendPacket:', { cmd, target, data });
+            
+            // Simulate responses for demo
+            setTimeout(() => {
+                if (cmd === "syn") {
+                    DownloadsWidget.onWSResponse("syn", { 
+                        data: getMockInitialData() 
+                    });
+                }
+            }, 500);
+        };
+        
+        function getMockInitialData() {
+            return [
+                {
+                    uuid: DownloadsWidget.uuidv4(),
+                    state: "Completed",
+                    created: Date.now() - 300000,
+                    url: "https://example.com/welcome-file.zip",
+                    options: { quality: "720p" },
+                    target: "/downloads",
+                    title: "welcome-file.zip"
+                }
+            ];
+        }
+
+        function initDemo() {
+            // Create the dashboard
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 120,
+                cellHeight: 120,
+                gap: 15,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: true,
+                useCSSAuto: true
+            });
+
+            // Set up event listeners
+            setupEventListeners();
+            updateStats();
+        }
+
+        function setupEventListeners() {
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', () => {
+                updateStats();
+                updateNoWidgetsDisplay();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                updateStats();
+                updateNoWidgetsDisplay();
+            });
+
+            // Control buttons
+            document.getElementById('addWidget').addEventListener('click', () => {
+                addDownloadManagerWidget();
+            });
+
+            document.getElementById('removeAll').addEventListener('click', () => {
+                if (confirm('Remove all widgets?')) {
+                    const widgets = Array.from(dashboard.widgets.keys());
+                    widgets.forEach(id => dashboard.removeWidget(id));
+                }
+            });
+
+            document.getElementById('addMockDownload').addEventListener('click', () => {
+                addMockDownloadToRandomWidget();
+            });
+
+            document.getElementById('simulateProgress').addEventListener('click', () => {
+                simulateDownloadProgress();
+            });
+
+            document.getElementById('simulateComplete').addEventListener('click', () => {
+                simulateRandomComplete();
+            });
+
+            document.getElementById('simulateError').addEventListener('click', () => {
+                simulateRandomError();
+            });
+
+            document.getElementById('exportLayout').addEventListener('click', () => {
+                exportDashboardLayout();
+            });
+
+            document.getElementById('resetDashboard').addEventListener('click', () => {
+                if (confirm('Reset dashboard to default state?')) {
+                    resetDashboard();
+                }
+            });
+        }
+
+        function addDownloadManagerWidget() {
+            widgetCounter++;
+            
+            const widget = new DownloadsWidget({
+                title: `Download Manager ${widgetCounter}`,
+                width: 4,
+                height: 3
+            });
+
+            // Find a good position for the widget
+            const position = findBestPosition(4, 3);
+            dashboard.addWidget(widget, position);
+
+            console.log(`Added Downloads Widget ${widgetCounter}`, widget);
+        }
+
+        function findBestPosition(width, height) {
+            // Simple position finding - try to place widgets in a grid pattern
+            const cols = Math.floor(dashboard.columns / width);
+            const rows = Math.floor(dashboard.rows / height);
+            const totalSlots = cols * rows;
+            const widgetIndex = dashboard.widgets.size % totalSlots;
+            
+            const col = (widgetIndex % cols) * width;
+            const row = Math.floor(widgetIndex / cols) * height;
+            
+            return { x: col, y: row };
+        }
+
+        function addMockDownloadToRandomWidget() {
+            const widgets = Array.from(dashboard.widgets.values())
+                .filter(w => w instanceof DownloadsWidget);
+            
+            if (widgets.length === 0) {
+                alert('Please add a Download Manager widget first!');
+                return;
+            }
+
+            const randomWidget = widgets[Math.floor(Math.random() * widgets.length)];
+            const mockUrls = [
+                'https://example.com/video-tutorial.mp4',
+                'https://demo.com/software-package.zip',
+                'https://test.org/document-archive.pdf',
+                'https://sample.net/music-album.zip',
+                'https://mock.io/presentation.pptx'
+            ];
+
+            const randomUrl = mockUrls[Math.floor(Math.random() * mockUrls.length)];
+            randomWidget.addNewElement(randomUrl, { quality: '720p' }, '/downloads', 'demo');
+        }
+
+        function simulateDownloadProgress() {
+            const items = Array.from(DownloadsWidget.indexes.entries())
+                .filter(([uuid, data]) => data.state === 'new' || data.state.includes('Downloading'));
+            
+            if (items.length === 0) {
+                alert('No downloads in progress to simulate!');
+                return;
+            }
+
+            const [uuid, data] = items[Math.floor(Math.random() * items.length)];
+            const progress = Math.floor(Math.random() * 100);
+            data.state = `Downloading (${progress}%)`;
+            
+            // Find widgets that have this download and update them
+            const widgets = Array.from(dashboard.widgets.values())
+                .filter(w => w instanceof DownloadsWidget);
+            
+            widgets.forEach(widget => {
+                widget.addDownloaderItem(data);
+            });
+        }
+
+        function simulateRandomComplete() {
+            const items = Array.from(DownloadsWidget.indexes.entries())
+                .filter(([uuid, data]) => data.state.includes('Downloading') || data.state === 'Committed');
+            
+            if (items.length === 0) {
+                alert('No active downloads to complete!');
+                return;
+            }
+
+            const [uuid, data] = items[Math.floor(Math.random() * items.length)];
+            data.state = 'Completed';
+            
+            // Update all widgets
+            const widgets = Array.from(dashboard.widgets.values())
+                .filter(w => w instanceof DownloadsWidget);
+            
+            widgets.forEach(widget => {
+                widget.addDownloaderItem(data);
+            });
+        }
+
+        function simulateRandomError() {
+            const items = Array.from(DownloadsWidget.indexes.entries())
+                .filter(([uuid, data]) => !data.state.includes('Error') && !data.state.includes('Completed'));
+            
+            if (items.length === 0) {
+                alert('No downloads to simulate error for!');
+                return;
+            }
+
+            const [uuid, data] = items[Math.floor(Math.random() * items.length)];
+            const errors = [
+                'Error: File not found (404)',
+                'Error: Connection timeout',
+                'Error: Insufficient disk space',
+                'Error: Access denied',
+                'Error: Invalid file format'
+            ];
+            
+            data.state = errors[Math.floor(Math.random() * errors.length)];
+            
+            // Update all widgets
+            const widgets = Array.from(dashboard.widgets.values())
+                .filter(w => w instanceof DownloadsWidget);
+            
+            widgets.forEach(widget => {
+                widget.addDownloaderItem(data);
+            });
+        }
+
+        function exportDashboardLayout() {
+            const layout = dashboard.exportLayout();
+            const exportData = {
+                layout,
+                widgetCount: dashboard.widgets.size,
+                downloadData: Array.from(DownloadsWidget.indexes.entries()),
+                exported: new Date().toISOString(),
+                demo: 'Downloads Widget'
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+                type: 'application/json'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `download-manager-layout-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function resetDashboard() {
+            // Clear all widgets
+            const widgets = Array.from(dashboard.widgets.keys());
+            widgets.forEach(id => dashboard.removeWidget(id));
+            
+            // Clear download data
+            DownloadsWidget.indexes.clear();
+            
+            // Reset counter
+            widgetCounter = 0;
+            
+            // Add a default widget
+            setTimeout(() => {
+                addDownloadManagerWidget();
+                
+                // Add some initial mock data
+                setTimeout(() => {
+                    addMockDownloadToRandomWidget();
+                    addMockDownloadToRandomWidget();
+                }, 500);
+            }, 100);
+        }
+
+        function updateStats() {
+            document.getElementById('widgetCount').textContent = dashboard.widgets.size;
+            document.getElementById('totalDownloads').textContent = DownloadsWidget.indexes.size;
+            
+            const dashboardInfo = `${dashboard.columns}x${dashboard.rows}`;
+            document.getElementById('dashboardInfo').textContent = dashboardInfo;
+        }
+
+        function updateNoWidgetsDisplay() {
+            const noWidgetsEl = document.getElementById('noWidgets');
+            const hasWidgets = dashboard.widgets.size > 0;
+            noWidgetsEl.style.display = hasWidgets ? 'none' : 'block';
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initDemo();
+            
+            // Add initial widget and data after a short delay
+            setTimeout(() => {
+                addDownloadManagerWidget();
+                
+                // Add some demo downloads
+                setTimeout(() => {
+                    addMockDownloadToRandomWidget();
+                    addMockDownloadToRandomWidget();
+                    
+                    // Simulate some progress
+                    setTimeout(() => {
+                        simulateDownloadProgress();
+                    }, 1000);
+                }, 500);
+            }, 500);
+        });
+    </script>
+</body>
+</html>

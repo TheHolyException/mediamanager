@@ -1,9 +1,14 @@
 class SettingsWidget extends BaseWidget {
     static currentSettings = {};
-    static isLoading = false;
 
-    constructor(name = "Settings") {
-        super(name);
+    constructor(options = {}) {
+        super({
+            type: 'settings',
+            width: 2,
+            height: 2,
+            ...options
+        });
+
         this.settingsConfig = [
             {
                 key: 'VOE_THREADS',
@@ -35,7 +40,7 @@ class SettingsWidget extends BaseWidget {
         ];
     }
 
-    render() {
+    createContent() {
         const settingsCards = this.settingsConfig.map(config => this.#renderSettingCard(config)).join('');
         
         let widget = $(`

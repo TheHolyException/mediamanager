@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic GridDashboard Setup</title>
+    
+    <!-- Required: Include the GridDashboard CSS -->
+    <link rel="stylesheet" href="../gridDashboard.css">
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f6fa;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border: 1px solid #90caf9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .info-box h3 {
+            color: #1565c0;
+            margin-bottom: 10px;
+        }
+        
+        .info-box code {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #dashboard {
+            height: 600px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0 5px;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .btn:hover {
+            background: #357abd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Basic GridDashboard Setup</h1>
+            <p>Minimal example showing how to set up the GridDashboard with external CSS</p>
+        </div>
+        
+        <div class="info-box">
+            <h3>📋 Setup Requirements:</h3>
+            <ol>
+                <li>Include the CSS file: <code>&lt;link rel="stylesheet" href="../gridDashboard.css"&gt;</code></li>
+                <li>Include the JavaScript files: <code>gridWidget.js</code>, <code>gridDashboard.js</code></li>
+                <li>Create a dashboard instance and add widgets</li>
+            </ol>
+        </div>
+        
+        <div id="dashboard"></div>
+        
+        <div class="controls">
+            <button class="btn" onclick="addSampleWidget()">Add Sample Widget</button>
+            <button class="btn" onclick="toggleEditMode()">Toggle Edit Mode</button>
+            <button class="btn" onclick="toggleDragDrop()">Toggle Drag & Drop</button>
+            <button class="btn" onclick="clearDashboard()">Clear Dashboard</button>
+        </div>
+        
+        <div style="text-align: center; margin-top: 15px; font-size: 14px; color: #666;">
+            <div>Edit Mode: <span id="editModeStatus">enabled</span></div>
+            <div>Drag & Drop: <span id="dragDropStatus">enabled</span></div>
+        </div>
+    </div>
+
+    <!-- Required JavaScript files -->
+    <script src="../gridWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+
+    <script>
+        let dashboard = null;
+        let widgetCounter = 0;
+
+        // Initialize the dashboard
+        function initDashboard() {
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 120,
+                cellHeight: 120,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                editMode: true,
+                showGridLines: true
+            });
+            
+            // Listen for drag drop mode changes
+            dashboard.container.addEventListener('gridDashboard:dragDropModeChanged', (event) => {
+                console.log('Drag & Drop mode changed:', event.detail);
+                updateStatusDisplay();
+            });
+            
+            // Listen for edit mode changes
+            dashboard.container.addEventListener('gridDashboard:editModeChanged', (event) => {
+                console.log('Edit mode changed:', event.detail);
+                updateStatusDisplay();
+            });
+            
+            // Initialize status display
+            updateStatusDisplay();
+            
+            console.log('Dashboard initialized:', dashboard);
+        }
+
+        function addSampleWidget() {
+            widgetCounter++;
+            
+            const widget = new GridWidget({
+                title: `Sample Widget ${widgetCounter}`,
+                content: `
+                    <div style="text-align: center; padding: 20px;">
+                        <h3>Widget #${widgetCounter}</h3>
+                        <p>This is a sample widget created at ${new Date().toLocaleTimeString()}</p>
+                        <div style="margin-top: 15px;">
+                            <strong>Features:</strong>
+                            <ul style="text-align: left; margin-top: 10px;">
+                                <li>Draggable and resizable</li>
+                                <li>Customizable content</li>
+                                <li>Grid-based positioning</li>
+                            </ul>
+                        </div>
+                    </div>
+                `,
+                width: 2,
+                height: 2
+            });
+
+            dashboard.addWidget(widget);
+        }
+
+        function toggleEditMode() {
+            dashboard.toggleEditMode();
+            updateStatusDisplay();
+            console.log('Edit mode:', dashboard.getEditMode());
+        }
+
+        function toggleDragDrop() {
+            dashboard.toggleDragDrop();
+            updateStatusDisplay();
+            console.log('Drag & Drop:', dashboard.getEnableDragDrop());
+        }
+
+        function updateStatusDisplay() {
+            document.getElementById('editModeStatus').textContent = dashboard.getEditMode() ? 'enabled' : 'disabled';
+            document.getElementById('dragDropStatus').textContent = dashboard.getEnableDragDrop() ? 'enabled' : 'disabled';
+        }
+
+        function clearDashboard() {
+            if (confirm('Clear all widgets?')) {
+                const widgets = Array.from(dashboard.widgets.keys());
+                widgets.forEach(id => dashboard.removeWidget(id));
+                widgetCounter = 0;
+            }
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initDashboard();
+            
+            // Add a welcome widget
+            setTimeout(() => {
+                const welcomeWidget = new GridWidget({
+                    title: '👋 Welcome!',
+                    content: `
+                        <div style="text-align: center; padding: 20px;">
+                            <h3>GridDashboard with External CSS</h3>
+                            <p>The CSS has been successfully separated from JavaScript!</p>
+                            <div style="margin-top: 15px; font-size: 14px; color: #666;">
+                                <p>✅ Styles loaded from gridDashboard.css</p>
+                                <p>✅ JavaScript functionality maintained</p>
+                                <p>✅ Better separation of concerns</p>
+                            </div>
+                        </div>
+                    `,
+                    width: 3,
+                    height: 2
+                });
+                
+                dashboard.addWidget(welcomeWidget, { x: 1, y: 1 });
+            }, 500);
+        });
+    </script>
+</body>
+</html>
