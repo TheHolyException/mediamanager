@@ -1,5 +1,5 @@
 const yeti = new Yeti();
-let grid;
+let dashboard;
 let targetFolders = [];
 
 const settings = [
@@ -23,16 +23,16 @@ const settings = [
 connect(); // Connect WebSocket
 $(document).ready(function () {
     initUI();
-    $('.embeded-widget').html(new DownloadsWidget().render());
+    $('.embeded-widget').html(new DownloadsWidget().createContent());
 });
 
 function initUI() {
     // Initialize tab navigation - TabBar constructor initializes itself
     const tabNavigation = new TabBar($('.embeded-widget-toolbar'), $('.embeded-widget'), true, {
-        downloads: function () { $('.embeded-widget').html(new DownloadsWidget().render()); },
-        settings: function () { $('.embeded-widget').html(new SettingsWidget().render()); },
-        statistics: function () { $('.embeded-widget').html(new StatisticsWidget().render()); },
-        subscriptions: function () { $('.embeded-widget').html(new SubscriptionsWidget().render()); },
+        downloads: function () { $('.embeded-widget').html(new DownloadsWidget().createContent()); },
+        settings: function () { $('.embeded-widget').html(new SettingsWidget().createContent()); },
+        statistics: function () { $('.embeded-widget').html(new StatisticsWidget().createContent()); },
+        subscriptions: function () { $('.embeded-widget').html(new SubscriptionsWidget().createContent()); },
     });
     // TabBar instance stored for potential future use
     window.tabNavigation = tabNavigation;
@@ -61,10 +61,13 @@ function initUI() {
             $(this).attr('title', 'Toggle Edit Mode');
         }
         
-        grid.setStatic(!newEditingState);
+        dashboard.setEditMode(newEditingState)
+        dashboard.setEnableDragDrop(newEditingState);
+        //grid.setStatic(!newEditingState);
 
         if(!newEditingState){
-            localStorage.setItem('dashboard-content', JSON.stringify(grid.save()));
+            //localStorage.setItem('dashboard-content', JSON.stringify(grid.save()));
+            localStorage.setItem('dashboard-content', JSON.stringify(dashboard.getLayout()));
         }
     })
 
@@ -89,7 +92,42 @@ function initUI() {
 
 
 
-    setupGridstack();
+    setupGridDashboard();
+    //setupGridstack();
+}
+
+function setupGridDashboard(){
+    dashboard = new GridDashboard('.dashboard', 20, 20, {
+        //useCSSAuto: true,
+        gap: 10,
+        editMode: false,
+        showGridLines: true,
+        enableDragDrop: false,
+        allowOverlapping: true,
+        cellWidth: "auto",
+        cellHeight: "auto"
+    });
+
+    // Create a custom HTML palette
+    const customPalette = new CustomHTMLWidgetPalette('.widget-toolbar-bar', {
+        widgetSelector: '[widget-type]',
+        enableClickToAdd: false,
+        enableHoverEffects: true,
+    });
+
+    customPalette.registerWidgetTemplate("downloads", new DownloadsWidget())
+    customPalette.registerWidgetTemplate("settings", new SettingsWidget())
+    customPalette.registerWidgetTemplate("statistics", new StatisticsWidget())
+    customPalette.registerWidgetTemplate("subscriptions", new SubscriptionsWidget())
+
+    // Register with a dashboard
+    customPalette.registerDashboard(dashboard);
+
+    let dashboardData = localStorage.getItem('dashboard-content');
+    if(dashboardData){
+        let dashboardItems = JSON.parse(dashboardData);
+        dashboard.loadFromLayout(dashboardItems);
+    }
 }
 
 function setupGridstack() {

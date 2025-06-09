@@ -8,13 +8,23 @@
 
     <link rel="stylesheet" href="./frameworks/scrollbar/style.css">
 
+    <script src="/frameworks/gridDashboard/gridDashboard.js"></script>
+    <script src="/frameworks/gridDashboard/gridWidget.js"></script>
+    <script src="/frameworks/gridDashboard/customHTMLWidgetPalette.js"></script>
+
     <script src="./frameworks/widgets/baseWidget.js"></script>
+    <!-- <script src="./frameworks/widgets/downloads/downloadsWidget.js"></script> -->
     <script src="./frameworks/widgets/downloads/downloadsWidget.js"></script>
     <script src="./frameworks/widgets/settings/settingsWidget.js"></script>
     <script src="./frameworks/widgets/statistics/statisticsWidget.js"></script>
-    <script src="./frameworks/widgets/subscriptions/subscriptionsWidget_v2.js"></script>
+    <script src="./frameworks/widgets/subscriptions/subscriptionsWidget.js"></script>
     <script src="./frameworks/widgets/widgetManager.js"></script>
     <link rel="stylesheet" href="./frameworks/widgets/widget.css">
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/downloads/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/settings/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/statistics/style.css" />
+    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/subscriptions/style.css" />
+    <link rel="stylesheet" type="text/css" href="frameworks/gridDashboard/gridDashboard.css" />
 
     <script src="./frameworks/yeti/yeti-alerts.js"></script>
     <script src="./frameworks/popup/modalLightboxPopup.js" defer></script>
@@ -25,20 +35,15 @@
     <script src="./script.js" defer></script>
     <script src="./scripts/addSourcePopup.js" defer></script>
     <script src="./scripts/streamSelectPopup.js" defer></script>
-    <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"> -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
 
     <link rel="stylesheet" type="text/css" href="./style/util/colors.css" />
     <link rel="stylesheet" type="text/css" href="./style/general.css" />
-    <link rel="stylesheet" type="text/css" href="./style/components/navbar.css" />
-    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/downloads/style.css" />
-    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/settings/style.css" />
-    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/statistics/style.css" />
-    <link rel="stylesheet" type="text/css" href="./frameworks/widgets/subscriptions/style_v2.css" />
+    <!-- <link rel="stylesheet" type="text/css" href="./style/components/navbar.css" /> -->
     <link rel="stylesheet" type="text/css" href="./frameworks/yeti/yeti-alerts.css" />
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack-all.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack.min.css" rel="stylesheet">
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack-all.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/gridstack.js/7.2.3/gridstack.min.css" rel="stylesheet"> -->
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 </head>
@@ -84,22 +89,22 @@
                 </div>
                 
                 <div class="nav-tabs widget-toolbar-bar">
-                    <a class="nav-item grid-stack-item" widget-name="downloads" data-tooltip="Downloads Widget">
+                    <a class="nav-item grid-stack-item" widget-type="downloads" data-tooltip="Downloads Widget">
                         <i class="fas fa-download"></i>
                         <span class="nav-text">Downloads</span>
                         <div class="nav-indicator"></div>
                     </a>
-                    <a class="nav-item grid-stack-item" widget-name="settings" data-tooltip="Settings Widget">
+                    <a class="nav-item grid-stack-item" widget-type="settings" data-tooltip="Settings Widget">
                         <i class="fas fa-cog"></i>
                         <span class="nav-text">Settings</span>
                         <div class="nav-indicator"></div>
                     </a>
-                    <a class="nav-item grid-stack-item" widget-name="statistics" data-tooltip="Statistics Widget">
+                    <a class="nav-item grid-stack-item" widget-type="statistics" data-tooltip="Statistics Widget">
                         <i class="fas fa-chart-bar"></i>
                         <span class="nav-text">Statistics</span>
                         <div class="nav-indicator"></div>
                     </a>
-                    <a class="nav-item grid-stack-item" widget-name="subscriptions" data-tooltip="Subscriptions Widget">
+                    <a class="nav-item grid-stack-item" widget-type="subscriptions" data-tooltip="Subscriptions Widget">
                         <i class="fas fa-bell"></i>
                         <span class="nav-text">Subscriptions</span>
                         <div class="nav-indicator"></div>
@@ -141,7 +146,7 @@
     <div id="statusText" class="statusText"></div>
     <main class="main-container">
         <div class="embeded-widget"></div>
-        <div class="grid-stack"></div>
+        <div class="dashboard"></div>
     </main>
 </body>
 
