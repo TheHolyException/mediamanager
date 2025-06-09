@@ -37,6 +37,7 @@ function connect() {
             case "default":
                 onWSResponseDefault(cmd, content);
                 DownloadsWidget.onWSResponse(cmd, content);
+                StatisticsWidget.onWSResponse(cmd, content);
                 break;
             case "aniworld":
                 Aniworld.onWSResponseAniworldParser(cmd, content);

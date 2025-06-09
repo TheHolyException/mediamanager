@@ -90,6 +90,9 @@ class StatisticsWidget extends BaseWidget {
             }
         }, 100);
         
+        // Store widget instance for updates
+        widget.data('widgetInstance', self);
+        
         sendPacket('systemInfo', 'default');
         return widget.get(0);
     }
@@ -411,75 +414,94 @@ class StatisticsWidget extends BaseWidget {
         });
     }
 
+    static onWSResponse(cmd, content) {
+        if (cmd === 'systemInfo') {
+            StatisticsWidget.updateStatistics(content);
+        }
+    }
+
     static updateStatistics(responseData) {
-        let container = $('[widget-name="StatisticsWidget"] .statistics-tables');
-        if (container.length == 0) return;
+        // Find all statistics widgets currently in the DOM
+        const statisticsWidgets = $('[widget-name="StatisticsWidget"]');
+        if (statisticsWidgets.length === 0) return;
 
-        // Update memory historical chart
-        if (responseData.memoryHistory && window.statisticsWidgetInstance && window.statisticsWidgetInstance.memoryChart) {
-            const memoryData = responseData.memoryHistory;
-            const chart = window.statisticsWidgetInstance.memoryChart;
+        // Update charts for all visible statistics widgets
+        statisticsWidgets.each(function() {
+            const widget = $(this);
+            const widgetInstance = widget.data('widgetInstance');
             
-            // Clear existing data
-            chart.data.labels = [];
-            chart.data.datasets[0].data = [];
-            
-            // Add historical data points
-            memoryData.forEach(point => {
-                chart.data.labels.push(new Date(point.timestamp));
-                chart.data.datasets[0].data.push(point.usagePercent);
-            });
-            
-            chart.update('none');
-        }
+            // Update memory historical chart
+            if (responseData.memoryHistory && widgetInstance && widgetInstance.memoryChart) {
+                const memoryData = responseData.memoryHistory;
+                const chart = widgetInstance.memoryChart;
+                
+                // Clear existing data
+                chart.data.labels = [];
+                chart.data.datasets[0].data = [];
+                
+                // Add historical data points
+                memoryData.forEach(point => {
+                    chart.data.labels.push(new Date(point.timestamp));
+                    chart.data.datasets[0].data.push(point.usagePercent);
+                });
+                
+                chart.update('none');
+            }
+        });
 
-        // Update download historical chart
-        if (responseData.downloadHistory && window.statisticsWidgetInstance && window.statisticsWidgetInstance.systemChart) {
-            const downloadData = responseData.downloadHistory;
-            const chart = window.statisticsWidgetInstance.systemChart;
+        // Update download and thread charts for all widgets
+        statisticsWidgets.each(function() {
+            const widget = $(this);
+            const widgetInstance = widget.data('widgetInstance');
             
-            // Clear existing data
-            chart.data.labels = [];
-            chart.data.datasets.forEach(dataset => {
-                dataset.data = [];
-            });
-            
-            // Add historical data points
-            downloadData.forEach(point => {
-                const timestamp = new Date(point.timestamp);
-                chart.data.labels.push(timestamp);
-                chart.data.datasets[0].data.push(point.total);        // Total Downloads
-                chart.data.datasets[1].data.push(point.active);       // Active Downloads
-                chart.data.datasets[2].data.push(point.failed);       // Failed Downloads
-                chart.data.datasets[3].data.push(point.completed);    // Completed Downloads
-            });
-            
-            chart.update('none');
-        }
+            // Update download historical chart
+            if (responseData.downloadHistory && widgetInstance && widgetInstance.systemChart) {
+                const downloadData = responseData.downloadHistory;
+                const chart = widgetInstance.systemChart;
+                
+                // Clear existing data
+                chart.data.labels = [];
+                chart.data.datasets.forEach(dataset => {
+                    dataset.data = [];
+                });
+                
+                // Add historical data points
+                downloadData.forEach(point => {
+                    const timestamp = new Date(point.timestamp);
+                    chart.data.labels.push(timestamp);
+                    chart.data.datasets[0].data.push(point.total);        // Total Downloads
+                    chart.data.datasets[1].data.push(point.active);       // Active Downloads
+                    chart.data.datasets[2].data.push(point.failed);       // Failed Downloads
+                    chart.data.datasets[3].data.push(point.completed);    // Completed Downloads
+                });
+                
+                chart.update('none');
+            }
 
-        // Update thread historical chart
-        if (responseData.threadHistory && window.statisticsWidgetInstance && window.statisticsWidgetInstance.threadChart) {
-            const threadData = responseData.threadHistory;
-            const chart = window.statisticsWidgetInstance.threadChart;
-            
-            // Clear existing data
-            chart.data.labels = [];
-            chart.data.datasets.forEach(dataset => {
-                dataset.data = [];
-            });
-            
-            // Add historical data points
-            threadData.forEach(point => {
-                const timestamp = new Date(point.timestamp);
-                chart.data.labels.push(timestamp);
-                chart.data.datasets[0].data.push(point.active || 0);         // Active Threads
-                chart.data.datasets[1].data.push(point.queued || 0);         // Queued Tasks
-                chart.data.datasets[2].data.push(point.RUNNABLE || 0);       // RUNNABLE threads
-                chart.data.datasets[3].data.push(point.WAITING || 0);        // WAITING threads
-            });
-            
-            chart.update('none');
-        }
+            // Update thread historical chart
+            if (responseData.threadHistory && widgetInstance && widgetInstance.threadChart) {
+                const threadData = responseData.threadHistory;
+                const chart = widgetInstance.threadChart;
+                
+                // Clear existing data
+                chart.data.labels = [];
+                chart.data.datasets.forEach(dataset => {
+                    dataset.data = [];
+                });
+                
+                // Add historical data points
+                threadData.forEach(point => {
+                    const timestamp = new Date(point.timestamp);
+                    chart.data.labels.push(timestamp);
+                    chart.data.datasets[0].data.push(point.active || 0);         // Active Threads
+                    chart.data.datasets[1].data.push(point.queued || 0);         // Queued Tasks
+                    chart.data.datasets[2].data.push(point.RUNNABLE || 0);       // RUNNABLE threads
+                    chart.data.datasets[3].data.push(point.WAITING || 0);        // WAITING threads
+                });
+                
+                chart.update('none');
+            }
+        });
 
         // Update current memory information
         if (responseData.memory) {
