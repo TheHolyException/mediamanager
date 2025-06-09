@@ -1,16 +1,19 @@
 class SubscriptionsWidget extends BaseWidget {
-    constructor(name = "Subscriptions") {
-        super(name);
+    constructor(options = {}) {
+        super({
+            type: 'subscriptions',
+            width: 2,
+            height: 2,
+            ...options
+        });
+
         this.searchTerm = '';
         this.filterStatus = 'all';
         this.sortBy = 'title';
         this.sortOrder = 'asc';
     }
-    
-    // Static property to store current edit item across instances
-    static currentEditItem = null;
 
-    render() {
+    createContent() {
         let widget = $(`
         <div class="widget subscriptions-widget scrollbar-on-hover custom-scrollbar" widget-name="SubscriptionsWidget">
             <div class="widget-header">

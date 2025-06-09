@@ -1,12 +1,17 @@
 class DownloadsWidget extends BaseWidget {
     static indexes = new Map();
 
-    constructor(name = "Statistics") {
-        super(name);
+    constructor(options = {}) {
+        super({
+            type: 'downloads',
+            width: 2,
+            height: 2,
+            ...options
+        });
     }
 
-    render() {
-        let widget = $(`
+    createContent() {
+        let widgetContent = $(`
         <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="DownloadsWidget">
             <div class="widget-header">
                 <div class="widget-title">
@@ -99,9 +104,9 @@ class DownloadsWidget extends BaseWidget {
         </div>
         `);
 
-        widget.find('.add-sources-btn').click(function() {
+        widgetContent.find('.add-sources-btn').click(function () {
             // Simple function call with timeout fallback
-            setTimeout(function() {
+            setTimeout(function () {
                 if (typeof window.openAddSourcePopup === 'function') {
                     window.openAddSourcePopup();
                 } else if (typeof openAddSourcePopup === 'function') {
@@ -114,24 +119,24 @@ class DownloadsWidget extends BaseWidget {
             }, 100);
         });
 
-        widget.find('.commit-sources-btn').click(function () {
+        widgetContent.find('.commit-sources-btn').click(function () {
             DownloadsWidget.commit();
         });
 
-        widget.find('.retry-all-btn').click(function(){
-            widget.find('.failed [action="resend"]').click();
+        widgetContent.find('.retry-all-btn').click(function () {
+            widgetContent.find('.failed [action="resend"]').click();
         });
 
-        widget.find('.delete-all-btn').click(function(){
+        widgetContent.find('.delete-all-btn').click(function () {
             sendPacket("del-all", "default");
         });
 
-        widget.find('.delete-completed-btn').click(function(){
+        widgetContent.find('.delete-completed-btn').click(function () {
             widget.find('.success [action="delete"]').click();
         });
 
         sendPacket("syn", "default");
-        return widget.get(0);
+        return widgetContent.get(0);
     }
 
     static commit() {
@@ -165,15 +170,15 @@ class DownloadsWidget extends BaseWidget {
             if (!subPath)
                 subPath = '?';
 
-            for(let t of tableBodies){
+            for (let t of tableBodies) {
                 let tableBody = $(t);
                 row = tableBody.find('[uuid="' + item.uuid + '"]');
 
-                if(row.length == 0){
+                if (row.length == 0) {
                     row = DownloadsWidget.createNewRow(item);
                     tableBody.append(row);
                 }
-                else{
+                else {
                     let stateCol = row.find('[col="state"]');
                     stateCol.text(item.state.split('\n')[0]);
 
@@ -271,7 +276,7 @@ class DownloadsWidget extends BaseWidget {
                     "list": [data]
                 });
             });
-        
+
         // Set initial disabled state based on item state
         if (item.state === "new" || item.state.includes("Downloading")) {
             resentBtn.addClass('disabled');
@@ -375,8 +380,6 @@ class DownloadsWidget extends BaseWidget {
         }
     }
 
-
-
     static uuidv4() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
             .replace(/[xy]/g, function (c) {
@@ -395,7 +398,7 @@ class DownloadsWidget extends BaseWidget {
                 }
                 break;
             case "del":
-                for(let uuid of content.list){
+                for (let uuid of content.list) {
                     DownloadsWidget.indexes.delete(uuid);
                     $('.queue-table [uuid="' + uuid + '"]').remove();
                 }
