@@ -1,5 +1,6 @@
 class SettingsWidget extends BaseWidget {
     static currentSettings = {};
+    static isLoading = false;
 
     constructor(options = {}) {
         super({
@@ -16,6 +17,7 @@ class SettingsWidget extends BaseWidget {
                 type: 'number',
                 min: 1,
                 max: 32,
+                defaultValue: 2,
                 description: 'Number of parallel threads for VOE downloads',
                 icon: 'fas fa-download'
             },
@@ -25,6 +27,7 @@ class SettingsWidget extends BaseWidget {
                 type: 'number',
                 min: 1,
                 max: 16,
+                defaultValue: 10,
                 description: 'Maximum number of simultaneous downloads',
                 icon: 'fas fa-stream'
             },
@@ -34,6 +37,7 @@ class SettingsWidget extends BaseWidget {
                 type: 'number',
                 min: 1,
                 max: 1440,
+                defaultValue: 0,
                 description: 'Minutes to wait before retrying failed downloads',
                 icon: 'fas fa-redo'
             }
@@ -50,6 +54,15 @@ class SettingsWidget extends BaseWidget {
                     <i class="fas fa-cog"></i>
                     <h1 class="widget-handle">System Settings</h1>
                 </div>
+                <div class="settings-actions">
+                    <button class="save-settings-btn">
+                        <i class="fas fa-save"></i>
+                        <span class="btn-text">Save Changes</span>
+                        <div class="loading-spinner hidden">
+                            <i class="fas fa-spinner fa-spin"></i>
+                        </div>
+                    </button>
+                </div>
             </div>
             <div class="settings-container scrollable-content">
                 ${settingsCards}
@@ -63,8 +76,15 @@ class SettingsWidget extends BaseWidget {
         </div>
         `);
 
+        // Store widget instance for updates
+        widget.data('widgetInstance', this);
+        
         this.#initSettingValues(widget);
         this.#initEvents(widget);
+        
+        // Request current settings from server
+        sendPacket('syn', 'default');
+        
         return widget.get(0);
     }
 
@@ -98,7 +118,44 @@ class SettingsWidget extends BaseWidget {
         `;
     }
 
+    static onWSResponse(cmd, content) {
+        if (cmd === 'setting') {
+            // Update current settings from server
+            if (content.settings) {
+                content.settings.forEach(setting => {
+                    SettingsWidget.currentSettings[setting.key] = setting.val;
+                });
+                
+                // Update all visible settings widgets
+                $('[widget-name="SettingsWidget"]').each(function() {
+                    const widget = $(this);
+                    const widgetInstance = widget.data('widgetInstance');
+                    if (widgetInstance) {
+                        widgetInstance.#updateDisplayedValues(widget);
+                    }
+                });
+            }
+        }
+    }
+
+    #updateDisplayedValues(widget) {
+        for (let key in SettingsWidget.currentSettings) {
+            let value = SettingsWidget.currentSettings[key];
+            let input = widget.find('[setting="' + key + '"] .setting-input');
+            input.val(value);
+            input.attr('data-original-value', value);
+        }
+        this.#updateSaveButtonState(widget);
+    }
+
     #initSettingValues(widget) {
+        // Initialize with default values if currentSettings is empty
+        if (Object.keys(SettingsWidget.currentSettings).length === 0) {
+            this.settingsConfig.forEach(config => {
+                SettingsWidget.currentSettings[config.key] = config.defaultValue || config.min || 1;
+            });
+        }
+        
         for (let key in SettingsWidget.currentSettings) {
             let value = SettingsWidget.currentSettings[key];
             let input = widget.find('[setting="' + key + '"] .setting-input');
