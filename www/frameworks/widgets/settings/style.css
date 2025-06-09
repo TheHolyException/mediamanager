@@ -1,6 +1,7 @@
 [widget-name="SettingsWidget"] {
     padding: 0;
     overflow: hidden;
+    height: 100%;
 
     /* Header Styling - removed sticky as it's now handled centrally */
     .settings-header {
@@ -112,8 +113,14 @@
         display: flex;
         flex-direction: column;
         gap: 20px;
-        max-height: calc(100vh - 200px);
+        height: calc(100% - 80px); /* Subtract header height */
         overflow-y: auto;
+    }
+
+    .scrollable-content {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
     }
 
     /* Setting Card Styling */

@@ -74,7 +74,7 @@ class DownloadsWidget extends BaseWidget {
                         </button>
                     </nav>
                 </div>
-                <div class="table-container">
+                <div class="table-container scrollable-content">
                     <table class="queue-table">
                         <thead>
                             <tr>

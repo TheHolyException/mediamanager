@@ -214,7 +214,7 @@ class SubscriptionsWidget extends BaseWidget {
                 </div>
             </div>
 
-            <div class="subscriptions-container">
+            <div class="subscriptions-container scrollable-content">
                 <div class="empty-state" style="display: none;">
                     <i class="fa fa-inbox"></i>
                     <h3>No Subscriptions</h3>

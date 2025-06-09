@@ -44,14 +44,14 @@ class SettingsWidget extends BaseWidget {
         const settingsCards = this.settingsConfig.map(config => this.#renderSettingCard(config)).join('');
         
         let widget = $(`
-        <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="SettingsWidget">
+        <div class="widget" widget-name="SettingsWidget">
             <div class="widget-header">
                 <div class="widget-title">
                     <i class="fas fa-cog"></i>
                     <h1 class="widget-handle">System Settings</h1>
                 </div>
             </div>
-            <div class="settings-container">
+            <div class="settings-container scrollable-content">
                 ${settingsCards}
             </div>
             <div class="settings-footer">

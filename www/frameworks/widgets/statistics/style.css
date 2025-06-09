@@ -1,9 +1,13 @@
 [widget-name="StatisticsWidget"] {
+    height: 100%;
+    overflow: hidden;
     .statistics {
         display: flex;
         flex-direction: column;
         gap: 20px;
         padding: 10px;
+        height: calc(100% - 80px); /* Subtract header height */
+        overflow-y: auto;
     }
     
     .chart-grid {

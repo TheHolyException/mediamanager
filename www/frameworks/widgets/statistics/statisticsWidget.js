@@ -20,7 +20,7 @@ class StatisticsWidget extends BaseWidget {
                     <h1 class="widget-handle">System Statistics</h1>
                 </div>
             </div>
-            <div class="statistics">
+            <div class="statistics scrollable-content">
                 <div class="chart-grid">
                     <div class="chart-container">
                         <h3>RAM Usage History</h3>

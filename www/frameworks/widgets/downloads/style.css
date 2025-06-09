@@ -1,6 +1,6 @@
 [widget-name="DownloadsWidget"] {
     /* Ensure widget stays within grid boundaries */
-    max-height: 100%;
+    height: 100%;
     overflow: hidden;
     
     /* Ensure downloads widget toolbar is always visible and properly styled */
@@ -14,7 +14,7 @@
         flex-direction: column;
         gap: 20px;
         padding: 15px;
-        max-height: 100%;
+        height: calc(100% - 80px); /* Subtract header height */
         overflow: hidden; /* Prevent content from overflowing the widget */
         box-sizing: border-box;
     }
