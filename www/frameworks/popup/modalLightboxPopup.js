@@ -30,7 +30,7 @@ class ModalLightboxPopup {
 
         #editor-overlay {
             position: fixed;
-            z-index: 999;
+            z-index: 99999999999999999999999;
             inset: 0px;
             display: flex;
             justify-content: center;
