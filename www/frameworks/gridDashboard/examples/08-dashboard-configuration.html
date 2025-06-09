@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Configuration Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 12px;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .config-panel {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .config-section {
+            margin-bottom: 25px;
+        }
+
+        .config-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 2px solid #e1e5e9;
+            padding-bottom: 8px;
+        }
+
+        .config-group {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .config-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .config-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .config-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            flex: 1;
+        }
+
+        .config-description {
+            font-size: 12px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .config-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #4a90e2;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .slider {
+            width: 120px;
+            height: 6px;
+            border-radius: 3px;
+            background: #e1e5e9;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #4a90e2;
+            cursor: pointer;
+        }
+
+        .number-input {
+            width: 60px;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .select-input {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            min-width: 100px;
+        }
+
+        .color-input {
+            width: 40px;
+            height: 24px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .btn.small {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.success {
+            background: #28a745;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .dashboard-area {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .dashboard-controls {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .drop-zone {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .drop-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #6c757d;
+            pointer-events: none;
+        }
+
+        .drop-indicator .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .config-export {
+            background: #e7f3ff;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .config-export h4 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+
+        .config-export textarea {
+            width: 100%;
+            height: 100px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            resize: vertical;
+        }
+
+        .config-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>⚙️ Dashboard Configuration</h1>
+        <p>Complete dashboard setup with live configuration options</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>📖 What you'll learn:</h4>
+        <ul>
+            <li>Comprehensive dashboard configuration options</li>
+            <li>Real-time settings updates and preview</li>
+            <li>Layout and sizing configuration</li>
+            <li>Visual appearance customization</li>
+            <li>Behavior and interaction settings</li>
+            <li>Configuration export and import</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section-header">
+                <h2>⚙️ Configuration Panel</h2>
+                <p>Customize dashboard behavior and appearance</p>
+            </div>
+            <div class="config-panel">
+                <!-- Layout Configuration -->
+                <div class="config-section">
+                    <h3>📐 Layout Settings</h3>
+                    <div class="config-group">
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Grid Columns</div>
+                                <div class="config-description">Number of columns in the grid</div>
+                            </div>
+                            <div class="config-control">
+                                <input type="range" class="slider" id="columnsSlider" min="3" max="12" value="6">
+                                <span id="columnsValue">6</span>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Grid Rows</div>
+                                <div class="config-description">Number of rows in the grid</div>
+                            </div>
+                            <div class="config-control">
+                                <input type="range" class="slider" id="rowsSlider" min="3" max="10" value="4">
+                                <span id="rowsValue">4</span>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Cell Size</div>
+                                <div class="config-description">Size of each grid cell in pixels</div>
+                            </div>
+                            <div class="config-control">
+                                <input type="range" class="slider" id="cellSizeSlider" min="60" max="200" value="100">
+                                <span id="cellSizeValue">100px</span>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Gap Size</div>
+                                <div class="config-description">Space between grid cells</div>
+                            </div>
+                            <div class="config-control">
+                                <input type="range" class="slider" id="gapSlider" min="0" max="30" value="10">
+                                <span id="gapValue">10px</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sizing Configuration -->
+                <div class="config-section">
+                    <h3>📏 Sizing Options</h3>
+                    <div class="config-group">
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Auto Resize</div>
+                                <div class="config-description">Automatically resize dashboard to fit container</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch active" id="autoResizeToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Auto Resize Width</div>
+                                <div class="config-description">Resize width to fit container</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch active" id="autoResizeWidthToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Auto Resize Height</div>
+                                <div class="config-description">Resize height to fit container</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch active" id="autoResizeHeightToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Use CSS Auto</div>
+                                <div class="config-description">Use CSS grid auto-sizing features</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch" id="cssAutoToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Min Cell Size</div>
+                                <div class="config-description">Minimum cell size for auto-sizing</div>
+                            </div>
+                            <div class="config-control">
+                                <input type="number" class="number-input" id="minCellSizeInput" value="80" min="40" max="150">
+                                <span>px</span>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Max Cell Size</div>
+                                <div class="config-description">Maximum cell size for auto-sizing</div>
+                            </div>
+                            <div class="config-control">
+                                <input type="number" class="number-input" id="maxCellSizeInput" value="200" min="100" max="400">
+                                <span>px</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Behavior Configuration -->
+                <div class="config-section">
+                    <h3>🎮 Behavior Settings</h3>
+                    <div class="config-group">
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Edit Mode</div>
+                                <div class="config-description">Allow widgets to be moved and resized</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch active" id="editModeToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Drag & Drop</div>
+                                <div class="config-description">Enable drag and drop functionality</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch active" id="dragDropToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Allow Overlapping</div>
+                                <div class="config-description">Allow widgets to overlap each other</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch" id="overlappingToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Snap to Grid</div>
+                                <div class="config-description">Snap widgets to grid positions</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch active" id="snapToGridToggle"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Visual Configuration -->
+                <div class="config-section">
+                    <h3>🎨 Visual Appearance</h3>
+                    <div class="config-group">
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Show Grid Lines</div>
+                                <div class="config-description">Display grid lines for alignment</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch" id="gridLinesToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Grid Line Color</div>
+                                <div class="config-description">Color of the grid lines</div>
+                            </div>
+                            <div class="config-control">
+                                <input type="color" class="color-input" id="gridColorPicker" value="#e1e5e9">
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Background Color</div>
+                                <div class="config-description">Dashboard background color</div>
+                            </div>
+                            <div class="config-control">
+                                <input type="color" class="color-input" id="backgroundColorPicker" value="#f8f9fa">
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Widget Shadow</div>
+                                <div class="config-description">Add drop shadow to widgets</div>
+                            </div>
+                            <div class="config-control">
+                                <div class="toggle-switch active" id="widgetShadowToggle"></div>
+                            </div>
+                        </div>
+                        <div class="config-row">
+                            <div>
+                                <div class="config-label">Animation Speed</div>
+                                <div class="config-description">Speed of transitions and animations</div>
+                            </div>
+                            <div class="config-control">
+                                <select class="select-input" id="animationSpeedSelect">
+                                    <option value="slow">Slow</option>
+                                    <option value="normal" selected>Normal</option>
+                                    <option value="fast">Fast</option>
+                                    <option value="none">None</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="config-section">
+                    <h3>🚀 Quick Presets</h3>
+                    <div class="preset-buttons">
+                        <button class="btn small" id="compactPreset">Compact</button>
+                        <button class="btn small" id="spaciousPreset">Spacious</button>
+                        <button class="btn small" id="mobilePreset">Mobile</button>
+                        <button class="btn small" id="desktopPreset">Desktop</button>
+                    </div>
+                </div>
+
+                <!-- Configuration Export/Import -->
+                <div class="config-export">
+                    <h4>💾 Configuration</h4>
+                    <textarea id="configTextarea" placeholder="Configuration JSON will appear here..." readonly></textarea>
+                    <div class="config-buttons">
+                        <button class="btn small" id="exportConfig">Export</button>
+                        <button class="btn small" id="importConfig">Import</button>
+                        <button class="btn small danger" id="resetConfig">Reset</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section-header">
+                <h2>📊 Live Dashboard Preview</h2>
+                <p>See your configuration changes in real-time</p>
+            </div>
+            
+            <div class="dashboard-controls">
+                <button class="btn" id="addSampleWidget">Add Sample Widget</button>
+                <button class="btn" id="addRandomWidgets">Add Random Widgets</button>
+                <button class="btn danger" id="clearDashboard">Clear All</button>
+                <button class="btn success" id="saveDashboard">Save Layout</button>
+            </div>
+
+            <div class="dashboard-area">
+                <div class="drop-zone" id="dashboard">
+                    <div class="drop-indicator" id="dropIndicator">
+                        <div class="icon">⚙️</div>
+                        <div>Configuration Dashboard</div>
+                        <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">
+                            Adjust settings in the sidebar to see live changes
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../customWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+
+    <script>
+        let dashboard = null;
+        let currentConfig = {};
+
+        function initDemo() {
+            // Create the dashboard with default configuration
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: false,
+                useCSSAuto: false,
+                minCellSize: 80,
+                maxCellSize: 200
+            });
+
+            // Store initial configuration
+            currentConfig = { ...dashboard.options };
+
+            // Set up event listeners
+            setupConfigurationListeners();
+            setupDashboardListeners();
+
+            // Update initial UI
+            updateConfigurationDisplay();
+            exportConfiguration();
+        }
+
+        function setupConfigurationListeners() {
+            // Layout settings
+            document.getElementById('columnsSlider').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                document.getElementById('columnsValue').textContent = value;
+                dashboard.setGridDimensions(value, dashboard.getGridDimensions().height);
+                updateConfig();
+            });
+
+            document.getElementById('rowsSlider').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                document.getElementById('rowsValue').textContent = value;
+                dashboard.setGridDimensions(dashboard.getGridDimensions().width, value);
+                updateConfig();
+            });
+
+            document.getElementById('cellSizeSlider').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                document.getElementById('cellSizeValue').textContent = value + 'px';
+                dashboard.setCellSize(value);
+                currentConfig.cellSize = value;
+                updateDashboardAppearance();
+                exportConfiguration();
+            });
+
+            document.getElementById('gapSlider').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                document.getElementById('gapValue').textContent = value + 'px';
+                dashboard.options.gap = value;
+                dashboard.updateLayout();
+                currentConfig.gap = value;
+                exportConfiguration();
+            });
+
+            // Sizing options
+            document.getElementById('autoResizeToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.setAutoResize(isActive);
+                currentConfig.autoResize = isActive;
+                exportConfiguration();
+            });
+
+            document.getElementById('autoResizeWidthToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.options.autoResizeWidth = isActive;
+                currentConfig.autoResizeWidth = isActive;
+                dashboard.updateLayout();
+                exportConfiguration();
+            });
+
+            document.getElementById('autoResizeHeightToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.options.autoResizeHeight = isActive;
+                currentConfig.autoResizeHeight = isActive;
+                dashboard.updateLayout();
+                exportConfiguration();
+            });
+
+            document.getElementById('cssAutoToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.options.useCSSAuto = isActive;
+                currentConfig.useCSSAuto = isActive;
+                dashboard.updateLayout();
+                exportConfiguration();
+            });
+
+            document.getElementById('minCellSizeInput').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                dashboard.options.minCellSize = value;
+                currentConfig.minCellSize = value;
+                dashboard.updateLayout();
+                exportConfiguration();
+            });
+
+            document.getElementById('maxCellSizeInput').addEventListener('input', (e) => {
+                const value = parseInt(e.target.value);
+                dashboard.options.maxCellSize = value;
+                currentConfig.maxCellSize = value;
+                dashboard.updateLayout();
+                exportConfiguration();
+            });
+
+            // Behavior settings
+            document.getElementById('editModeToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.setEditMode(isActive);
+                currentConfig.editMode = isActive;
+                exportConfiguration();
+            });
+
+            document.getElementById('dragDropToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.options.enableDragDrop = isActive;
+                currentConfig.enableDragDrop = isActive;
+                exportConfiguration();
+            });
+
+            document.getElementById('overlappingToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.options.allowOverlapping = isActive;
+                currentConfig.allowOverlapping = isActive;
+                exportConfiguration();
+            });
+
+            document.getElementById('snapToGridToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.options.snapToGrid = isActive;
+                currentConfig.snapToGrid = isActive;
+                exportConfiguration();
+            });
+
+            // Visual appearance
+            document.getElementById('gridLinesToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                dashboard.setShowGridLines(isActive);
+                currentConfig.showGridLines = isActive;
+                exportConfiguration();
+            });
+
+            document.getElementById('gridColorPicker').addEventListener('input', (e) => {
+                const color = e.target.value;
+                updateGridLineColor(color);
+                currentConfig.gridLineColor = color;
+                exportConfiguration();
+            });
+
+            document.getElementById('backgroundColorPicker').addEventListener('input', (e) => {
+                const color = e.target.value;
+                updateBackgroundColor(color);
+                currentConfig.backgroundColor = color;
+                exportConfiguration();
+            });
+
+            document.getElementById('widgetShadowToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.toggle('active');
+                updateWidgetShadow(isActive);
+                currentConfig.widgetShadow = isActive;
+                exportConfiguration();
+            });
+
+            document.getElementById('animationSpeedSelect').addEventListener('change', (e) => {
+                const speed = e.target.value;
+                updateAnimationSpeed(speed);
+                currentConfig.animationSpeed = speed;
+                exportConfiguration();
+            });
+
+            // Preset buttons
+            document.getElementById('compactPreset').addEventListener('click', () => applyPreset('compact'));
+            document.getElementById('spaciousPreset').addEventListener('click', () => applyPreset('spacious'));
+            document.getElementById('mobilePreset').addEventListener('click', () => applyPreset('mobile'));
+            document.getElementById('desktopPreset').addEventListener('click', () => applyPreset('desktop'));
+
+            // Configuration export/import
+            document.getElementById('exportConfig').addEventListener('click', exportConfiguration);
+            document.getElementById('importConfig').addEventListener('click', importConfiguration);
+            document.getElementById('resetConfig').addEventListener('click', resetConfiguration);
+        }
+
+        function setupDashboardListeners() {
+            // Dashboard controls
+            document.getElementById('addSampleWidget').addEventListener('click', () => {
+                addSampleWidget();
+            });
+
+            document.getElementById('addRandomWidgets').addEventListener('click', () => {
+                addRandomWidgets();
+            });
+
+            document.getElementById('clearDashboard').addEventListener('click', () => {
+                if (confirm('Clear all widgets?')) {
+                    const widgets = Array.from(dashboard.widgets.keys());
+                    widgets.forEach(id => dashboard.removeWidget(id));
+                    updateDropIndicator();
+                }
+            });
+
+            document.getElementById('saveDashboard').addEventListener('click', () => {
+                const layout = dashboard.exportLayout();
+                localStorage.setItem('dashboard-config-layout', JSON.stringify(layout));
+                alert('Dashboard layout saved!');
+            });
+
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', () => {
+                updateDropIndicator();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                updateDropIndicator();
+            });
+        }
+
+        function addSampleWidget() {
+            const widgets = [
+                new TextWidget({
+                    title: 'Sample Text',
+                    text: 'This is a sample text widget for configuration testing.',
+                    width: 2,
+                    height: 2
+                }),
+                new ChartWidget({
+                    title: 'Sample Chart',
+                    width: 3,
+                    height: 2,
+                    chartType: 'line'
+                }),
+                new GridWidget({
+                    title: 'Custom Widget',
+                    content: `
+                        <div style="padding: 20px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">⚙️</div>
+                            <h4>Configuration Test</h4>
+                            <p style="margin-top: 10px; color: #666; font-size: 14px;">
+                                This widget responds to configuration changes.
+                            </p>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 2
+                })
+            ];
+
+            const randomWidget = widgets[Math.floor(Math.random() * widgets.length)];
+            dashboard.addWidget(randomWidget);
+        }
+
+        function addRandomWidgets() {
+            const count = Math.floor(Math.random() * 5) + 3; // 3-7 widgets
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => addSampleWidget(), i * 200);
+            }
+        }
+
+        function updateConfig() {
+            currentConfig = { ...dashboard.options };
+            exportConfiguration();
+        }
+
+        function updateConfigurationDisplay() {
+            // Update sliders and values
+            const dimensions = dashboard.getGridDimensions();
+            document.getElementById('columnsSlider').value = dimensions.width;
+            document.getElementById('columnsValue').textContent = dimensions.width;
+            document.getElementById('rowsSlider').value = dimensions.height;
+            document.getElementById('rowsValue').textContent = dimensions.height;
+            document.getElementById('cellSizeSlider').value = dashboard.options.cellSize;
+            document.getElementById('cellSizeValue').textContent = dashboard.options.cellSize + 'px';
+            document.getElementById('gapSlider').value = dashboard.options.gap;
+            document.getElementById('gapValue').textContent = dashboard.options.gap + 'px';
+
+            // Update toggles
+            document.getElementById('autoResizeToggle').classList.toggle('active', dashboard.options.autoResize);
+            document.getElementById('autoResizeWidthToggle').classList.toggle('active', dashboard.options.autoResizeWidth);
+            document.getElementById('autoResizeHeightToggle').classList.toggle('active', dashboard.options.autoResizeHeight);
+            document.getElementById('cssAutoToggle').classList.toggle('active', dashboard.options.useCSSAuto);
+            document.getElementById('editModeToggle').classList.toggle('active', dashboard.options.editMode);
+            document.getElementById('dragDropToggle').classList.toggle('active', dashboard.options.enableDragDrop);
+            document.getElementById('overlappingToggle').classList.toggle('active', dashboard.options.allowOverlapping);
+            document.getElementById('gridLinesToggle').classList.toggle('active', dashboard.options.showGridLines);
+
+            // Update number inputs
+            document.getElementById('minCellSizeInput').value = dashboard.options.minCellSize;
+            document.getElementById('maxCellSizeInput').value = dashboard.options.maxCellSize;
+        }
+
+        function updateDashboardAppearance() {
+            // Apply visual updates that aren't handled by the dashboard itself
+            dashboard.updateLayout();
+        }
+
+        function updateGridLineColor(color) {
+            const style = document.createElement('style');
+            style.textContent = `
+                .grid-dashboard .grid-line {
+                    background-color: ${color} !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function updateBackgroundColor(color) {
+            dashboard.container.style.backgroundColor = color;
+        }
+
+        function updateWidgetShadow(enabled) {
+            const style = document.createElement('style');
+            style.textContent = `
+                .grid-widget {
+                    box-shadow: ${enabled ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'} !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function updateAnimationSpeed(speed) {
+            const speeds = {
+                slow: '0.5s',
+                normal: '0.3s',
+                fast: '0.1s',
+                none: '0s'
+            };
+            
+            const style = document.createElement('style');
+            style.textContent = `
+                .grid-widget {
+                    transition: all ${speeds[speed]} ease !important;
+                }
+                .grid-dashboard {
+                    transition: all ${speeds[speed]} ease !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        function applyPreset(preset) {
+            const presets = {
+                compact: {
+                    cellWidth: 80,
+                    cellHeight: 80,
+                    gap: 5,
+                    gridDimensions: [8, 6],
+                    autoResize: true,
+                    useCSSAuto: true,
+                    minCellSize: 60,
+                    maxCellSize: 120
+                },
+                spacious: {
+                    cellWidth: 150,
+                    cellHeight: 150,
+                    gap: 20,
+                    gridDimensions: [4, 3],
+                    autoResize: false,
+                    useCSSAuto: false,
+                    minCellSize: 120,
+                    maxCellSize: 200
+                },
+                mobile: {
+                    cellWidth: 100,
+                cellHeight: 100,
+                    gap: 8,
+                    gridDimensions: [3, 5],
+                    autoResize: true,
+                    useCSSAuto: true,
+                    minCellSize: 80,
+                    maxCellSize: 140
+                },
+                desktop: {
+                    cellWidth: 120,
+                cellHeight: 120,
+                    gap: 15,
+                    gridDimensions: [6, 4],
+                    autoResize: true,
+                    useCSSAuto: false,
+                    minCellSize: 100,
+                    maxCellSize: 200
+                }
+            };
+
+            const config = presets[preset];
+            if (!config) return;
+
+            // Apply configuration
+            dashboard.setCellSize(config.cellSize);
+            dashboard.options.gap = config.gap;
+            dashboard.setGridDimensions(config.gridDimensions[0], config.gridDimensions[1]);
+            dashboard.setAutoResize(config.autoResize);
+            dashboard.options.useCSSAuto = config.useCSSAuto;
+            dashboard.options.minCellSize = config.minCellSize;
+            dashboard.options.maxCellSize = config.maxCellSize;
+            dashboard.updateLayout();
+
+            // Update UI
+            updateConfigurationDisplay();
+            updateConfig();
+        }
+
+        function exportConfiguration() {
+            const config = {
+                ...currentConfig,
+                gridDimensions: dashboard.getGridDimensions(),
+                timestamp: new Date().toISOString()
+            };
+            
+            document.getElementById('configTextarea').value = JSON.stringify(config, null, 2);
+        }
+
+        function importConfiguration() {
+            try {
+                const configText = document.getElementById('configTextarea').value;
+                const config = JSON.parse(configText);
+                
+                // Apply configuration
+                if (config.gridDimensions) {
+                    dashboard.setGridDimensions(config.gridDimensions.width, config.gridDimensions.height);
+                }
+                dashboard.setCellSize(config.cellSize || 100);
+                dashboard.options.gap = config.gap || 10;
+                dashboard.setAutoResize(config.autoResize !== false);
+                dashboard.options.useCSSAuto = config.useCSSAuto || false;
+                dashboard.options.minCellSize = config.minCellSize || 80;
+                dashboard.options.maxCellSize = config.maxCellSize || 200;
+                dashboard.setEditMode(config.editMode !== false);
+                dashboard.setShowGridLines(config.showGridLines || false);
+                
+                dashboard.updateLayout();
+                updateConfigurationDisplay();
+                updateConfig();
+                
+                alert('Configuration imported successfully!');
+            } catch (e) {
+                alert('Invalid configuration format!');
+            }
+        }
+
+        function resetConfiguration() {
+            if (confirm('Reset to default configuration?')) {
+                // Reset to initial state
+                dashboard.setGridDimensions(6, 4);
+                dashboard.setCellSize(100);
+                dashboard.options.gap = 10;
+                dashboard.setAutoResize(true);
+                dashboard.options.useCSSAuto = false;
+                dashboard.options.minCellSize = 80;
+                dashboard.options.maxCellSize = 200;
+                dashboard.setEditMode(true);
+                dashboard.setShowGridLines(false);
+                
+                dashboard.updateLayout();
+                updateConfigurationDisplay();
+                updateConfig();
+            }
+        }
+
+        function updateDropIndicator() {
+            const indicator = document.getElementById('dropIndicator');
+            const hasWidgets = dashboard.widgets.size > 0;
+            indicator.style.display = hasWidgets ? 'none' : 'block';
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDemo);
+
+        // Auto-save configuration to localStorage
+        setInterval(() => {
+            localStorage.setItem('dashboard-config', JSON.stringify(currentConfig));
+        }, 5000);
+
+        // Load saved configuration on startup
+        window.addEventListener('load', () => {
+            const saved = localStorage.getItem('dashboard-config');
+            if (saved) {
+                try {
+                    const config = JSON.parse(saved);
+                    document.getElementById('configTextarea').value = JSON.stringify(config, null, 2);
+                } catch (e) {
+                    console.log('Could not load saved configuration');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

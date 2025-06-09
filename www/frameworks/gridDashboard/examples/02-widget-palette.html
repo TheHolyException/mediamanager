@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widget Palette Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #4a90e2;
+            text-decoration: none;
+            margin-bottom: 10px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            height: fit-content;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 700px;
+            padding: 20px;
+        }
+
+        .info-panel {
+            background: #e7f3ff;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-panel h4 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+
+        .info-panel ul {
+            color: #0c5460;
+            margin-left: 20px;
+        }
+
+        .controls {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background: #4a90e2;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #ccc;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #4a90e2;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>🎨 Widget Palette</h1>
+        <p>Standard widget palette with templates and categories</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>📖 What you'll learn:</h4>
+        <ul>
+            <li>How to use the standard WidgetPalette class</li>
+            <li>Categorized widget organization</li>
+            <li>Search and filter functionality</li>
+            <li>Drag-to-add widget functionality</li>
+            <li>Widget templates and previews</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div id="widget-palette"></div>
+        </div>
+
+        <div class="main-content">
+            <div class="controls">
+                <label>Edit Mode:</label>
+                <div class="toggle-switch active" id="editModeToggle"></div>
+                
+                <label>Grid Lines:</label>
+                <div class="toggle-switch" id="gridLinesToggle"></div>
+                
+                <button id="clearDashboard" class="btn secondary">Clear All</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="widgetCount">0</div>
+                    <div class="stat-label">Widgets</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="paletteItems">0</div>
+                    <div class="stat-label">Palette Items</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="categories">0</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+            </div>
+
+            <div id="dashboard"></div>
+        </div>
+    </div>
+
+    <!-- Include the grid framework scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+    <script src="../widgetPalette.js"></script>
+
+    <script>
+        let dashboard = null;
+        let palette = null;
+
+        function initDemo() {
+            // Create the dashboard
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: false,
+                useCSSAuto: true
+            });
+
+            // Create the widget palette
+            palette = new WidgetPalette('#widget-palette', {
+                title: 'Widget Library',
+                layout: 'list',
+                collapsible: true,
+                searchable: true,
+                categories: true,
+                showPreview: true
+            });
+
+            // Register the palette with the dashboard
+            dashboard.registerWidgetPalette('main-palette', palette);
+
+            // Add welcome widget
+            const welcomeWidget = new TextWidget({
+                title: 'Widget Palette Demo',
+                text: 'Welcome to the Widget Palette demo!\n\n• Browse widgets in the sidebar\n• Use search to find specific widgets\n• Drag widgets to the dashboard\n• Explore different categories',
+                textAlign: 'left',
+                width: 4,
+                height: 3
+            });
+            dashboard.addWidget(welcomeWidget, { x: 1, y: 0 });
+
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Update stats
+            updateStats();
+        }
+
+        function setupEventListeners() {
+            // Toggle controls
+            document.getElementById('editModeToggle').addEventListener('click', (e) => {
+                dashboard.toggleEditMode();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('gridLinesToggle').addEventListener('click', (e) => {
+                dashboard.toggleGridLines();
+                e.target.classList.toggle('active');
+            });
+
+            // Clear dashboard
+            document.getElementById('clearDashboard').addEventListener('click', () => {
+                if (confirm('Clear all widgets?')) {
+                    const widgets = Array.from(dashboard.widgets.keys());
+                    widgets.forEach(id => dashboard.removeWidget(id));
+                    updateStats();
+                }
+            });
+
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', (e) => {
+                console.log('Widget created:', e.detail);
+                updateStats();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                updateStats();
+            });
+
+            // Palette events
+            palette.container.addEventListener('widgetPalette:widgetSelected', (e) => {
+                console.log('Widget selected from palette:', e.detail);
+            });
+
+            palette.container.addEventListener('widgetPalette:searchChanged', (e) => {
+                console.log('Palette search changed:', e.detail.query);
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('widgetCount').textContent = dashboard.widgets.size;
+            
+            // Count palette items and categories
+            const paletteItems = palette.container.querySelectorAll('.widget-palette-item').length;
+            const categories = palette.container.querySelectorAll('.widget-category').length;
+            
+            document.getElementById('paletteItems').textContent = paletteItems;
+            document.getElementById('categories').textContent = categories;
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDemo);
+    </script>
+</body>
+</html>

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Basic Dashboard Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: #4a90e2;
+            text-decoration: none;
+            margin-bottom: 10px;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .controls h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #4a90e2;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .btn.secondary:hover {
+            background: #545b62;
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.danger:hover {
+            background: #c82333;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #4a90e2;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(26px);
+        }
+
+        .dashboard-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            min-height: 600px;
+            padding: 20px;
+        }
+
+        .info-panel {
+            background: #e7f3ff;
+            border: 1px solid #bee5eb;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .info-panel h4 {
+            color: #0c5460;
+            margin-bottom: 10px;
+        }
+
+        .info-panel ul {
+            color: #0c5460;
+            margin-left: 20px;
+        }
+
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="index.html" class="back-link">← Back to Examples</a>
+            <h1>🚀 Basic Dashboard</h1>
+            <p>Learn the fundamentals of creating a grid dashboard with basic widgets</p>
+        </div>
+
+        <div class="info-panel">
+            <h4>📖 What you'll learn:</h4>
+            <ul>
+                <li>How to create a basic grid dashboard</li>
+                <li>Adding and removing widgets programmatically</li>
+                <li>Basic drag and drop functionality</li>
+                <li>Dashboard configuration options</li>
+                <li>Grid resizing and responsive behavior</li>
+            </ul>
+        </div>
+
+        <div class="controls">
+            <h3>Dashboard Controls</h3>
+            
+            <div class="control-group">
+                <button id="addTextWidget" class="btn">Add Text Widget</button>
+                <button id="addChartWidget" class="btn">Add Chart Widget</button>
+                <button id="addImageWidget" class="btn">Add Image Widget</button>
+                <button id="addCustomWidget" class="btn">Add Custom Widget</button>
+            </div>
+
+            <div class="control-group">
+                <label>Edit Mode:</label>
+                <div class="toggle-switch active" id="editModeToggle"></div>
+                
+                <label>Grid Lines:</label>
+                <div class="toggle-switch" id="gridLinesToggle"></div>
+                
+                <label>Auto Resize:</label>
+                <div class="toggle-switch active" id="autoResizeToggle"></div>
+            </div>
+
+            <div class="control-group">
+                <button id="clearDashboard" class="btn danger">Clear All Widgets</button>
+                <button id="saveDashboard" class="btn secondary">Save Layout</button>
+                <button id="loadDashboard" class="btn secondary">Load Layout</button>
+            </div>
+        </div>
+
+        <div class="dashboard-container">
+            <div id="dashboard"></div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-item">
+                <div class="stat-value" id="widgetCount">0</div>
+                <div class="stat-label">Widgets</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="gridSize">6×4</div>
+                <div class="stat-label">Grid Size</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="cellSize">100px</div>
+                <div class="stat-label">Cell Size</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include the grid framework scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+
+    <script>
+        // Initialize the dashboard
+        let dashboard = null;
+
+        function initDashboard() {
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: false,
+                useCSSAuto: false  // Use fixed cell sizing to demonstrate cellWidth/cellHeight
+            });
+
+            // Add some initial widgets
+            addInitialWidgets();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Update stats
+            updateStats();
+        }
+
+        function addInitialWidgets() {
+            // Welcome widget
+            const welcomeWidget = new TextWidget({
+                title: 'Welcome! 👋',
+                text: 'This is a basic dashboard example.\n\nTry dragging widgets around or adding new ones using the controls above.',
+                textAlign: 'left',
+                width: 3,
+                height: 2
+            });
+            dashboard.addWidget(welcomeWidget, { x: 0, y: 0 });
+
+            // Sample chart widget
+            const chartWidget = new ChartWidget({
+                title: 'Sample Chart',
+                width: 3,
+                height: 2,
+                chartType: 'line'
+            });
+            dashboard.addWidget(chartWidget, { x: 3, y: 0 });
+        }
+
+        function setupEventListeners() {
+            // Widget creation buttons
+            document.getElementById('addTextWidget').addEventListener('click', () => {
+                const widget = new TextWidget({
+                    title: 'Text Widget',
+                    text: 'This is a sample text widget with some content.',
+                    width: 2,
+                    height: 2
+                });
+                dashboard.addWidget(widget);
+                updateStats();
+            });
+
+            document.getElementById('addChartWidget').addEventListener('click', () => {
+                const widget = new ChartWidget({
+                    title: 'Chart Widget',
+                    width: 3,
+                    height: 2,
+                    chartType: 'bar'
+                });
+                dashboard.addWidget(widget);
+                updateStats();
+            });
+
+            document.getElementById('addImageWidget').addEventListener('click', () => {
+                const widget = new ImageWidget({
+                    title: 'Image Widget',
+                    imageUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="150" viewBox="0 0 200 150"><rect width="200" height="150" fill="%23f0f0f0"/><text x="100" y="75" text-anchor="middle" dy="0.3em" font-family="Arial" font-size="16" fill="%23666">Sample Image</text></svg>',
+                    width: 2,
+                    height: 2
+                });
+                dashboard.addWidget(widget);
+                updateStats();
+            });
+
+            document.getElementById('addCustomWidget').addEventListener('click', () => {
+                const widget = new GridWidget({
+                    title: 'Custom Widget',
+                    content: `
+                        <div style="padding: 20px; text-align: center;">
+                            <div style="font-size: 48px; margin-bottom: 15px;">⭐</div>
+                            <h3>Custom Content</h3>
+                            <p>This widget has custom HTML content.</p>
+                            <button style="margin-top: 15px; padding: 8px 16px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer;">Click Me</button>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 3
+                });
+                dashboard.addWidget(widget);
+                updateStats();
+            });
+
+            // Toggle controls
+            document.getElementById('editModeToggle').addEventListener('click', (e) => {
+                dashboard.toggleEditMode();
+                e.target.classList.toggle('active');
+                updateStats();
+            });
+
+            document.getElementById('gridLinesToggle').addEventListener('click', (e) => {
+                dashboard.toggleGridLines();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('autoResizeToggle').addEventListener('click', (e) => {
+                const isActive = e.target.classList.contains('active');
+                dashboard.setAutoResize(!isActive);
+                e.target.classList.toggle('active');
+            });
+
+            // Dashboard management
+            document.getElementById('clearDashboard').addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear all widgets?')) {
+                    const widgets = Array.from(dashboard.widgets.keys());
+                    widgets.forEach(id => dashboard.removeWidget(id));
+                    updateStats();
+                }
+            });
+
+            document.getElementById('saveDashboard').addEventListener('click', () => {
+                const layout = dashboard.exportLayout();
+                localStorage.setItem('dashboard-layout', JSON.stringify(layout));
+                alert('Dashboard layout saved!');
+            });
+
+            document.getElementById('loadDashboard').addEventListener('click', () => {
+                const saved = localStorage.getItem('dashboard-layout');
+                if (saved) {
+                    const layout = JSON.parse(saved);
+                    dashboard.importLayout(layout);
+                    updateStats();
+                    alert('Dashboard layout loaded!');
+                } else {
+                    alert('No saved layout found!');
+                }
+            });
+
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', updateStats);
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', updateStats);
+            dashboard.container.addEventListener('gridDashboard:layoutChanged', updateStats);
+        }
+
+        function updateStats() {
+            document.getElementById('widgetCount').textContent = dashboard.widgets.size;
+            
+            const dimensions = dashboard.getGridDimensions();
+            document.getElementById('gridSize').textContent = `${dimensions.width}×${dimensions.height}`;
+            
+            const cellSize = dashboard.options.useCSSAuto ? 'Auto' : `${dashboard.options.cellSize}px`;
+            document.getElementById('cellSize').textContent = cellSize;
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDashboard);
+    </script>
+</body>
+</html>

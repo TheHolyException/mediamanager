@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Application Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1a1a2e;
+            color: white;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            display: grid;
+            grid-template-rows: 60px 1fr;
+            height: 100vh;
+        }
+
+        /* Top Navigation Bar */
+        .top-nav {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            z-index: 1000;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .nav-brand .logo {
+            font-size: 24px;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 28px;
+            height: 28px;
+            background: #fff;
+            color: #667eea;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            gap: 0;
+            overflow: hidden;
+        }
+
+        /* Left Sidebar */
+        .left-sidebar {
+            background: #16213e;
+            border-right: 1px solid #2a3f5f;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-section {
+            border-bottom: 1px solid #2a3f5f;
+        }
+
+        .sidebar-header {
+            background: #1e2a47;
+            padding: 15px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #8892b0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .widget-library {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .widget-category {
+            margin-bottom: 20px;
+        }
+
+        .category-title {
+            color: #64ffda;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            padding-left: 5px;
+        }
+
+        .widget-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .widget-item:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .widget-item .icon {
+            font-size: 20px;
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .widget-item .info {
+            flex: 1;
+        }
+
+        .widget-item .name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .widget-item .desc {
+            font-size: 11px;
+            opacity: 0.8;
+        }
+
+        /* Dashboard Area */
+        .dashboard-container {
+            background: #0f1419;
+            position: relative;
+            overflow: auto;
+        }
+
+        .dashboard-header {
+            background: #1e2a47;
+            border-bottom: 1px solid #2a3f5f;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .dashboard-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #ccd6f6;
+        }
+
+        .dashboard-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 12px;
+            color: #8892b0;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .dashboard-controls {
+            background: #16213e;
+            border-bottom: 1px solid #2a3f5f;
+            padding: 12px 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .control-btn {
+            background: #233554;
+            color: #ccd6f6;
+            border: 1px solid #2a3f5f;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .control-btn:hover {
+            background: #2a3f5f;
+            border-color: #667eea;
+        }
+
+        .control-btn.active {
+            background: #667eea;
+            border-color: #667eea;
+            color: white;
+        }
+
+        .dashboard-area {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .drop-zone {
+            background: #0f1419;
+            border: 2px dashed #2a3f5f;
+            border-radius: 12px;
+            min-height: 600px;
+            position: relative;
+        }
+
+        .drop-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #8892b0;
+            pointer-events: none;
+        }
+
+        .drop-indicator .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .drop-indicator h3 {
+            color: #ccd6f6;
+            margin-bottom: 10px;
+        }
+
+        /* Right Sidebar */
+        .right-sidebar {
+            background: #16213e;
+            border-left: 1px solid #2a3f5f;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .properties-panel {
+            padding: 20px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .property-group {
+            margin-bottom: 25px;
+        }
+
+        .property-group h4 {
+            color: #64ffda;
+            font-size: 14px;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .property-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .property-label {
+            color: #ccd6f6;
+            font-size: 13px;
+            flex: 1;
+        }
+
+        .property-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 40px;
+            height: 20px;
+            background: #2a3f5f;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #667eea;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .slider {
+            width: 100px;
+            height: 4px;
+            border-radius: 2px;
+            background: #2a3f5f;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+        }
+
+        .value-display {
+            color: #8892b0;
+            font-size: 12px;
+            min-width: 40px;
+            text-align: right;
+        }
+
+        .analytics-panel {
+            border-top: 1px solid #2a3f5f;
+            padding: 20px;
+        }
+
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .analytics-card {
+            background: #1e2a47;
+            border: 1px solid #2a3f5f;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .analytics-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #64ffda;
+            margin-bottom: 5px;
+        }
+
+        .analytics-label {
+            font-size: 11px;
+            color: #8892b0;
+            text-transform: uppercase;
+        }
+
+        .performance-chart {
+            background: #1e2a47;
+            border: 1px solid #2a3f5f;
+            border-radius: 8px;
+            padding: 15px;
+            height: 120px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-title {
+            color: #ccd6f6;
+            font-size: 12px;
+            margin-bottom: 10px;
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 80px;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal {
+            background: #16213e;
+            border: 1px solid #2a3f5f;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+
+        .modal h2 {
+            color: #ccd6f6;
+            margin-bottom: 20px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .modal-btn.secondary {
+            background: #2a3f5f;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 250px 1fr 280px;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .left-sidebar,
+            .right-sidebar {
+                display: none;
+            }
+        }
+
+        /* Loading Animation */
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        .loading {
+            animation: pulse 2s infinite;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1a1a2e;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #2a3f5f;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-brand">
+                <div class="logo">🚀</div>
+                <div>Dashboard Pro</div>
+            </div>
+            <div class="nav-actions">
+                <button class="nav-btn" id="newDashboard">New</button>
+                <button class="nav-btn" id="saveDashboard">Save</button>
+                <button class="nav-btn" id="exportDashboard">Export</button>
+                <button class="nav-btn" id="settingsBtn">Settings</button>
+                <div class="user-profile" id="userProfile">
+                    <div class="user-avatar">JD</div>
+                    <span>John Doe</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Left Sidebar - Widget Library -->
+            <div class="left-sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-header">Widget Library</div>
+                    <div class="widget-library">
+                        <!-- Data Widgets -->
+                        <div class="widget-category">
+                            <div class="category-title">📊 Data & Analytics</div>
+                            <div class="widget-item" widget-type="chart-widget">
+                                <div class="icon">📈</div>
+                                <div class="info">
+                                    <div class="name">Line Chart</div>
+                                    <div class="desc">Time series data visualization</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="bar-chart-widget">
+                                <div class="icon">📊</div>
+                                <div class="info">
+                                    <div class="name">Bar Chart</div>
+                                    <div class="desc">Categorical data comparison</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="metric-widget">
+                                <div class="icon">🔢</div>
+                                <div class="info">
+                                    <div class="name">KPI Metric</div>
+                                    <div class="desc">Key performance indicator</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="table-widget">
+                                <div class="icon">📋</div>
+                                <div class="info">
+                                    <div class="name">Data Table</div>
+                                    <div class="desc">Tabular data display</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Control Widgets -->
+                        <div class="widget-category">
+                            <div class="category-title">🎛️ Controls & Forms</div>
+                            <div class="widget-item" widget-type="filter-widget">
+                                <div class="icon">🔍</div>
+                                <div class="info">
+                                    <div class="name">Filter Panel</div>
+                                    <div class="desc">Data filtering controls</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="date-picker-widget">
+                                <div class="icon">📅</div>
+                                <div class="info">
+                                    <div class="name">Date Picker</div>
+                                    <div class="desc">Date range selection</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="slider-widget">
+                                <div class="icon">🎚️</div>
+                                <div class="info">
+                                    <div class="name">Slider Control</div>
+                                    <div class="desc">Value range selector</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content Widgets -->
+                        <div class="widget-category">
+                            <div class="category-title">📝 Content & Media</div>
+                            <div class="widget-item" widget-type="text-widget">
+                                <div class="icon">📄</div>
+                                <div class="info">
+                                    <div class="name">Text Content</div>
+                                    <div class="desc">Rich text display</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="image-widget">
+                                <div class="icon">🖼️</div>
+                                <div class="info">
+                                    <div class="name">Image Display</div>
+                                    <div class="desc">Image with caption</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="video-widget">
+                                <div class="icon">🎬</div>
+                                <div class="info">
+                                    <div class="name">Video Player</div>
+                                    <div class="desc">Embedded video content</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Utility Widgets -->
+                        <div class="widget-category">
+                            <div class="category-title">🔧 Utilities</div>
+                            <div class="widget-item" widget-type="clock-widget">
+                                <div class="icon">🕐</div>
+                                <div class="info">
+                                    <div class="name">Live Clock</div>
+                                    <div class="desc">Real-time clock display</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="weather-widget">
+                                <div class="icon">🌤️</div>
+                                <div class="info">
+                                    <div class="name">Weather Info</div>
+                                    <div class="desc">Current weather conditions</div>
+                                </div>
+                            </div>
+                            <div class="widget-item" widget-type="note-widget">
+                                <div class="icon">📝</div>
+                                <div class="info">
+                                    <div class="name">Quick Notes</div>
+                                    <div class="desc">Editable note widget</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Center - Dashboard Area -->
+            <div class="dashboard-container">
+                <div class="dashboard-header">
+                    <div class="dashboard-title">Main Dashboard</div>
+                    <div class="dashboard-meta">
+                        <div class="meta-item">
+                            <span>📊</span>
+                            <span id="widgetCount">0 widgets</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>📐</span>
+                            <span id="gridSize">6×4 grid</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>💾</span>
+                            <span id="lastSaved">Unsaved</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-controls">
+                    <button class="control-btn active" id="editModeBtn">Edit Mode</button>
+                    <button class="control-btn" id="gridLinesBtn">Grid Lines</button>
+                    <button class="control-btn" id="autoResizeBtn">Auto Resize</button>
+                    <button class="control-btn" id="fullscreenBtn">Fullscreen</button>
+                    <div style="margin-left: auto; display: flex; gap: 10px;">
+                        <button class="control-btn" id="undoBtn">↶ Undo</button>
+                        <button class="control-btn" id="redoBtn">↷ Redo</button>
+                        <button class="control-btn" id="clearBtn" style="color: #ff6b6b;">🗑️ Clear</button>
+                    </div>
+                </div>
+
+                <div class="dashboard-area">
+                    <div class="drop-zone" id="dashboard">
+                        <div class="drop-indicator" id="dropIndicator">
+                            <div class="icon">🚀</div>
+                            <h3>Welcome to Dashboard Pro</h3>
+                            <p>Drag widgets from the left panel to build your dashboard</p>
+                            <p style="margin-top: 10px; opacity: 0.7;">
+                                Professional dashboard creation with advanced features
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Sidebar - Properties Panel -->
+            <div class="right-sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-header">Properties</div>
+                    <div class="properties-panel">
+                        <div class="property-group">
+                            <h4>🎛️ Dashboard Settings</h4>
+                            <div class="property-row">
+                                <div class="property-label">Cell Size</div>
+                                <div class="property-control">
+                                    <input type="range" class="slider" id="cellSizeSlider" min="60" max="200" value="100">
+                                    <span class="value-display" id="cellSizeValue">100px</span>
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <div class="property-label">Gap Size</div>
+                                <div class="property-control">
+                                    <input type="range" class="slider" id="gapSizeSlider" min="0" max="30" value="10">
+                                    <span class="value-display" id="gapSizeValue">10px</span>
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <div class="property-label">Columns</div>
+                                <div class="property-control">
+                                    <input type="range" class="slider" id="columnsSlider" min="3" max="12" value="6">
+                                    <span class="value-display" id="columnsValue">6</span>
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <div class="property-label">Rows</div>
+                                <div class="property-control">
+                                    <input type="range" class="slider" id="rowsSlider" min="3" max="10" value="4">
+                                    <span class="value-display" id="rowsValue">4</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="property-group">
+                            <h4>⚙️ Behavior Options</h4>
+                            <div class="property-row">
+                                <div class="property-label">Auto Sizing</div>
+                                <div class="property-control">
+                                    <div class="toggle-switch active" id="autoSizingToggle"></div>
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <div class="property-label">Snap to Grid</div>
+                                <div class="property-control">
+                                    <div class="toggle-switch active" id="snapToGridToggle"></div>
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <div class="property-label">Allow Overlap</div>
+                                <div class="property-control">
+                                    <div class="toggle-switch" id="allowOverlapToggle"></div>
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <div class="property-label">Auto Save</div>
+                                <div class="property-control">
+                                    <div class="toggle-switch active" id="autoSaveToggle"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="property-group">
+                            <h4>🎨 Visual Theme</h4>
+                            <div class="property-row">
+                                <div class="property-label">Dark Mode</div>
+                                <div class="property-control">
+                                    <div class="toggle-switch active" id="darkModeToggle"></div>
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <div class="property-label">Animations</div>
+                                <div class="property-control">
+                                    <div class="toggle-switch active" id="animationsToggle"></div>
+                                </div>
+                            </div>
+                            <div class="property-row">
+                                <div class="property-label">Widget Shadows</div>
+                                <div class="property-control">
+                                    <div class="toggle-switch active" id="shadowsToggle"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-header">Analytics</div>
+                    <div class="analytics-panel">
+                        <div class="analytics-grid">
+                            <div class="analytics-card">
+                                <div class="analytics-value" id="totalWidgets">0</div>
+                                <div class="analytics-label">Widgets</div>
+                            </div>
+                            <div class="analytics-card">
+                                <div class="analytics-value" id="gridUsage">0%</div>
+                                <div class="analytics-label">Grid Usage</div>
+                            </div>
+                            <div class="analytics-card">
+                                <div class="analytics-value" id="loadTime">--</div>
+                                <div class="analytics-label">Load Time</div>
+                            </div>
+                            <div class="analytics-card">
+                                <div class="analytics-value" id="memoryUsage">--</div>
+                                <div class="analytics-label">Memory</div>
+                            </div>
+                        </div>
+
+                        <div class="performance-chart">
+                            <div class="chart-title">Performance Monitor</div>
+                            <canvas class="chart-canvas" id="performanceChart" width="280" height="80"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="modal-overlay" id="settingsModal">
+        <div class="modal">
+            <h2>⚙️ Application Settings</h2>
+            <div class="property-group">
+                <h4>🔧 General Settings</h4>
+                <div class="property-row">
+                    <div class="property-label">Auto-save interval (seconds)</div>
+                    <div class="property-control">
+                        <input type="number" value="30" min="10" max="300" style="width: 80px; padding: 4px; background: #2a3f5f; border: 1px solid #667eea; color: white; border-radius: 4px;">
+                    </div>
+                </div>
+                <div class="property-row">
+                    <div class="property-label">Performance monitoring</div>
+                    <div class="property-control">
+                        <div class="toggle-switch active"></div>
+                    </div>
+                </div>
+                <div class="property-row">
+                    <div class="property-label">Debug mode</div>
+                    <div class="property-control">
+                        <div class="toggle-switch"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn secondary" id="cancelSettings">Cancel</button>
+                <button class="modal-btn" id="saveSettings">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../customWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+    <script src="../customHTMLWidgetPalette.js"></script>
+
+    <script>
+        class DashboardApp {
+            constructor() {
+                this.dashboard = null;
+                this.palette = null;
+                this.currentDashboard = null;
+                this.settings = this.loadSettings();
+                this.history = [];
+                this.historyIndex = -1;
+                this.performanceData = [];
+                this.autoSaveInterval = null;
+                
+                this.init();
+            }
+
+            init() {
+                this.createDashboard();
+                this.createWidgetPalette();
+                this.registerWidgetTemplates();
+                this.setupEventListeners();
+                this.setupPropertyPanel();
+                this.setupAnalytics();
+                this.startPerformanceMonitoring();
+                this.loadDashboard();
+            }
+
+            createDashboard() {
+                this.dashboard = new GridDashboard('#dashboard', 6, 4, {
+                    cellWidth: 100,
+                cellHeight: 100,
+                    gap: 10,
+                    autoResize: true,
+                    enableDragDrop: true,
+                    allowOverlapping: false,
+                    autoResizeWidth: true,
+                    autoResizeHeight: true,
+                    editMode: true,
+                    showGridLines: false,
+                    useCSSAuto: true,
+                    minCellSize: 80,
+                    maxCellSize: 200
+                });
+            }
+
+            createWidgetPalette() {
+                this.palette = new CustomHTMLWidgetPalette('.widget-library', {
+                    widgetSelector: '[widget-type]',
+                    enableHoverEffects: true,
+                    enableClickToAdd: false,
+                    autoSetDraggable: true,
+                    enableCustomDragFeedback: true
+                });
+
+                this.palette.registerDashboard(this.dashboard);
+            }
+
+            registerWidgetTemplates() {
+                // Data widgets
+                this.palette.registerWidgetTemplate('chart-widget', new ChartWidget({
+                    title: 'Line Chart',
+                    width: 4,
+                    height: 3,
+                    chartType: 'line'
+                }));
+
+                this.palette.registerWidgetTemplate('bar-chart-widget', new ChartWidget({
+                    title: 'Bar Chart',
+                    width: 3,
+                    height: 3,
+                    chartType: 'bar'
+                }));
+
+                this.palette.registerWidgetTemplate('metric-widget', new GridWidget({
+                    title: 'KPI Metric',
+                    content: `
+                        <div style="padding: 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 8px;">
+                            <div style="font-size: 48px; font-weight: bold; margin-bottom: 10px;" class="metric-value">1,234</div>
+                            <div style="font-size: 16px; opacity: 0.9; margin-bottom: 8px;">Active Users</div>
+                            <div style="font-size: 14px; opacity: 0.8;">↗ +12.5% from last week</div>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 2
+                }));
+
+                this.palette.registerWidgetTemplate('table-widget', new GridWidget({
+                    title: 'Data Table',
+                    content: `
+                        <div style="padding: 15px; background: #16213e; border-radius: 8px; color: white;">
+                            <h4 style="margin-bottom: 15px; color: #64ffda;">Recent Transactions</h4>
+                            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                                <thead>
+                                    <tr style="background: #1e2a47;">
+                                        <th style="padding: 8px; text-align: left; color: #ccd6f6;">ID</th>
+                                        <th style="padding: 8px; text-align: left; color: #ccd6f6;">Amount</th>
+                                        <th style="padding: 8px; text-align: left; color: #ccd6f6;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td style="padding: 6px; color: #8892b0;">#1001</td><td style="padding: 6px; color: #8892b0;">$1,250</td><td style="padding: 6px; color: #64ffda;">✅ Complete</td></tr>
+                                    <tr><td style="padding: 6px; color: #8892b0;">#1002</td><td style="padding: 6px; color: #8892b0;">$875</td><td style="padding: 6px; color: #ffd700;">⏳ Pending</td></tr>
+                                    <tr><td style="padding: 6px; color: #8892b0;">#1003</td><td style="padding: 6px; color: #8892b0;">$2,100</td><td style="padding: 6px; color: #64ffda;">✅ Complete</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    `,
+                    width: 4,
+                    height: 3
+                }));
+
+                // Control widgets
+                this.palette.registerWidgetTemplate('filter-widget', new GridWidget({
+                    title: 'Filter Panel',
+                    content: `
+                        <div style="padding: 20px; background: #16213e; border-radius: 8px; color: white;">
+                            <h4 style="margin-bottom: 15px; color: #64ffda;">Data Filters</h4>
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; margin-bottom: 5px; color: #ccd6f6; font-size: 13px;">Date Range</label>
+                                <select style="width: 100%; padding: 6px; background: #2a3f5f; border: 1px solid #667eea; color: white; border-radius: 4px;">
+                                    <option>Last 7 days</option>
+                                    <option>Last 30 days</option>
+                                    <option>Last 90 days</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom: 12px;">
+                                <label style="display: block; margin-bottom: 5px; color: #ccd6f6; font-size: 13px;">Category</label>
+                                <select style="width: 100%; padding: 6px; background: #2a3f5f; border: 1px solid #667eea; color: white; border-radius: 4px;">
+                                    <option>All Categories</option>
+                                    <option>Sales</option>
+                                    <option>Marketing</option>
+                                </select>
+                            </div>
+                            <button style="width: 100%; padding: 8px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer;">Apply Filters</button>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 3
+                }));
+
+                // Content widgets
+                this.palette.registerWidgetTemplate('text-widget', new TextWidget({
+                    title: 'Welcome Message',
+                    text: 'Welcome to Dashboard Pro! This is a professional dashboard creation platform with advanced features and analytics.',
+                    width: 3,
+                    height: 2
+                }));
+
+                this.palette.registerWidgetTemplate('image-widget', new ImageWidget({
+                    title: 'Analytics Overview',
+                    imageUrl: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200"><rect width="300" height="200" fill="%23667eea"/><text x="150" y="100" text-anchor="middle" dy="0.3em" font-family="Arial" font-size="20" fill="white">Analytics Chart</text></svg>',
+                    width: 3,
+                    height: 2
+                }));
+
+                // Utility widgets
+                this.palette.registerWidgetTemplate('clock-widget', new GridWidget({
+                    title: 'Live Clock',
+                    content: `
+                        <div style="padding: 20px; text-align: center; background: #16213e; border-radius: 8px; color: white;">
+                            <div style="font-size: 32px; font-weight: bold; margin-bottom: 10px; color: #64ffda;" id="clockTime">--:--:--</div>
+                            <div style="font-size: 14px; color: #8892b0;" id="clockDate">Loading...</div>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 2
+                }));
+
+                this.palette.registerWidgetTemplate('weather-widget', new GridWidget({
+                    title: 'Weather',
+                    content: `
+                        <div style="padding: 20px; text-align: center; background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%); border-radius: 8px; color: white;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">🌤️</div>
+                            <div style="font-size: 24px; font-weight: bold; margin-bottom: 5px;">22°C</div>
+                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 10px;">Partly Cloudy</div>
+                            <div style="display: flex; justify-content: space-around; font-size: 12px; opacity: 0.8;">
+                                <div>🌅 6:30</div>
+                                <div>💧 65%</div>
+                                <div>🌇 18:45</div>
+                            </div>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 2
+                }));
+
+                this.palette.registerWidgetTemplate('note-widget', new GridWidget({
+                    title: 'Quick Notes',
+                    content: `
+                        <div style="padding: 15px; background: #16213e; border-radius: 8px; color: white;">
+                            <textarea style="width: 100%; height: 100px; background: #2a3f5f; border: 1px solid #667eea; color: white; border-radius: 4px; padding: 8px; resize: none;" placeholder="Add your notes here...">📝 Meeting Notes:
+• Discuss Q4 targets
+• Review dashboard analytics
+• Plan team presentation</textarea>
+                            <div style="margin-top: 10px; display: flex; gap: 8px;">
+                                <button style="flex: 1; padding: 6px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Save</button>
+                                <button style="flex: 1; padding: 6px; background: #2a3f5f; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Clear</button>
+                            </div>
+                        </div>
+                    `,
+                    width: 3,
+                    height: 3
+                }));
+            }
+
+            setupEventListeners() {
+                // Top navigation
+                document.getElementById('newDashboard').addEventListener('click', () => this.newDashboard());
+                document.getElementById('saveDashboard').addEventListener('click', () => this.saveDashboard());
+                document.getElementById('exportDashboard').addEventListener('click', () => this.exportDashboard());
+                document.getElementById('settingsBtn').addEventListener('click', () => this.showSettings());
+
+                // Dashboard controls
+                document.getElementById('editModeBtn').addEventListener('click', (e) => {
+                    this.dashboard.toggleEditMode();
+                    e.target.classList.toggle('active');
+                });
+
+                document.getElementById('gridLinesBtn').addEventListener('click', (e) => {
+                    this.dashboard.toggleGridLines();
+                    e.target.classList.toggle('active');
+                });
+
+                document.getElementById('autoResizeBtn').addEventListener('click', (e) => {
+                    const isActive = e.target.classList.toggle('active');
+                    this.dashboard.setAutoResize(isActive);
+                });
+
+                document.getElementById('fullscreenBtn').addEventListener('click', () => this.toggleFullscreen());
+                document.getElementById('undoBtn').addEventListener('click', () => this.undo());
+                document.getElementById('redoBtn').addEventListener('click', () => this.redo());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearDashboard());
+
+                // Dashboard events
+                this.dashboard.container.addEventListener('gridDashboard:widgetCreated', () => {
+                    this.updateAnalytics();
+                    this.saveToHistory();
+                });
+
+                this.dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                    this.updateAnalytics();
+                    this.saveToHistory();
+                });
+
+                // Settings modal
+                document.getElementById('cancelSettings').addEventListener('click', () => this.hideSettings());
+                document.getElementById('saveSettings').addEventListener('click', () => this.saveSettings());
+
+                // Live clock update
+                setInterval(() => this.updateClock(), 1000);
+            }
+
+            setupPropertyPanel() {
+                // Cell size slider
+                document.getElementById('cellSizeSlider').addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    document.getElementById('cellSizeValue').textContent = value + 'px';
+                    this.dashboard.setCellSize(value);
+                });
+
+                // Gap size slider
+                document.getElementById('gapSizeSlider').addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    document.getElementById('gapSizeValue').textContent = value + 'px';
+                    this.dashboard.options.gap = value;
+                    this.dashboard.updateLayout();
+                });
+
+                // Columns slider
+                document.getElementById('columnsSlider').addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    document.getElementById('columnsValue').textContent = value;
+                    const dimensions = this.dashboard.getGridDimensions();
+                    this.dashboard.setGridDimensions(value, dimensions.height);
+                    this.updateAnalytics();
+                });
+
+                // Rows slider
+                document.getElementById('rowsSlider').addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    document.getElementById('rowsValue').textContent = value;
+                    const dimensions = this.dashboard.getGridDimensions();
+                    this.dashboard.setGridDimensions(dimensions.width, value);
+                    this.updateAnalytics();
+                });
+
+                // Toggle switches
+                document.getElementById('autoSizingToggle').addEventListener('click', (e) => {
+                    const isActive = e.target.classList.toggle('active');
+                    this.dashboard.options.useCSSAuto = isActive;
+                    this.dashboard.updateLayout();
+                });
+
+                document.getElementById('snapToGridToggle').addEventListener('click', (e) => {
+                    const isActive = e.target.classList.toggle('active');
+                    this.dashboard.options.snapToGrid = isActive;
+                });
+
+                document.getElementById('allowOverlapToggle').addEventListener('click', (e) => {
+                    const isActive = e.target.classList.toggle('active');
+                    this.dashboard.options.allowOverlapping = isActive;
+                });
+
+                document.getElementById('autoSaveToggle').addEventListener('click', (e) => {
+                    const isActive = e.target.classList.toggle('active');
+                    if (isActive) {
+                        this.startAutoSave();
+                    } else {
+                        this.stopAutoSave();
+                    }
+                });
+            }
+
+            setupAnalytics() {
+                this.updateAnalytics();
+                
+                // Performance monitoring
+                setInterval(() => {
+                    this.updatePerformanceMetrics();
+                }, 1000);
+            }
+
+            updateAnalytics() {
+                const widgetCount = this.dashboard.widgets.size;
+                const dimensions = this.dashboard.getGridDimensions();
+                const totalCells = dimensions.width * dimensions.height;
+                const usagePercentage = Math.round((widgetCount / totalCells) * 100);
+
+                document.getElementById('totalWidgets').textContent = widgetCount;
+                document.getElementById('gridUsage').textContent = usagePercentage + '%';
+                document.getElementById('widgetCount').textContent = widgetCount + ' widgets';
+                document.getElementById('gridSize').textContent = `${dimensions.width}×${dimensions.height} grid`;
+
+                // Update drop indicator
+                const indicator = document.getElementById('dropIndicator');
+                indicator.style.display = widgetCount > 0 ? 'none' : 'block';
+            }
+
+            updatePerformanceMetrics() {
+                const now = performance.now();
+                const memoryInfo = performance.memory || {};
+                
+                document.getElementById('loadTime').textContent = Math.round(now) + 'ms';
+                document.getElementById('memoryUsage').textContent = 
+                    memoryInfo.usedJSHeapSize ? 
+                    Math.round(memoryInfo.usedJSHeapSize / 1024 / 1024) + 'MB' : 
+                    '--';
+
+                this.performanceData.push(now);
+                if (this.performanceData.length > 50) {
+                    this.performanceData.shift();
+                }
+
+                this.drawPerformanceChart();
+            }
+
+            drawPerformanceChart() {
+                const canvas = document.getElementById('performanceChart');
+                if (!canvas) return;
+
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (this.performanceData.length < 2) return;
+
+                ctx.strokeStyle = '#64ffda';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+
+                const stepX = canvas.width / (this.performanceData.length - 1);
+                const maxValue = Math.max(...this.performanceData);
+                const minValue = Math.min(...this.performanceData);
+                const valueRange = maxValue - minValue || 1;
+
+                this.performanceData.forEach((value, index) => {
+                    const x = index * stepX;
+                    const y = canvas.height - ((value - minValue) / valueRange) * canvas.height;
+                    
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+
+                ctx.stroke();
+            }
+
+            startPerformanceMonitoring() {
+                setInterval(() => {
+                    this.updatePerformanceMetrics();
+                }, 1000);
+            }
+
+            updateClock() {
+                const now = new Date();
+                const timeElement = document.getElementById('clockTime');
+                const dateElement = document.getElementById('clockDate');
+                
+                if (timeElement) {
+                    timeElement.textContent = now.toLocaleTimeString();
+                }
+                if (dateElement) {
+                    dateElement.textContent = now.toLocaleDateString();
+                }
+            }
+
+            newDashboard() {
+                if (confirm('Create a new dashboard? This will clear the current dashboard.')) {
+                    this.clearDashboard();
+                    this.currentDashboard = null;
+                    document.getElementById('lastSaved').textContent = 'New Dashboard';
+                }
+            }
+
+            saveDashboard() {
+                const layout = this.dashboard.exportLayout();
+                const dashboardData = {
+                    layout,
+                    settings: this.dashboard.options,
+                    timestamp: new Date().toISOString(),
+                    version: '1.0'
+                };
+
+                localStorage.setItem('dashboard-pro-layout', JSON.stringify(dashboardData));
+                document.getElementById('lastSaved').textContent = 'Saved ' + new Date().toLocaleTimeString();
+                
+                // Show save confirmation
+                this.showNotification('Dashboard saved successfully!', 'success');
+            }
+
+            loadDashboard() {
+                const saved = localStorage.getItem('dashboard-pro-layout');
+                if (saved) {
+                    try {
+                        const dashboardData = JSON.parse(saved);
+                        if (dashboardData.layout) {
+                            this.dashboard.importLayout(dashboardData.layout);
+                            const saveTime = new Date(dashboardData.timestamp);
+                            document.getElementById('lastSaved').textContent = 'Loaded ' + saveTime.toLocaleTimeString();
+                            this.updateAnalytics();
+                        }
+                    } catch (e) {
+                        console.error('Failed to load dashboard:', e);
+                    }
+                }
+            }
+
+            exportDashboard() {
+                const layout = this.dashboard.exportLayout();
+                const dashboardData = {
+                    layout,
+                    settings: this.dashboard.options,
+                    metadata: {
+                        exported: new Date().toISOString(),
+                        version: '1.0',
+                        widgets: this.dashboard.widgets.size
+                    }
+                };
+
+                const blob = new Blob([JSON.stringify(dashboardData, null, 2)], {
+                    type: 'application/json'
+                });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `dashboard-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                this.showNotification('Dashboard exported successfully!', 'success');
+            }
+
+            clearDashboard() {
+                if (this.dashboard.widgets.size > 0 && !confirm('Clear all widgets?')) {
+                    return;
+                }
+                
+                const widgets = Array.from(this.dashboard.widgets.keys());
+                widgets.forEach(id => this.dashboard.removeWidget(id));
+                this.updateAnalytics();
+                this.saveToHistory();
+            }
+
+            toggleFullscreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen();
+                } else {
+                    document.exitFullscreen();
+                }
+            }
+
+            saveToHistory() {
+                const layout = this.dashboard.exportLayout();
+                this.history = this.history.slice(0, this.historyIndex + 1);
+                this.history.push(JSON.stringify(layout));
+                this.historyIndex = this.history.length - 1;
+                
+                // Limit history size
+                if (this.history.length > 50) {
+                    this.history.shift();
+                    this.historyIndex--;
+                }
+            }
+
+            undo() {
+                if (this.historyIndex > 0) {
+                    this.historyIndex--;
+                    const layout = JSON.parse(this.history[this.historyIndex]);
+                    this.dashboard.importLayout(layout);
+                    this.updateAnalytics();
+                }
+            }
+
+            redo() {
+                if (this.historyIndex < this.history.length - 1) {
+                    this.historyIndex++;
+                    const layout = JSON.parse(this.history[this.historyIndex]);
+                    this.dashboard.importLayout(layout);
+                    this.updateAnalytics();
+                }
+            }
+
+            showSettings() {
+                document.getElementById('settingsModal').style.display = 'flex';
+            }
+
+            hideSettings() {
+                document.getElementById('settingsModal').style.display = 'none';
+            }
+
+            saveSettings() {
+                // Save settings logic here
+                this.hideSettings();
+                this.showNotification('Settings saved!', 'success');
+            }
+
+            showNotification(message, type = 'info') {
+                // Create and show notification
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? '#28a745' : '#667eea'};
+                    color: white;
+                    padding: 12px 20px;
+                    border-radius: 6px;
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    z-index: 3000;
+                    font-size: 14px;
+                    opacity: 0;
+                    transform: translateX(100%);
+                    transition: all 0.3s ease;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    notification.style.opacity = '1';
+                    notification.style.transform = 'translateX(0)';
+                }, 100);
+
+                setTimeout(() => {
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
+            }
+
+            startAutoSave() {
+                this.stopAutoSave();
+                this.autoSaveInterval = setInterval(() => {
+                    this.saveDashboard();
+                }, 30000); // Save every 30 seconds
+            }
+
+            stopAutoSave() {
+                if (this.autoSaveInterval) {
+                    clearInterval(this.autoSaveInterval);
+                    this.autoSaveInterval = null;
+                }
+            }
+
+            loadSettings() {
+                const saved = localStorage.getItem('dashboard-pro-settings');
+                return saved ? JSON.parse(saved) : {
+                    autoSave: true,
+                    darkMode: true,
+                    animations: true,
+                    performance: true
+                };
+            }
+
+            saveSettingsToStorage() {
+                localStorage.setItem('dashboard-pro-settings', JSON.stringify(this.settings));
+            }
+        }
+
+        // Initialize the application
+        let app = null;
+        document.addEventListener('DOMContentLoaded', () => {
+            app = new DashboardApp();
+        });
+
+        // Add some sample widgets after initialization
+        setTimeout(() => {
+            if (app && app.dashboard.widgets.size === 0) {
+                // Add welcome widgets
+                const welcomeWidget = new TextWidget({
+                    title: 'Welcome to Dashboard Pro! 🚀',
+                    text: 'This is a complete dashboard application with professional features:\n\n• Drag widgets from the left panel\n• Customize properties in the right panel\n• Save and export your dashboards\n• Monitor performance in real-time',
+                    textAlign: 'left',
+                    width: 3,
+                    height: 2
+                });
+                app.dashboard.addWidget(welcomeWidget, { x: 0, y: 0 });
+
+                const metricsWidget = new GridWidget({
+                    title: 'Dashboard Metrics',
+                    content: `
+                        <div style="padding: 20px; text-align: center; background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; border-radius: 8px;">
+                            <div style="font-size: 36px; font-weight: bold; margin-bottom: 10px;">100%</div>
+                            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">System Performance</div>
+                            <div style="font-size: 12px; opacity: 0.8;">All systems operational</div>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 2
+                });
+                app.dashboard.addWidget(metricsWidget, { x: 4, y: 0 });
+
+                app.updateAnalytics();
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

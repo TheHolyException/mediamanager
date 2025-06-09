@@ -1,0 +1,283 @@
+/**
+ * Grid Dashboard CSS Styles
+ * Extracted from gridDashboard.js for better separation of concerns
+ */
+
+:root {
+    /* CSS Custom Properties for theming */
+    --surface-primary: #ffffff;
+    --surface-secondary: #f8f9fa;
+    --surface-tertiary: #e9ecef;
+    --border-primary: #e1e5e9;
+    --border-radius: 8px;
+    --accent-primary: #00d4ff;
+    --accent-tertiary: #0099cc;
+    --text-primary: #333333;
+    --text-secondary: #666666;
+    
+    /* Animation timing - can be overridden by JavaScript */
+    --grid-animation-duration: 300ms;
+}
+
+.grid-dashboard {
+    user-select: none;
+    overflow: auto;
+}
+
+.grid-widget {
+    background: var(--darkBGColor1);
+    border: 1px solid var(--border-primary);
+    border-radius: var(--border-radius);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    cursor: move;
+    transition: transform var(--grid-animation-duration) ease, box-shadow var(--grid-animation-duration) ease;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    max-height: 100%;
+    width: 100%;
+    height: 100%;
+}
+
+.grid-widget:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.grid-widget:active {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+.grid-widget.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+    z-index: 1000;
+}
+
+.grid-widget-placeholder {
+    background: var(--accent-primary);
+    opacity: 0.3;
+    border: 2px dashed var(--accent-primary);
+    border-radius: var(--border-radius);
+    pointer-events: none;
+    transition: all var(--grid-animation-duration) ease;
+}
+
+.grid-widget-placeholder.expanding {
+    background: #28a745;
+    border-color: #28a745;
+    opacity: 0.4;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+.grid-widget-header {
+    background: var(--surface-secondary);
+    border-bottom: 1px solid var(--border-primary);
+    padding: 12px 16px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-height: 49px;
+    max-height: 49px;
+    height: 49px;
+    box-sizing: border-box;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.grid-widget-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-right: 8px;
+}
+
+.grid-widget-content {
+    padding: 16px;
+    height: calc(100% - 49px);
+    overflow: auto;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    word-break: break-word;
+    min-width: 0;
+    min-height: 0;
+}
+
+.grid-widget-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.grid-widget-action {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1;
+    min-width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.grid-widget-action:hover {
+    background: var(--surface-tertiary);
+    color: var(--text-primary);
+}
+
+.grid-widget-action.remove-handle {
+    color: #dc3545;
+}
+
+.grid-widget-action.remove-handle:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.grid-widget-resize-handle {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 20px;
+    height: 20px;
+    background: rgba(0, 212, 255, 0.8);
+    color: white;
+    border: none;
+    cursor: nw-resize;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    border-radius: var(--border-radius) 0 var(--border-radius) 0;
+    opacity: 0;
+    transition: opacity 0.2s ease, background-color 0.2s ease;
+    z-index: 10;
+    user-select: none;
+}
+
+.grid-widget:hover .grid-widget-resize-handle {
+    opacity: 1;
+}
+
+.grid-widget-resize-handle:hover {
+    background: rgba(0, 212, 255, 1);
+    transform: scale(1.1);
+}
+
+.grid-widget-resize-handle:active {
+    background: var(--accent-tertiary);
+}
+
+.grid-widget-resize-handle.constrained {
+    background: rgba(255, 193, 7, 0.8);
+    cursor: not-allowed;
+}
+
+.grid-widget-resize-handle.constrained:hover {
+    background: rgba(255, 193, 7, 1);
+    transform: none;
+}
+
+/* Edit mode styles */
+.grid-dashboard.view-mode .grid-widget {
+    cursor: default;
+}
+
+.grid-dashboard.view-mode .grid-widget:hover {
+    transform: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.grid-dashboard.edit-mode .grid-widget {
+    cursor: move;
+}
+
+.grid-widget.readonly {
+    cursor: default !important;
+}
+
+.grid-widget.readonly:hover {
+    transform: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.grid-widget.editable {
+    border-color: rgba(0, 212, 255, 0.3);
+}
+
+.grid-widget.editable:hover {
+    border-color: rgba(0, 212, 255, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Hide edit elements in view mode */
+.grid-dashboard.view-mode .grid-widget-resize-handle {
+    display: none !important;
+}
+
+.grid-dashboard.view-mode .remove-handle {
+    display: none !important;
+}
+
+/* Grid overlay styles */
+.grid-dashboard-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.4;
+}
+
+.grid-cell-placeholder {
+    border: 1px solid rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.5);
+}
+
+/* Hide grid overlay in view mode */
+.grid-dashboard.view-mode .grid-dashboard-overlay {
+    display: none !important;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+    .grid-dashboard {
+        overflow-x: auto;
+    }
+    
+    .grid-cell-placeholder::before {
+        font-size: 8px;
+    }
+}
+
+/* Animation duration utility classes */
+.grid-dashboard.fast-animations {
+    --grid-animation-duration: 150ms;
+}
+
+.grid-dashboard.slow-animations {
+    --grid-animation-duration: 500ms;
+}
+
+.grid-dashboard.no-animations {
+    --grid-animation-duration: 0ms;
+}
+
+.grid-dashboard.no-animations * {
+    transition: none !important;
+    animation: none !important;
+}

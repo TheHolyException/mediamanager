@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Dashboard Examples</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .example-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .example-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .card-subtitle {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        .card-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .card-features {
+            list-style: none;
+            margin-bottom: 20px;
+        }
+
+        .card-features li {
+            padding: 5px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-features li::before {
+            content: '✓';
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            text-align: center;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: #4a90e2;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #dee2e6;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+        }
+
+        .difficulty {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .difficulty.beginner {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .difficulty.intermediate {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .difficulty.advanced {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .difficulty.expert {
+            background: #e2e3e5;
+            color: #383d41;
+        }
+
+        .category {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+
+        .category.core {
+            background: #e3f2fd;
+            color: #0d47a1;
+        }
+
+        .category.widgets {
+            background: #f3e5f5;
+            color: #4a148c;
+        }
+
+        .category.tutorial {
+            background: #fff8e1;
+            color: #e65100;
+        }
+
+        .category.advanced {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        @media (max-width: 768px) {
+            .examples-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .card-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Grid Dashboard Examples</h1>
+        <p>Explore comprehensive demos showcasing all grid dashboard features</p>
+    </div>
+
+    <div class="examples-grid">
+        <!-- Basic Setup -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">📋</div>
+                <div class="card-title">Basic Setup</div>
+                <div class="card-subtitle">Getting started with external CSS</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty beginner">Beginner</div>
+                <div class="category core">Core</div>
+                
+                <div class="card-description">
+                    Learn how to set up GridDashboard with the new external CSS file structure and basic widget creation.
+                </div>
+                
+                <ul class="card-features">
+                    <li>External CSS setup</li>
+                    <li>Basic dashboard initialization</li>
+                    <li>Simple widget creation</li>
+                    <li>Edit mode controls</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="00-basic-setup.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Basic Usage -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">🚀</div>
+                <div class="card-title">Basic Dashboard</div>
+                <div class="card-subtitle">Getting started with grid layouts</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty beginner">Beginner</div>
+                <div class="category core">Core</div>
+                
+                <div class="card-description">
+                    Learn the fundamentals of creating a grid dashboard with basic widgets and drag & drop functionality.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Simple grid setup</li>
+                    <li>Basic widget creation</li>
+                    <li>Drag and drop basics</li>
+                    <li>Grid resizing</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="01-basic-dashboard.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Widget Palette -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">🎨</div>
+                <div class="card-title">Widget Palette</div>
+                <div class="card-subtitle">Standard widget palette with templates</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty beginner">Beginner</div>
+                <div class="category widgets">Widgets</div>
+                
+                <div class="card-description">
+                    Explore the standard widget palette system with pre-built widget templates and drag-to-add functionality.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Standard widget templates</li>
+                    <li>Categorized palette</li>
+                    <li>Search functionality</li>
+                    <li>Widget previews</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="02-widget-palette.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom HTML Palette -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">🛠️</div>
+                <div class="card-title">Custom HTML Palette</div>
+                <div class="card-subtitle">Custom styled widget palette</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty intermediate">Intermediate</div>
+                <div class="category widgets">Widgets</div>
+                
+                <div class="card-description">
+                    Create beautiful custom widget palettes using HTML elements with advanced styling and interactions.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Custom HTML widgets</li>
+                    <li>Styled palette items</li>
+                    <li>Drag feedback system</li>
+                    <li>Click-to-add support</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="03-custom-html-palette.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drag Feedback -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">🎯</div>
+                <div class="card-title">Drag Feedback</div>
+                <div class="card-subtitle">Visual feedback during drag operations</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty intermediate">Intermediate</div>
+                <div class="category core">Core</div>
+                
+                <div class="card-description">
+                    See different types of visual feedback during drag operations, including custom drag images and cursor followers.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Custom drag images</li>
+                    <li>Cursor-following feedback</li>
+                    <li>Customizable colors</li>
+                    <li>Cross-browser support</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="04-drag-feedback.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Interactive Widgets -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">⚡</div>
+                <div class="card-title">Interactive Widgets</div>
+                <div class="card-subtitle">Widgets with event handling</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty advanced">Advanced</div>
+                <div class="category widgets">Widgets</div>
+                
+                <div class="card-description">
+                    Build functional widgets with interactive elements like buttons, forms, and real-time updates.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Button event handling</li>
+                    <li>Form interactions</li>
+                    <li>Data persistence</li>
+                    <li>Real-time updates</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="05-interactive-widgets.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Widget Classes -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">🧩</div>
+                <div class="card-title">Custom Widget Classes</div>
+                <div class="card-subtitle">Advanced widget inheritance patterns</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty advanced">Advanced</div>
+                <div class="category widgets">Widgets</div>
+                
+                <div class="card-description">
+                    Learn to create custom widget classes with specialized functionality and reusable components.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Widget inheritance</li>
+                    <li>Specialized components</li>
+                    <li>Lifecycle management</li>
+                    <li>Extensible architecture</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="06-custom-widget-classes.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSS Auto Sizing -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">📐</div>
+                <div class="card-title">CSS Auto Sizing</div>
+                <div class="card-subtitle">Responsive grid layouts</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty intermediate">Intermediate</div>
+                <div class="category core">Core</div>
+                
+                <div class="card-description">
+                    Explore CSS auto-sizing features for responsive grid layouts that adapt to container size.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Auto-responsive cells</li>
+                    <li>Container adaptation</li>
+                    <li>Responsive comparison</li>
+                    <li>Viewport simulation</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="07-css-auto-sizing.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Configuration -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">⚙️</div>
+                <div class="card-title">Dashboard Configuration</div>
+                <div class="card-subtitle">Complete dashboard setup</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty advanced">Advanced</div>
+                <div class="category core">Core</div>
+                
+                <div class="card-description">
+                    Comprehensive guide to dashboard configuration options with live preview and export functionality.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Live configuration</li>
+                    <li>Export/Import settings</li>
+                    <li>Quick presets</li>
+                    <li>Visual customization</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="08-dashboard-configuration.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Complete Application -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">🚀</div>
+                <div class="card-title">Complete Application</div>
+                <div class="card-subtitle">Full-featured dashboard app</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty expert">Expert</div>
+                <div class="category advanced">Advanced</div>
+                
+                <div class="card-description">
+                    A complete dashboard application with professional UI, analytics, and performance monitoring.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Professional UI</li>
+                    <li>Real-time analytics</li>
+                    <li>Performance monitoring</li>
+                    <li>Full feature set</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="09-complete-application.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Creating Custom Widgets Tutorial -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">🛠️</div>
+                <div class="card-title">Creating Custom Widgets</div>
+                <div class="card-subtitle">Step-by-step widget tutorial</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty intermediate">Intermediate</div>
+                <div class="category tutorial">Tutorial</div>
+                
+                <div class="card-description">
+                    Comprehensive tutorial for building custom widgets from scratch with interactive step-by-step examples.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Step-by-step tutorial</li>
+                    <li>Interactive examples</li>
+                    <li>Best practices guide</li>
+                    <li>Advanced patterns</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="10-creating-custom-widgets.html" class="btn btn-primary">Start Tutorial</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download Manager Widget -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">📥</div>
+                <div class="card-title">Download Manager</div>
+                <div class="card-subtitle">Converted legacy widget</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty advanced">Advanced</div>
+                <div class="category widgets">Widgets</div>
+                
+                <div class="card-description">
+                    Real-world example of converting a legacy BaseWidget to GridWidget format with full download management functionality.
+                </div>
+                
+                <ul class="card-features">
+                    <li>Legacy widget conversion</li>
+                    <li>Download queue management</li>
+                    <li>Real-time status updates</li>
+                    <li>Mock data simulation</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="11-download-manager.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cell Dimensions Control -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">📏</div>
+                <div class="card-title">Cell Dimensions</div>
+                <div class="card-subtitle">Independent width and height control</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty intermediate">Intermediate</div>
+                <div class="category core">Core</div>
+                
+                <div class="card-description">
+                    Control cell width and height independently with interactive sliders, aspect ratio presets, and real-time dimension feedback.
+                </div>
+                
+                <ul class="card-features">
+                    <li>setCellWidth() & setCellHeight() API</li>
+                    <li>Independent width/height control</li>
+                    <li>Aspect ratio presets</li>
+                    <li>Real-time dimension display</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="13-cell-dimensions.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Drag & Drop Controls -->
+        <div class="example-card">
+            <div class="card-header">
+                <div class="card-icon">🎛️</div>
+                <div class="card-title">Drag & Drop Controls</div>
+                <div class="card-subtitle">Dynamic behavior management</div>
+            </div>
+            <div class="card-content">
+                <div class="difficulty intermediate">Intermediate</div>
+                <div class="category core">Core</div>
+                
+                <div class="card-description">
+                    Comprehensive demo of the new drag & drop API with dynamic enable/disable functionality and real-time control.
+                </div>
+                
+                <ul class="card-features">
+                    <li>setEnableDragDrop() API</li>
+                    <li>getEnableDragDrop() getter</li>
+                    <li>toggleDragDrop() method</li>
+                    <li>Event-driven updates</li>
+                </ul>
+                
+                <div class="card-actions">
+                    <a href="12-drag-drop-controls.html" class="btn btn-primary">View Demo</a>
+                    <a href="#" class="btn btn-secondary">Source Code</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="text-align: center; color: white; margin-top: 40px; opacity: 0.8;">
+        <p>🎯 Complete Grid Dashboard Framework Examples</p>
+        <p style="font-size: 14px; margin-top: 8px;">From beginner basics to expert-level applications</p>
+    </div>
+</body>
+</html>

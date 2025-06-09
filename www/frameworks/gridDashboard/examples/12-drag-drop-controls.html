@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag & Drop Controls Demo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../gridDashboard.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 12px;
+        }
+
+        .controls-panel {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .control-group {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .control-group h4 {
+            margin-bottom: 12px;
+            color: #495057;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toggle-control {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-switch.active {
+            background: #4a90e2;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(26px);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .status-indicator.enabled {
+            background: #28a745;
+        }
+
+        .status-indicator.disabled {
+            background: #dc3545;
+        }
+
+        .control-btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-bottom: 8px;
+            width: 100%;
+            transition: background 0.2s;
+        }
+
+        .control-btn:hover {
+            background: #357abd;
+        }
+
+        .control-btn.danger {
+            background: #dc3545;
+        }
+
+        .control-btn.danger:hover {
+            background: #c82333;
+        }
+
+        .control-btn.success {
+            background: #28a745;
+        }
+
+        .control-btn.success:hover {
+            background: #218838;
+        }
+
+        .dashboard-area {
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .dashboard-controls {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .code-snippet {
+            background: #f8f9fa;
+            border: 1px solid #e1e5e9;
+            border-radius: 6px;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+                max-height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>🎛️ Drag & Drop Controls</h1>
+        <p>Dynamic control of drag and drop functionality</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>🚀 New Drag & Drop API:</h4>
+        <ul>
+            <li><strong>setEnableDragDrop(enabled)</strong> - Enable/disable drag & drop</li>
+            <li><strong>getEnableDragDrop()</strong> - Get current drag & drop state</li>
+            <li><strong>toggleDragDrop()</strong> - Toggle drag & drop on/off</li>
+            <li><strong>Event:</strong> 'gridDashboard:dragDropModeChanged' - Fires when changed</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section-header">
+                <h2>🎛️ Controls</h2>
+                <p>Manage dashboard behavior</p>
+            </div>
+            <div class="controls-panel">
+                <div class="control-group">
+                    <h4><i class="fas fa-edit"></i> Mode Controls</h4>
+                    
+                    <div class="toggle-control">
+                        <span>Edit Mode</span>
+                        <div class="toggle-switch active" id="editModeToggle" onclick="toggleEditMode()"></div>
+                    </div>
+                    
+                    <div class="toggle-control">
+                        <span>Drag & Drop</span>
+                        <div class="toggle-switch active" id="dragDropToggle" onclick="toggleDragDrop()"></div>
+                    </div>
+                    
+                    <div class="toggle-control">
+                        <span>Grid Lines</span>
+                        <div class="toggle-switch" id="gridLinesToggle" onclick="toggleGridLines()"></div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-plus"></i> Widget Actions</h4>
+                    <button class="control-btn success" onclick="addSampleWidget()">Add Sample Widget</button>
+                    <button class="control-btn" onclick="addMultipleWidgets()">Add 3 Widgets</button>
+                    <button class="control-btn danger" onclick="clearDashboard()">Clear All Widgets</button>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-info-circle"></i> Status</h4>
+                    <div style="font-size: 13px; line-height: 1.6;">
+                        <div><span class="status-indicator enabled" id="editModeIndicator"></span>Edit Mode: <span id="editModeStatus">enabled</span></div>
+                        <div><span class="status-indicator enabled" id="dragDropIndicator"></span>Drag & Drop: <span id="dragDropStatus">enabled</span></div>
+                        <div><span class="status-indicator disabled" id="gridLinesIndicator"></span>Grid Lines: <span id="gridLinesStatus">disabled</span></div>
+                        <div style="margin-top: 8px; color: #666;">Widgets: <span id="widgetCount">0</span></div>
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h4><i class="fas fa-code"></i> API Usage</h4>
+                    <div class="code-snippet">
+// Enable/disable drag & drop
+dashboard.setEnableDragDrop(true);
+
+// Get current state
+let enabled = dashboard.getEnableDragDrop();
+
+// Toggle state
+dashboard.toggleDragDrop();
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section-header">
+                <h2>📊 Interactive Dashboard</h2>
+                <p>Test drag & drop functionality</p>
+            </div>
+            
+            <div class="dashboard-controls">
+                <button class="btn" onclick="testDragDropAPI()">Test API Methods</button>
+                <button class="btn" onclick="simulateScenarios()">Run Test Scenarios</button>
+                <div style="margin-left: auto;">
+                    <span style="font-size: 14px; color: #666;">Dashboard Size: <span id="dashboardInfo">6x4</span></span>
+                </div>
+            </div>
+
+            <div class="dashboard-area">
+                <div id="dashboard" style="width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+
+    <script>
+        let dashboard = null;
+        let widgetCounter = 0;
+
+        function initDemo() {
+            // Create the dashboard
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                editMode: true,
+                showGridLines: false
+            });
+
+            // Set up event listeners for all mode changes
+            dashboard.container.addEventListener('gridDashboard:editModeChanged', (event) => {
+                console.log('Edit mode changed:', event.detail);
+                updateStatusDisplay();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:dragDropModeChanged', (event) => {
+                console.log('Drag & Drop mode changed:', event.detail);
+                updateStatusDisplay();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:gridLinesChanged', (event) => {
+                console.log('Grid lines changed:', event.detail);
+                updateStatusDisplay();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', () => {
+                updateStats();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                updateStats();
+            });
+
+            updateStatusDisplay();
+            updateStats();
+        }
+
+        function toggleEditMode() {
+            dashboard.toggleEditMode();
+            console.log('Edit mode toggled:', dashboard.getEditMode());
+        }
+
+        function toggleDragDrop() {
+            dashboard.toggleDragDrop();
+            console.log('Drag & Drop toggled:', dashboard.getEnableDragDrop());
+        }
+
+        function toggleGridLines() {
+            dashboard.toggleGridLines();
+            console.log('Grid lines toggled:', dashboard.getShowGridLines());
+        }
+
+        function updateStatusDisplay() {
+            // Update status text
+            document.getElementById('editModeStatus').textContent = dashboard.getEditMode() ? 'enabled' : 'disabled';
+            document.getElementById('dragDropStatus').textContent = dashboard.getEnableDragDrop() ? 'enabled' : 'disabled';
+            document.getElementById('gridLinesStatus').textContent = dashboard.getShowGridLines() ? 'enabled' : 'disabled';
+            
+            // Update toggle switches
+            updateToggleSwitch('editModeToggle', dashboard.getEditMode());
+            updateToggleSwitch('dragDropToggle', dashboard.getEnableDragDrop());
+            updateToggleSwitch('gridLinesToggle', dashboard.getShowGridLines());
+            
+            // Update status indicators
+            updateStatusIndicator('editModeIndicator', dashboard.getEditMode());
+            updateStatusIndicator('dragDropIndicator', dashboard.getEnableDragDrop());
+            updateStatusIndicator('gridLinesIndicator', dashboard.getShowGridLines());
+        }
+
+        function updateToggleSwitch(id, enabled) {
+            const toggle = document.getElementById(id);
+            if (enabled) {
+                toggle.classList.add('active');
+            } else {
+                toggle.classList.remove('active');
+            }
+        }
+
+        function updateStatusIndicator(id, enabled) {
+            const indicator = document.getElementById(id);
+            if (enabled) {
+                indicator.classList.add('enabled');
+                indicator.classList.remove('disabled');
+            } else {
+                indicator.classList.add('disabled');
+                indicator.classList.remove('enabled');
+            }
+        }
+
+        function addSampleWidget() {
+            widgetCounter++;
+            
+            const widget = new GridWidget({
+                title: `Widget ${widgetCounter}`,
+                content: `
+                    <div style="text-align: center; padding: 15px;">
+                        <h4>Sample Widget #${widgetCounter}</h4>
+                        <p style="margin: 10px 0; color: #666;">
+                            ${dashboard.getEnableDragDrop() ? '🖱️ Draggable' : '🚫 Not draggable'}
+                        </p>
+                        <div style="font-size: 11px; color: #999;">
+                            Created: ${new Date().toLocaleTimeString()}
+                        </div>
+                    </div>
+                `,
+                width: 2,
+                height: 2
+            });
+
+            dashboard.addWidget(widget);
+        }
+
+        function addMultipleWidgets() {
+            for (let i = 0; i < 3; i++) {
+                setTimeout(() => addSampleWidget(), i * 200);
+            }
+        }
+
+        function clearDashboard() {
+            if (confirm('Clear all widgets?')) {
+                const widgets = Array.from(dashboard.widgets.keys());
+                widgets.forEach(id => dashboard.removeWidget(id));
+                widgetCounter = 0;
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('widgetCount').textContent = dashboard.widgets.size;
+        }
+
+        function testDragDropAPI() {
+            console.log('=== Testing Drag & Drop API ===');
+            
+            // Test getter
+            console.log('Current state:', dashboard.getEnableDragDrop());
+            
+            // Test setter
+            dashboard.setEnableDragDrop(false);
+            console.log('After disable:', dashboard.getEnableDragDrop());
+            
+            setTimeout(() => {
+                dashboard.setEnableDragDrop(true);
+                console.log('After enable:', dashboard.getEnableDragDrop());
+            }, 1000);
+            
+            alert('Check console for API test results!');
+        }
+
+        function simulateScenarios() {
+            console.log('=== Running Test Scenarios ===');
+            
+            // Scenario 1: Disable drag drop, try to drag widgets
+            setTimeout(() => {
+                console.log('Scenario 1: Disabling drag & drop...');
+                dashboard.setEnableDragDrop(false);
+            }, 500);
+            
+            // Scenario 2: Re-enable after 2 seconds
+            setTimeout(() => {
+                console.log('Scenario 2: Re-enabling drag & drop...');
+                dashboard.setEnableDragDrop(true);
+            }, 2500);
+            
+            // Scenario 3: Test with edit mode off
+            setTimeout(() => {
+                console.log('Scenario 3: Turning off edit mode...');
+                dashboard.setEditMode(false);
+            }, 4000);
+            
+            // Scenario 4: Test toggle with edit mode off
+            setTimeout(() => {
+                console.log('Scenario 4: Toggling drag & drop with edit mode off...');
+                dashboard.toggleDragDrop();
+            }, 5500);
+            
+            // Scenario 5: Restore everything
+            setTimeout(() => {
+                console.log('Scenario 5: Restoring all settings...');
+                dashboard.setEditMode(true);
+                dashboard.setEnableDragDrop(true);
+                console.log('=== Test Scenarios Complete ===');
+            }, 7000);
+            
+            alert('Running test scenarios - watch the dashboard and console!');
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            initDemo();
+            
+            // Add some initial widgets
+            setTimeout(() => {
+                addSampleWidget();
+                
+                setTimeout(() => {
+                    addSampleWidget();
+                }, 300);
+            }, 500);
+        });
+    </script>
+</body>
+</html>

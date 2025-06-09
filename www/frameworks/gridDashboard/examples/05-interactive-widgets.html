@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Widgets Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            height: fit-content;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 700px;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 12px;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .widget-palette {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .interactive-widget {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .interactive-widget:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(40, 167, 69, 0.3);
+        }
+
+        .interactive-widget .widget-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .interactive-widget .widget-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .interactive-widget .widget-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .interactive-widget .widget-description {
+            font-size: 14px;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+
+        .dashboard-area {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .dashboard-controls {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.danger:hover {
+            background: #c82333;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #4a90e2;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .drop-zone {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .drop-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #6c757d;
+            pointer-events: none;
+        }
+
+        .drop-indicator .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>⚡ Interactive Widgets</h1>
+        <p>Widgets with event handling, forms, and real-time functionality</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>📖 What you'll learn:</h4>
+        <ul>
+            <li>Creating widgets with button interactions</li>
+            <li>Form handling within widgets</li>
+            <li>Data persistence with localStorage</li>
+            <li>Real-time updates and timers</li>
+            <li>Widget-to-widget communication</li>
+            <li>Custom event handling patterns</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section-header">
+                <h2>⚡ Interactive Widgets</h2>
+                <p>Drag to add functional widgets</p>
+            </div>
+            <div class="widget-palette">
+                <div class="interactive-widget" 
+                     widget-type="counter-widget"
+                     data-drag-image-html="<div style='padding: 10px; background: #28a745; color: white; border-radius: 6px; font-weight: bold;'>🔢 Counter Widget</div>">
+                    <div class="widget-header">
+                        <div class="widget-icon">🔢</div>
+                        <div class="widget-title">Counter Widget</div>
+                    </div>
+                    <div class="widget-description">
+                        Interactive counter with increment/decrement buttons and reset functionality.
+                    </div>
+                </div>
+
+                <div class="interactive-widget" 
+                     widget-type="todo-widget"
+                     data-drag-image-html="<div style='padding: 10px; background: #007bff; color: white; border-radius: 6px; font-weight: bold;'>✅ Todo List</div>">
+                    <div class="widget-header">
+                        <div class="widget-icon">✅</div>
+                        <div class="widget-title">Todo List</div>
+                    </div>
+                    <div class="widget-description">
+                        Add, complete, and remove tasks. Data persists in localStorage.
+                    </div>
+                </div>
+
+                <div class="interactive-widget" 
+                     widget-type="calculator-widget"
+                     data-drag-image-html="<div style='padding: 10px; background: #6f42c1; color: white; border-radius: 6px; font-weight: bold;'>🧮 Calculator</div>">
+                    <div class="widget-header">
+                        <div class="widget-icon">🧮</div>
+                        <div class="widget-title">Calculator</div>
+                    </div>
+                    <div class="widget-description">
+                        Basic calculator with arithmetic operations and memory functions.
+                    </div>
+                </div>
+
+                <div class="interactive-widget" 
+                     widget-type="timer-widget"
+                     data-drag-image-html="<div style='padding: 10px; background: #fd7e14; color: white; border-radius: 6px; font-weight: bold;'>⏱️ Timer</div>">
+                    <div class="widget-header">
+                        <div class="widget-icon">⏱️</div>
+                        <div class="widget-title">Timer Widget</div>
+                    </div>
+                    <div class="widget-description">
+                        Countdown timer with start, pause, reset, and alarm functionality.
+                    </div>
+                </div>
+
+                <div class="interactive-widget" 
+                     widget-type="form-widget"
+                     data-drag-image-html="<div style='padding: 10px; background: #e83e8c; color: white; border-radius: 6px; font-weight: bold;'>📝 Contact Form</div>">
+                    <div class="widget-header">
+                        <div class="widget-icon">📝</div>
+                        <div class="widget-title">Contact Form</div>
+                    </div>
+                    <div class="widget-description">
+                        Complete form with validation, submission, and success feedback.
+                    </div>
+                </div>
+
+                <div class="interactive-widget" 
+                     widget-type="chart-widget"
+                     data-drag-image-html="<div style='padding: 10px; background: #20c997; color: white; border-radius: 6px; font-weight: bold;'>📊 Live Chart</div>">
+                    <div class="widget-header">
+                        <div class="widget-icon">📊</div>
+                        <div class="widget-title">Live Chart</div>
+                    </div>
+                    <div class="widget-description">
+                        Real-time updating chart with controls to add/remove data points.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section-header">
+                <h2>📊 Interactive Dashboard</h2>
+                <p>Drag widgets to see them in action</p>
+            </div>
+            
+            <div class="dashboard-controls">
+                <div class="control-group">
+                    <label>Edit Mode:</label>
+                    <div class="toggle-switch active" id="editModeToggle"></div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Grid Lines:</label>
+                    <div class="toggle-switch" id="gridLinesToggle"></div>
+                </div>
+                
+                <button class="btn danger" id="clearDashboard">🗑️ Clear All</button>
+                <button class="btn" id="addSample">➕ Add Sample</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="widgetCount">0</div>
+                    <div class="stat-label">Widgets</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="interactiveCount">0</div>
+                    <div class="stat-label">Interactive</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="eventsCount">0</div>
+                    <div class="stat-label">Events Fired</div>
+                </div>
+            </div>
+
+            <div class="dashboard-area">
+                <div class="drop-zone" id="dashboard">
+                    <div class="drop-indicator" id="dropIndicator">
+                        <div class="icon">⚡</div>
+                        <div>Drag interactive widgets here</div>
+                        <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">
+                            Each widget has unique interactive features to explore
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../customWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+    <script src="../customHTMLWidgetPalette.js"></script>
+
+    <script>
+        let dashboard = null;
+        let customPalette = null;
+        let eventsCount = 0;
+
+        function initDemo() {
+            // Create the dashboard
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: false,
+                useCSSAuto: true
+            });
+
+            // Create custom HTML widget palette
+            customPalette = new CustomHTMLWidgetPalette('.widget-palette', {
+                widgetSelector: '[widget-type]',
+                enableHoverEffects: true,
+                enableClickToAdd: false,
+                autoSetDraggable: true,
+                enableCustomDragFeedback: true
+            });
+
+            // Register interactive widget templates
+            registerInteractiveWidgets();
+
+            // Register palette with dashboard
+            customPalette.registerDashboard(dashboard);
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Update stats
+            updateStats();
+        }
+
+        function registerInteractiveWidgets() {
+            // Counter Widget
+            const counterWidget = new GridWidget({
+                title: 'Counter',
+                content: `
+                    <div style="padding: 20px; text-align: center;">
+                        <div style="font-size: 48px; font-weight: bold; color: #4a90e2; margin-bottom: 20px;" class="counter-value">0</div>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
+                            <button class="counter-btn decrement" style="padding: 8px 16px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer;">-</button>
+                            <button class="counter-btn increment" style="padding: 8px 16px; border: none; background: #28a745; color: white; border-radius: 4px; cursor: pointer;">+</button>
+                        </div>
+                        <button class="counter-btn reset" style="padding: 6px 12px; border: none; background: #6c757d; color: white; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button>
+                    </div>
+                `,
+                width: 2,
+                height: 2
+            });
+
+            counterWidget.onRender = function() {
+                GridWidget.prototype.onRender.call(this);
+                
+                let count = parseInt(localStorage.getItem(`counter-${this.id}`) || '0');
+                const valueEl = this.element.querySelector('.counter-value');
+                const incrementBtn = this.element.querySelector('.increment');
+                const decrementBtn = this.element.querySelector('.decrement');
+                const resetBtn = this.element.querySelector('.reset');
+                
+                valueEl.textContent = count;
+                
+                incrementBtn.addEventListener('click', () => {
+                    count++;
+                    valueEl.textContent = count;
+                    localStorage.setItem(`counter-${this.id}`, count.toString());
+                    incrementEventsCount();
+                });
+                
+                decrementBtn.addEventListener('click', () => {
+                    count--;
+                    valueEl.textContent = count;
+                    localStorage.setItem(`counter-${this.id}`, count.toString());
+                    incrementEventsCount();
+                });
+                
+                resetBtn.addEventListener('click', () => {
+                    count = 0;
+                    valueEl.textContent = count;
+                    localStorage.setItem(`counter-${this.id}`, count.toString());
+                    incrementEventsCount();
+                });
+            };
+
+            customPalette.registerWidgetTemplate('counter-widget', counterWidget);
+
+            // Todo Widget
+            const todoWidget = new GridWidget({
+                title: 'Todo List',
+                content: `
+                    <div style="padding: 15px;">
+                        <div style="display: flex; gap: 5px; margin-bottom: 10px;">
+                            <input type="text" class="todo-input" placeholder="Add new task..." style="flex: 1; padding: 6px; border: 1px solid #ddd; border-radius: 3px; font-size: 12px;">
+                            <button class="todo-add" style="padding: 6px 10px; border: none; background: #28a745; color: white; border-radius: 3px; cursor: pointer; font-size: 12px;">Add</button>
+                        </div>
+                        <div class="todo-list" style="max-height: 120px; overflow-y: auto;"></div>
+                        <div class="todo-stats" style="margin-top: 10px; font-size: 11px; color: #666; text-align: center;"></div>
+                    </div>
+                `,
+                width: 3,
+                height: 3
+            });
+
+            todoWidget.onRender = function() {
+                GridWidget.prototype.onRender.call(this);
+                
+                const input = this.element.querySelector('.todo-input');
+                const addBtn = this.element.querySelector('.todo-add');
+                const list = this.element.querySelector('.todo-list');
+                const stats = this.element.querySelector('.todo-stats');
+                
+                let todos = JSON.parse(localStorage.getItem(`todos-${this.id}`) || '[]');
+                
+                const renderTodos = () => {
+                    list.innerHTML = '';
+                    todos.forEach((todo, index) => {
+                        const item = document.createElement('div');
+                        item.style.cssText = 'display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 5px; background: #f8f9fa; border-radius: 3px;';
+                        item.innerHTML = `
+                            <input type="checkbox" ${todo.completed ? 'checked' : ''} style="margin: 0;">
+                            <span style="flex: 1; font-size: 12px; ${todo.completed ? 'text-decoration: line-through; color: #666;' : ''}">${todo.text}</span>
+                            <button style="padding: 2px 6px; border: none; background: #dc3545; color: white; border-radius: 2px; cursor: pointer; font-size: 10px;">×</button>
+                        `;
+                        
+                        const checkbox = item.querySelector('input');
+                        const deleteBtn = item.querySelector('button');
+                        
+                        checkbox.addEventListener('change', () => {
+                            todos[index].completed = checkbox.checked;
+                            localStorage.setItem(`todos-${this.id}`, JSON.stringify(todos));
+                            renderTodos();
+                            incrementEventsCount();
+                        });
+                        
+                        deleteBtn.addEventListener('click', () => {
+                            todos.splice(index, 1);
+                            localStorage.setItem(`todos-${this.id}`, JSON.stringify(todos));
+                            renderTodos();
+                            incrementEventsCount();
+                        });
+                        
+                        list.appendChild(item);
+                    });
+                    
+                    const completed = todos.filter(t => t.completed).length;
+                    stats.textContent = `${todos.length} tasks • ${completed} completed`;
+                };
+                
+                const addTodo = () => {
+                    const text = input.value.trim();
+                    if (text) {
+                        todos.push({ text, completed: false });
+                        localStorage.setItem(`todos-${this.id}`, JSON.stringify(todos));
+                        input.value = '';
+                        renderTodos();
+                        incrementEventsCount();
+                    }
+                };
+                
+                addBtn.addEventListener('click', addTodo);
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') addTodo();
+                });
+                
+                renderTodos();
+            };
+
+            customPalette.registerWidgetTemplate('todo-widget', todoWidget);
+
+            // Calculator Widget
+            const calculatorWidget = new GridWidget({
+                title: 'Calculator',
+                content: `
+                    <div style="padding: 15px; text-align: center;">
+                        <div class="calc-display" style="background: #333; color: #00ff00; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 16px; margin-bottom: 10px; min-height: 24px;">0</div>
+                        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; font-size: 12px;">
+                            <button class="calc-btn" data-action="clear" style="grid-column: span 2; padding: 8px; border: none; background: #dc3545; color: white; border-radius: 3px; cursor: pointer;">Clear</button>
+                            <button class="calc-btn" data-action="delete" style="padding: 8px; border: none; background: #ffc107; color: black; border-radius: 3px; cursor: pointer;">Del</button>
+                            <button class="calc-btn" data-operation="/" style="padding: 8px; border: none; background: #6c757d; color: white; border-radius: 3px; cursor: pointer;">÷</button>
+                            <button class="calc-btn" data-number="7" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">7</button>
+                            <button class="calc-btn" data-number="8" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">8</button>
+                            <button class="calc-btn" data-number="9" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">9</button>
+                            <button class="calc-btn" data-operation="*" style="padding: 8px; border: none; background: #6c757d; color: white; border-radius: 3px; cursor: pointer;">×</button>
+                            <button class="calc-btn" data-number="4" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">4</button>
+                            <button class="calc-btn" data-number="5" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">5</button>
+                            <button class="calc-btn" data-number="6" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">6</button>
+                            <button class="calc-btn" data-operation="-" style="padding: 8px; border: none; background: #6c757d; color: white; border-radius: 3px; cursor: pointer;">-</button>
+                            <button class="calc-btn" data-number="1" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">1</button>
+                            <button class="calc-btn" data-number="2" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">2</button>
+                            <button class="calc-btn" data-number="3" style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">3</button>
+                            <button class="calc-btn" data-operation="+" style="padding: 8px; border: none; background: #6c757d; color: white; border-radius: 3px; cursor: pointer;">+</button>
+                            <button class="calc-btn" data-number="0" style="grid-column: span 2; padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">0</button>
+                            <button class="calc-btn" data-number="." style="padding: 8px; border: none; background: #e9ecef; border-radius: 3px; cursor: pointer;">.</button>
+                            <button class="calc-btn" data-action="equals" style="padding: 8px; border: none; background: #28a745; color: white; border-radius: 3px; cursor: pointer;">=</button>
+                        </div>
+                    </div>
+                `,
+                width: 3,
+                height: 4
+            });
+
+            calculatorWidget.onRender = function() {
+                GridWidget.prototype.onRender.call(this);
+                
+                const display = this.element.querySelector('.calc-display');
+                const buttons = this.element.querySelectorAll('.calc-btn');
+                
+                let currentInput = '0';
+                let operator = null;
+                let previousInput = null;
+                let waitingForOperand = false;
+                
+                const updateDisplay = () => {
+                    display.textContent = currentInput;
+                };
+                
+                buttons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        incrementEventsCount();
+                        
+                        if (button.dataset.number) {
+                            const number = button.dataset.number;
+                            if (waitingForOperand) {
+                                currentInput = number;
+                                waitingForOperand = false;
+                            } else {
+                                currentInput = currentInput === '0' ? number : currentInput + number;
+                            }
+                        } else if (button.dataset.operation) {
+                            const nextOperator = button.dataset.operation;
+                            const inputValue = parseFloat(currentInput);
+                            
+                            if (previousInput === null) {
+                                previousInput = inputValue;
+                            } else if (operator) {
+                                const currentValue = previousInput || 0;
+                                const newValue = calculate(currentValue, inputValue, operator);
+                                
+                                currentInput = String(newValue);
+                                previousInput = newValue;
+                            }
+                            
+                            waitingForOperand = true;
+                            operator = nextOperator;
+                        } else if (button.dataset.action === 'equals') {
+                            const inputValue = parseFloat(currentInput);
+                            
+                            if (previousInput !== null && operator) {
+                                const newValue = calculate(previousInput, inputValue, operator);
+                                currentInput = String(newValue);
+                                previousInput = null;
+                                operator = null;
+                                waitingForOperand = true;
+                            }
+                        } else if (button.dataset.action === 'clear') {
+                            currentInput = '0';
+                            previousInput = null;
+                            operator = null;
+                            waitingForOperand = false;
+                        } else if (button.dataset.action === 'delete') {
+                            currentInput = currentInput.length > 1 ? currentInput.slice(0, -1) : '0';
+                        }
+                        
+                        updateDisplay();
+                    });
+                });
+                
+                function calculate(firstOperand, secondOperand, operator) {
+                    switch (operator) {
+                        case '+': return firstOperand + secondOperand;
+                        case '-': return firstOperand - secondOperand;
+                        case '*': return firstOperand * secondOperand;
+                        case '/': return firstOperand / secondOperand;
+                        default: return secondOperand;
+                    }
+                }
+            };
+
+            customPalette.registerWidgetTemplate('calculator-widget', calculatorWidget);
+
+            // Timer Widget
+            const timerWidget = new GridWidget({
+                title: 'Timer',
+                content: `
+                    <div style="padding: 20px; text-align: center;">
+                        <div class="timer-display" style="font-size: 32px; font-weight: bold; color: #fd7e14; margin-bottom: 15px; font-family: monospace;">05:00</div>
+                        <div style="display: flex; gap: 5px; justify-content: center; margin-bottom: 10px;">
+                            <input type="number" class="timer-minutes" value="5" min="0" max="59" style="width: 50px; padding: 4px; border: 1px solid #ddd; border-radius: 3px; text-align: center; font-size: 12px;">
+                            <span style="align-self: center; font-size: 12px;">min</span>
+                            <input type="number" class="timer-seconds" value="0" min="0" max="59" style="width: 50px; padding: 4px; border: 1px solid #ddd; border-radius: 3px; text-align: center; font-size: 12px;">
+                            <span style="align-self: center; font-size: 12px;">sec</span>
+                        </div>
+                        <div style="display: flex; gap: 5px; justify-content: center;">
+                            <button class="timer-start" style="padding: 6px 12px; border: none; background: #28a745; color: white; border-radius: 3px; cursor: pointer; font-size: 12px;">Start</button>
+                            <button class="timer-pause" style="padding: 6px 12px; border: none; background: #ffc107; color: black; border-radius: 3px; cursor: pointer; font-size: 12px;" disabled>Pause</button>
+                            <button class="timer-reset" style="padding: 6px 12px; border: none; background: #dc3545; color: white; border-radius: 3px; cursor: pointer; font-size: 12px;">Reset</button>
+                        </div>
+                    </div>
+                `,
+                width: 2,
+                height: 2
+            });
+
+            timerWidget.onRender = function() {
+                GridWidget.prototype.onRender.call(this);
+                
+                const display = this.element.querySelector('.timer-display');
+                const minutesInput = this.element.querySelector('.timer-minutes');
+                const secondsInput = this.element.querySelector('.timer-seconds');
+                const startBtn = this.element.querySelector('.timer-start');
+                const pauseBtn = this.element.querySelector('.timer-pause');
+                const resetBtn = this.element.querySelector('.timer-reset');
+                
+                let totalSeconds = 300; // 5 minutes
+                let remainingSeconds = totalSeconds;
+                let timerInterval = null;
+                let isRunning = false;
+                
+                const updateDisplay = () => {
+                    const mins = Math.floor(remainingSeconds / 60);
+                    const secs = remainingSeconds % 60;
+                    display.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    
+                    if (remainingSeconds === 0) {
+                        display.style.color = '#dc3545';
+                        alert('Timer finished!');
+                        resetTimer();
+                    }
+                };
+                
+                const startTimer = () => {
+                    if (!isRunning) {
+                        if (remainingSeconds === totalSeconds) {
+                            totalSeconds = parseInt(minutesInput.value) * 60 + parseInt(secondsInput.value);
+                            remainingSeconds = totalSeconds;
+                        }
+                        
+                        timerInterval = setInterval(() => {
+                            remainingSeconds--;
+                            updateDisplay();
+                            if (remainingSeconds <= 0) {
+                                clearInterval(timerInterval);
+                                isRunning = false;
+                            }
+                        }, 1000);
+                        
+                        isRunning = true;
+                        startBtn.disabled = true;
+                        pauseBtn.disabled = false;
+                        incrementEventsCount();
+                    }
+                };
+                
+                const pauseTimer = () => {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    incrementEventsCount();
+                };
+                
+                const resetTimer = () => {
+                    clearInterval(timerInterval);
+                    isRunning = false;
+                    totalSeconds = parseInt(minutesInput.value) * 60 + parseInt(secondsInput.value);
+                    remainingSeconds = totalSeconds;
+                    display.style.color = '#fd7e14';
+                    startBtn.disabled = false;
+                    pauseBtn.disabled = true;
+                    updateDisplay();
+                    incrementEventsCount();
+                };
+                
+                startBtn.addEventListener('click', startTimer);
+                pauseBtn.addEventListener('click', pauseTimer);
+                resetBtn.addEventListener('click', resetTimer);
+                
+                minutesInput.addEventListener('change', () => {
+                    if (!isRunning) {
+                        totalSeconds = parseInt(minutesInput.value) * 60 + parseInt(secondsInput.value);
+                        remainingSeconds = totalSeconds;
+                        updateDisplay();
+                    }
+                });
+                
+                secondsInput.addEventListener('change', () => {
+                    if (!isRunning) {
+                        totalSeconds = parseInt(minutesInput.value) * 60 + parseInt(secondsInput.value);
+                        remainingSeconds = totalSeconds;
+                        updateDisplay();
+                    }
+                });
+                
+                updateDisplay();
+            };
+
+            customPalette.registerWidgetTemplate('timer-widget', timerWidget);
+        }
+
+        function setupEventListeners() {
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', (e) => {
+                updateStats();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                updateStats();
+            });
+
+            // Control event listeners
+            document.getElementById('editModeToggle').addEventListener('click', (e) => {
+                dashboard.toggleEditMode();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('gridLinesToggle').addEventListener('click', (e) => {
+                dashboard.toggleGridLines();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('clearDashboard').addEventListener('click', () => {
+                if (confirm('Clear all widgets?')) {
+                    const widgets = Array.from(dashboard.widgets.keys());
+                    widgets.forEach(id => dashboard.removeWidget(id));
+                    updateStats();
+                }
+            });
+
+            document.getElementById('addSample').addEventListener('click', () => {
+                // Add a sample counter widget
+                const counterWidget = new GridWidget({
+                    title: 'Sample Counter',
+                    content: `
+                        <div style="padding: 20px; text-align: center;">
+                            <div style="font-size: 48px; font-weight: bold; color: #4a90e2; margin-bottom: 20px;" class="counter-value">0</div>
+                            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
+                                <button class="counter-btn decrement" style="padding: 8px 16px; border: none; background: #dc3545; color: white; border-radius: 4px; cursor: pointer;">-</button>
+                                <button class="counter-btn increment" style="padding: 8px 16px; border: none; background: #28a745; color: white; border-radius: 4px; cursor: pointer;">+</button>
+                            </div>
+                            <button class="counter-btn reset" style="padding: 6px 12px; border: none; background: #6c757d; color: white; border-radius: 4px; cursor: pointer; font-size: 12px;">Reset</button>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 2
+                });
+
+                counterWidget.onRender = function() {
+                    GridWidget.prototype.onRender.call(this);
+                    
+                    let count = 0;
+                    const valueEl = this.element.querySelector('.counter-value');
+                    const incrementBtn = this.element.querySelector('.increment');
+                    const decrementBtn = this.element.querySelector('.decrement');
+                    const resetBtn = this.element.querySelector('.reset');
+                    
+                    incrementBtn.addEventListener('click', () => {
+                        count++;
+                        valueEl.textContent = count;
+                        incrementEventsCount();
+                    });
+                    
+                    decrementBtn.addEventListener('click', () => {
+                        count--;
+                        valueEl.textContent = count;
+                        incrementEventsCount();
+                    });
+                    
+                    resetBtn.addEventListener('click', () => {
+                        count = 0;
+                        valueEl.textContent = count;
+                        incrementEventsCount();
+                    });
+                };
+
+                dashboard.addWidget(counterWidget);
+                updateStats();
+            });
+        }
+
+        function incrementEventsCount() {
+            eventsCount++;
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('widgetCount').textContent = dashboard.widgets.size;
+            document.getElementById('interactiveCount').textContent = dashboard.widgets.size;
+            document.getElementById('eventsCount').textContent = eventsCount;
+            
+            // Update drop indicator
+            const indicator = document.getElementById('dropIndicator');
+            const hasWidgets = dashboard.widgets.size > 0;
+            indicator.style.display = hasWidgets ? 'none' : 'block';
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDemo);
+    </script>
+</body>
+</html>

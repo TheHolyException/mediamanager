@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Widget Classes Example</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .back-link:hover {
+            opacity: 1;
+            text-decoration: underline;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 20px;
+            height: calc(100vh - 140px);
+        }
+
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-header {
+            background: linear-gradient(135deg, #4a90e2 0%, #5a9bd4 100%);
+            color: white;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .section-header h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .section-header p {
+            opacity: 0.9;
+            font-size: 12px;
+        }
+
+        .info-panel {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+
+        .info-panel h4 {
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+
+        .info-panel ul {
+            margin-left: 20px;
+            opacity: 0.8;
+        }
+
+        .widget-palette {
+            padding: 16px;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .widget-class-group {
+            margin-bottom: 20px;
+        }
+
+        .class-header {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid #4a90e2;
+        }
+
+        .class-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .class-description {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .custom-widget {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .custom-widget:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .custom-widget .widget-icon {
+            font-size: 18px;
+            width: 32px;
+            height: 32px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .custom-widget .widget-info {
+            flex: 1;
+        }
+
+        .custom-widget .widget-name {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .custom-widget .widget-desc {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+
+        .custom-widget .widget-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .dashboard-area {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .dashboard-controls {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e1e5e9;
+            padding: 16px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: #4a90e2;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            background: #357abd;
+            transform: translateY(-1px);
+        }
+
+        .btn.danger {
+            background: #dc3545;
+        }
+
+        .btn.danger:hover {
+            background: #c82333;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #4a90e2;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.3s ease;
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 6px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4a90e2;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .drop-zone {
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            min-height: 400px;
+            position: relative;
+        }
+
+        .drop-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #6c757d;
+            pointer-events: none;
+        }
+
+        .drop-indicator .icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: 2;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="index.html" class="back-link">← Back to Examples</a>
+        <h1>🧩 Custom Widget Classes</h1>
+        <p>Advanced widget inheritance patterns and specialized components</p>
+    </div>
+
+    <div class="info-panel">
+        <h4>📖 What you'll learn:</h4>
+        <ul>
+            <li>Creating custom widget class hierarchies</li>
+            <li>Widget inheritance and method overriding</li>
+            <li>Specialized widget components</li>
+            <li>Lifecycle management in custom widgets</li>
+            <li>Building reusable widget templates</li>
+            <li>Advanced widget composition patterns</li>
+        </ul>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section-header">
+                <h2>🧩 Custom Widget Classes</h2>
+                <p>Drag specialized widget instances</p>
+            </div>
+            <div class="widget-palette">
+                <!-- Data Widgets -->
+                <div class="widget-class-group">
+                    <div class="class-header">
+                        <div class="class-title">📊 Data Widgets</div>
+                        <div class="class-description">Widgets specialized for data visualization and metrics</div>
+                    </div>
+                    
+                    <div class="custom-widget" 
+                         widget-type="metric-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #28a745; color: white; border-radius: 6px; font-weight: bold;'>📈 Metric Widget</div>">
+                        <div class="widget-icon">📈</div>
+                        <div class="widget-info">
+                            <div class="widget-name">Metric Widget</div>
+                            <div class="widget-desc">KPI display with trend indicators</div>
+                        </div>
+                        <div class="widget-badge">Data</div>
+                    </div>
+
+                    <div class="custom-widget" 
+                         widget-type="live-chart-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #007bff; color: white; border-radius: 6px; font-weight: bold;'>📊 Live Chart</div>">
+                        <div class="widget-icon">📊</div>
+                        <div class="widget-info">
+                            <div class="widget-name">Live Chart</div>
+                            <div class="widget-desc">Real-time updating data visualization</div>
+                        </div>
+                        <div class="widget-badge">Live</div>
+                    </div>
+
+                    <div class="custom-widget" 
+                         widget-type="table-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #6f42c1; color: white; border-radius: 6px; font-weight: bold;'>📋 Data Table</div>">
+                        <div class="widget-icon">📋</div>
+                        <div class="widget-info">
+                            <div class="widget-name">Data Table</div>
+                            <div class="widget-desc">Sortable table with pagination</div>
+                        </div>
+                        <div class="widget-badge">Table</div>
+                    </div>
+                </div>
+
+                <!-- Form Widgets -->
+                <div class="widget-class-group">
+                    <div class="class-header">
+                        <div class="class-title">📝 Form Widgets</div>
+                        <div class="class-description">Interactive form components with validation</div>
+                    </div>
+                    
+                    <div class="custom-widget" 
+                         widget-type="survey-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #fd7e14; color: white; border-radius: 6px; font-weight: bold;'>📋 Survey Form</div>">
+                        <div class="widget-icon">📋</div>
+                        <div class="widget-info">
+                            <div class="widget-name">Survey Form</div>
+                            <div class="widget-desc">Multi-step form with progress</div>
+                        </div>
+                        <div class="widget-badge">Form</div>
+                    </div>
+
+                    <div class="custom-widget" 
+                         widget-type="contact-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #e83e8c; color: white; border-radius: 6px; font-weight: bold;'>📧 Contact Form</div>">
+                        <div class="widget-icon">📧</div>
+                        <div class="widget-info">
+                            <div class="widget-name">Contact Form</div>
+                            <div class="widget-desc">Email form with validation</div>
+                        </div>
+                        <div class="widget-badge">Contact</div>
+                    </div>
+                </div>
+
+                <!-- Media Widgets -->
+                <div class="widget-class-group">
+                    <div class="class-header">
+                        <div class="class-title">🎵 Media Widgets</div>
+                        <div class="class-description">Audio, video, and media control components</div>
+                    </div>
+                    
+                    <div class="custom-widget" 
+                         widget-type="audio-player-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #20c997; color: white; border-radius: 6px; font-weight: bold;'>🎵 Audio Player</div>">
+                        <div class="widget-icon">🎵</div>
+                        <div class="widget-info">
+                            <div class="widget-name">Audio Player</div>
+                            <div class="widget-desc">Custom audio controls and playlist</div>
+                        </div>
+                        <div class="widget-badge">Media</div>
+                    </div>
+
+                    <div class="custom-widget" 
+                         widget-type="video-player-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #dc3545; color: white; border-radius: 6px; font-weight: bold;'>🎬 Video Player</div>">
+                        <div class="widget-icon">🎬</div>
+                        <div class="widget-info">
+                            <div class="widget-name">Video Player</div>
+                            <div class="widget-desc">Video with custom controls</div>
+                        </div>
+                        <div class="widget-badge">Video</div>
+                    </div>
+                </div>
+
+                <!-- Utility Widgets -->
+                <div class="widget-class-group">
+                    <div class="class-header">
+                        <div class="class-title">🔧 Utility Widgets</div>
+                        <div class="class-description">Tools and utility components</div>
+                    </div>
+                    
+                    <div class="custom-widget" 
+                         widget-type="code-editor-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #343a40; color: white; border-radius: 6px; font-weight: bold;'>💻 Code Editor</div>">
+                        <div class="widget-icon">💻</div>
+                        <div class="widget-info">
+                            <div class="widget-name">Code Editor</div>
+                            <div class="widget-desc">Syntax highlighting editor</div>
+                        </div>
+                        <div class="widget-badge">Code</div>
+                    </div>
+
+                    <div class="custom-widget" 
+                         widget-type="qr-generator-widget"
+                         data-drag-image-html="<div style='padding: 10px; background: #495057; color: white; border-radius: 6px; font-weight: bold;'>📱 QR Generator</div>">
+                        <div class="widget-icon">📱</div>
+                        <div class="widget-info">
+                            <div class="widget-name">QR Generator</div>
+                            <div class="widget-desc">Dynamic QR code creation</div>
+                        </div>
+                        <div class="widget-badge">Tool</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="section-header">
+                <h2>📊 Custom Widget Dashboard</h2>
+                <p>Drag specialized widgets to see inheritance in action</p>
+            </div>
+            
+            <div class="dashboard-controls">
+                <div class="control-group">
+                    <label>Edit Mode:</label>
+                    <div class="toggle-switch active" id="editModeToggle"></div>
+                </div>
+                
+                <div class="control-group">
+                    <label>Grid Lines:</label>
+                    <div class="toggle-switch" id="gridLinesToggle"></div>
+                </div>
+                
+                <button class="btn danger" id="clearDashboard">🗑️ Clear All</button>
+                <button class="btn" id="addSample">➕ Add Sample</button>
+            </div>
+
+            <div class="stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="widgetCount">0</div>
+                    <div class="stat-label">Widgets</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="classCount">0</div>
+                    <div class="stat-label">Classes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="methodsCount">0</div>
+                    <div class="stat-label">Custom Methods</div>
+                </div>
+            </div>
+
+            <div class="dashboard-area">
+                <div class="drop-zone" id="dashboard">
+                    <div class="drop-indicator" id="dropIndicator">
+                        <div class="icon">🧩</div>
+                        <div>Drag custom widget classes here</div>
+                        <div style="font-size: 14px; margin-top: 8px; opacity: 0.7;">
+                            Each widget demonstrates different inheritance patterns
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Include required scripts -->
+    <script src="../gridWidget.js"></script>
+    <script src="../customWidget.js"></script>
+    <script src="../gridDashboard.js"></script>
+    <script src="../customHTMLWidgetPalette.js"></script>
+
+    <script>
+        let dashboard = null;
+        let customPalette = null;
+
+        // Base class for data widgets
+        class DataWidget extends GridWidget {
+            constructor(options) {
+                super(options);
+                this.dataUpdateInterval = null;
+                this.lastUpdate = Date.now();
+            }
+
+            startDataUpdates(interval = 5000) {
+                this.dataUpdateInterval = setInterval(() => {
+                    this.updateData();
+                    this.lastUpdate = Date.now();
+                }, interval);
+            }
+
+            stopDataUpdates() {
+                if (this.dataUpdateInterval) {
+                    clearInterval(this.dataUpdateInterval);
+                    this.dataUpdateInterval = null;
+                }
+            }
+
+            updateData() {
+                // Override in subclasses
+                console.log('Data updated for', this.options.title);
+            }
+
+            onRemove() {
+                this.stopDataUpdates();
+                super.onRemove();
+            }
+        }
+
+        // Metric Widget Class
+        class MetricWidget extends DataWidget {
+            constructor(options) {
+                super({
+                    title: 'Metric Widget',
+                    content: `
+                        <div style="padding: 20px; text-align: center;">
+                            <div class="metric-value" style="font-size: 36px; font-weight: bold; color: #28a745; margin-bottom: 10px;">1,234</div>
+                            <div class="metric-label" style="font-size: 14px; color: #666; margin-bottom: 15px;">Active Users</div>
+                            <div class="metric-trend" style="font-size: 12px; color: #28a745;">↗ +12.5% from last week</div>
+                            <div class="metric-chart" style="height: 40px; background: linear-gradient(90deg, #28a745 0%, #20c997 100%); margin-top: 15px; border-radius: 4px; position: relative; overflow: hidden;">
+                                <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 60%; background: rgba(255,255,255,0.2); animation: pulse 2s infinite;"></div>
+                            </div>
+                        </div>
+                    `,
+                    width: 2,
+                    height: 2,
+                    ...options
+                });
+                this.currentValue = 1234;
+            }
+
+            updateData() {
+                const change = Math.floor(Math.random() * 100) - 50;
+                this.currentValue += change;
+                
+                const valueEl = this.element.querySelector('.metric-value');
+                const trendEl = this.element.querySelector('.metric-trend');
+                
+                if (valueEl) {
+                    valueEl.textContent = this.currentValue.toLocaleString();
+                }
+                
+                if (trendEl) {
+                    const percentage = ((change / this.currentValue) * 100).toFixed(1);
+                    const arrow = change >= 0 ? '↗' : '↘';
+                    const color = change >= 0 ? '#28a745' : '#dc3545';
+                    trendEl.innerHTML = `${arrow} ${Math.abs(percentage)}% from last update`;
+                    trendEl.style.color = color;
+                }
+            }
+
+            onRender() {
+                super.onRender();
+                this.startDataUpdates(3000);
+            }
+        }
+
+        // Live Chart Widget Class
+        class LiveChartWidget extends DataWidget {
+            constructor(options) {
+                super({
+                    title: 'Live Chart',
+                    content: `
+                        <div style="padding: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0; color: #333;">Revenue Trend</h4>
+                                <span class="live-indicator" style="background: #28a745; color: white; padding: 2px 8px; border-radius: 10px; font-size: 10px;">LIVE</span>
+                            </div>
+                            <canvas class="chart-canvas" width="200" height="100" style="width: 100%; height: 100px; border: 1px solid #e1e5e9; border-radius: 4px;"></canvas>
+                            <div style="display: flex; justify-content: between; margin-top: 10px; font-size: 12px; color: #666;">
+                                <span>Last 10 updates</span>
+                                <span class="last-update">Just now</span>
+                            </div>
+                        </div>
+                    `,
+                    width: 3,
+                    height: 2,
+                    ...options
+                });
+                this.chartData = [45, 52, 48, 61, 58, 63, 67, 71, 69, 75];
+            }
+
+            updateData() {
+                // Add new data point and remove oldest
+                const newValue = Math.floor(Math.random() * 30) + 45;
+                this.chartData.push(newValue);
+                if (this.chartData.length > 10) {
+                    this.chartData.shift();
+                }
+                
+                this.drawChart();
+                
+                const updateEl = this.element.querySelector('.last-update');
+                if (updateEl) {
+                    updateEl.textContent = 'Just now';
+                }
+            }
+
+            drawChart() {
+                const canvas = this.element.querySelector('.chart-canvas');
+                if (!canvas) return;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw chart
+                ctx.strokeStyle = '#4a90e2';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                const stepX = canvas.width / (this.chartData.length - 1);
+                const maxValue = Math.max(...this.chartData);
+                const minValue = Math.min(...this.chartData);
+                const valueRange = maxValue - minValue || 1;
+                
+                this.chartData.forEach((value, index) => {
+                    const x = index * stepX;
+                    const y = canvas.height - ((value - minValue) / valueRange) * canvas.height;
+                    
+                    if (index === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                });
+                
+                ctx.stroke();
+            }
+
+            onRender() {
+                super.onRender();
+                this.drawChart();
+                this.startDataUpdates(2000);
+            }
+        }
+
+        // Base class for form widgets
+        class FormWidget extends GridWidget {
+            constructor(options) {
+                super(options);
+                this.formData = {};
+                this.validators = {};
+                this.isValid = true;
+            }
+
+            addValidator(fieldName, validatorFn, errorMessage) {
+                this.validators[fieldName] = { validator: validatorFn, message: errorMessage };
+            }
+
+            validateField(fieldName, value) {
+                if (this.validators[fieldName]) {
+                    const validator = this.validators[fieldName];
+                    const isValid = validator.validator(value);
+                    return { valid: isValid, message: isValid ? '' : validator.message };
+                }
+                return { valid: true, message: '' };
+            }
+
+            validateForm() {
+                let isValid = true;
+                for (const fieldName in this.formData) {
+                    const result = this.validateField(fieldName, this.formData[fieldName]);
+                    if (!result.valid) {
+                        isValid = false;
+                        break;
+                    }
+                }
+                this.isValid = isValid;
+                return isValid;
+            }
+
+            submitForm() {
+                if (this.validateForm()) {
+                    console.log('Form submitted:', this.formData);
+                    this.onFormSubmit(this.formData);
+                    return true;
+                }
+                return false;
+            }
+
+            onFormSubmit(data) {
+                // Override in subclasses
+            }
+        }
+
+        // Survey Widget Class
+        class SurveyWidget extends FormWidget {
+            constructor(options) {
+                super({
+                    title: 'Customer Survey',
+                    content: `
+                        <div style="padding: 15px;">
+                            <div class="survey-progress" style="background: #e1e5e9; height: 4px; border-radius: 2px; margin-bottom: 15px;">
+                                <div class="progress-bar" style="background: #4a90e2; height: 100%; width: 33%; border-radius: 2px; transition: width 0.3s ease;"></div>
+                            </div>
+                            <div class="survey-step" data-step="1">
+                                <h4 style="margin-bottom: 10px;">How satisfied are you with our service?</h4>
+                                <div style="display: flex; gap: 5px; margin-bottom: 15px;">
+                                    <button class="rating-btn" data-rating="1" style="padding: 8px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">😞</button>
+                                    <button class="rating-btn" data-rating="2" style="padding: 8px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">😐</button>
+                                    <button class="rating-btn" data-rating="3" style="padding: 8px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">😊</button>
+                                    <button class="rating-btn" data-rating="4" style="padding: 8px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">😍</button>
+                                </div>
+                                <button class="next-btn" style="padding: 6px 12px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer;" disabled>Next</button>
+                            </div>
+                            <div class="survey-completion" style="display: none; text-align: center;">
+                                <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                                <h4>Thank you for your feedback!</h4>
+                                <p style="color: #666; font-size: 12px; margin-top: 5px;">Your response has been recorded.</p>
+                            </div>
+                        </div>
+                    `,
+                    width: 3,
+                    height: 2,
+                    ...options
+                });
+                this.currentStep = 1;
+                this.totalSteps = 3;
+            }
+
+            onRender() {
+                super.onRender();
+                
+                // Rating button listeners
+                this.element.querySelectorAll('.rating-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        // Remove active state from all buttons
+                        this.element.querySelectorAll('.rating-btn').forEach(b => {
+                            b.style.background = 'white';
+                            b.style.borderColor = '#ddd';
+                        });
+                        
+                        // Add active state to clicked button
+                        e.target.style.background = '#4a90e2';
+                        e.target.style.borderColor = '#4a90e2';
+                        e.target.style.color = 'white';
+                        
+                        this.formData.rating = e.target.dataset.rating;
+                        
+                        // Enable next button
+                        const nextBtn = this.element.querySelector('.next-btn');
+                        if (nextBtn) {
+                            nextBtn.disabled = false;
+                            nextBtn.style.opacity = '1';
+                        }
+                    });
+                });
+
+                // Next button listener
+                const nextBtn = this.element.querySelector('.next-btn');
+                if (nextBtn) {
+                    nextBtn.addEventListener('click', () => {
+                        this.nextStep();
+                    });
+                }
+            }
+
+            nextStep() {
+                this.currentStep++;
+                
+                if (this.currentStep > this.totalSteps) {
+                    this.completeSurvey();
+                    return;
+                }
+                
+                // Update progress
+                const progressBar = this.element.querySelector('.progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = `${(this.currentStep / this.totalSteps) * 100}%`;
+                }
+                
+                // Simulate completion for demo
+                setTimeout(() => this.completeSurvey(), 1000);
+            }
+
+            completeSurvey() {
+                const stepEl = this.element.querySelector('.survey-step');
+                const completionEl = this.element.querySelector('.survey-completion');
+                
+                if (stepEl) stepEl.style.display = 'none';
+                if (completionEl) completionEl.style.display = 'block';
+                
+                // Update progress to 100%
+                const progressBar = this.element.querySelector('.progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = '100%';
+                    progressBar.style.background = '#28a745';
+                }
+            }
+
+            onFormSubmit(data) {
+                console.log('Survey completed:', data);
+            }
+        }
+
+        function initDemo() {
+            // Create the dashboard
+            dashboard = new GridDashboard('#dashboard', 6, 4, {
+                cellWidth: 100,
+                cellHeight: 100,
+                gap: 10,
+                autoResize: true,
+                enableDragDrop: true,
+                allowOverlapping: false,
+                autoResizeWidth: true,
+                autoResizeHeight: true,
+                editMode: true,
+                showGridLines: false,
+                useCSSAuto: true
+            });
+
+            // Create custom HTML widget palette
+            customPalette = new CustomHTMLWidgetPalette('.widget-palette', {
+                widgetSelector: '[widget-type]',
+                enableHoverEffects: true,
+                enableClickToAdd: false,
+                autoSetDraggable: true,
+                enableCustomDragFeedback: true
+            });
+
+            // Register custom widget classes
+            registerCustomWidgetClasses();
+
+            // Register palette with dashboard
+            customPalette.registerDashboard(dashboard);
+
+            // Set up event listeners
+            setupEventListeners();
+
+            // Update stats
+            updateStats();
+        }
+
+        function registerCustomWidgetClasses() {
+            // Register Data Widgets
+            customPalette.registerWidgetTemplate('metric-widget', new MetricWidget());
+            customPalette.registerWidgetTemplate('live-chart-widget', new LiveChartWidget());
+            
+            // Data Table Widget
+            customPalette.registerWidgetTemplate('table-widget', new GridWidget({
+                title: 'Data Table',
+                content: `
+                    <div style="padding: 15px;">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                            <thead>
+                                <tr style="background: #f8f9fa;">
+                                    <th style="padding: 8px; border: 1px solid #e1e5e9; text-align: left;">Name</th>
+                                    <th style="padding: 8px; border: 1px solid #e1e5e9; text-align: left;">Status</th>
+                                    <th style="padding: 8px; border: 1px solid #e1e5e9; text-align: left;">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="padding: 6px; border: 1px solid #e1e5e9;">John Doe</td><td style="padding: 6px; border: 1px solid #e1e5e9;">✅ Active</td><td style="padding: 6px; border: 1px solid #e1e5e9;">95</td></tr>
+                                <tr><td style="padding: 6px; border: 1px solid #e1e5e9;">Jane Smith</td><td style="padding: 6px; border: 1px solid #e1e5e9;">⏸️ Pending</td><td style="padding: 6px; border: 1px solid #e1e5e9;">87</td></tr>
+                                <tr><td style="padding: 6px; border: 1px solid #e1e5e9;">Bob Wilson</td><td style="padding: 6px; border: 1px solid #e1e5e9;">✅ Active</td><td style="padding: 6px; border: 1px solid #e1e5e9;">92</td></tr>
+                            </tbody>
+                        </table>
+                        <div style="margin-top: 10px; font-size: 11px; color: #666; text-align: center;">
+                            Showing 3 of 150 entries
+                        </div>
+                    </div>
+                `,
+                width: 4,
+                height: 3
+            }));
+
+            // Register Form Widgets
+            customPalette.registerWidgetTemplate('survey-widget', new SurveyWidget());
+            
+            // Contact Form Widget
+            customPalette.registerWidgetTemplate('contact-widget', new GridWidget({
+                title: 'Contact Form',
+                content: `
+                    <div style="padding: 15px;">
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600;">Name</label>
+                            <input type="text" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600;">Email</label>
+                            <input type="email" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px;">
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <label style="display: block; margin-bottom: 4px; font-size: 12px; font-weight: 600;">Message</label>
+                            <textarea style="width: 100%; height: 60px; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; resize: none;" placeholder="Your message..."></textarea>
+                        </div>
+                        <button style="width: 100%; padding: 8px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Send Message</button>
+                    </div>
+                `,
+                width: 3,
+                height: 3
+            }));
+
+            // Register Media Widgets
+            customPalette.registerWidgetTemplate('audio-player-widget', new GridWidget({
+                title: 'Audio Player',
+                content: `
+                    <div style="padding: 15px;">
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <div style="font-size: 48px; margin-bottom: 10px;">🎵</div>
+                            <h4 style="margin: 0; font-size: 14px;">Now Playing</h4>
+                            <p style="margin: 5px 0; color: #666; font-size: 12px;">Relaxing Jazz Melody</p>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 10px; border-radius: 6px;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <button style="background: #4a90e2; color: white; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer;">▶</button>
+                                <div style="flex: 1; height: 4px; background: #e1e5e9; border-radius: 2px; position: relative;">
+                                    <div style="height: 100%; width: 35%; background: #4a90e2; border-radius: 2px;"></div>
+                                </div>
+                                <span style="font-size: 10px; color: #666;">2:34</span>
+                            </div>
+                            <div style="display: flex; justify-content: center; gap: 5px;">
+                                <button style="background: none; border: none; font-size: 16px; cursor: pointer;">⏮</button>
+                                <button style="background: none; border: none; font-size: 16px; cursor: pointer;">⏭</button>
+                                <button style="background: none; border: none; font-size: 16px; cursor: pointer;">🔀</button>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                width: 2,
+                height: 3
+            }));
+
+            // Video Player Widget
+            customPalette.registerWidgetTemplate('video-player-widget', new GridWidget({
+                title: 'Video Player',
+                content: `
+                    <div style="padding: 15px;">
+                        <div style="background: #000; border-radius: 6px; position: relative; height: 120px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+                            <button style="background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 48px; height: 48px; cursor: pointer; font-size: 20px;">▶</button>
+                            <div style="position: absolute; bottom: 10px; left: 10px; color: white; font-size: 10px;">HD</div>
+                            <div style="position: absolute; bottom: 10px; right: 10px; color: white; font-size: 10px;">4:20</div>
+                        </div>
+                        <div style="font-size: 12px;">
+                            <div style="font-weight: 600; margin-bottom: 4px;">Product Demo Video</div>
+                            <div style="color: #666;">Learn about our latest features</div>
+                        </div>
+                    </div>
+                `,
+                width: 3,
+                height: 3
+            }));
+
+            // Register Utility Widgets
+            customPalette.registerWidgetTemplate('code-editor-widget', new GridWidget({
+                title: 'Code Editor',
+                content: `
+                    <div style="padding: 15px;">
+                        <div style="background: #282c34; color: #abb2bf; padding: 10px; border-radius: 6px; font-family: 'Courier New', monospace; font-size: 11px; height: 140px; overflow-y: auto;">
+                            <div style="color: #c678dd;">function</div>
+                            <div style="margin-left: 20px; color: #61dafb;">calculateTotal</div>
+                            <div style="margin-left: 20px;">(items) {</div>
+                            <div style="margin-left: 40px; color: #e06c75;">return</div>
+                            <div style="margin-left: 60px;">items.reduce((sum, item) => {</div>
+                            <div style="margin-left: 80px; color: #e06c75;">return</div>
+                            <div style="margin-left: 100px;">sum + item.price;</div>
+                            <div style="margin-left: 60px;">}, 0);</div>
+                            <div style="margin-left: 20px;">}</div>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 5px;">
+                            <button style="padding: 4px 8px; background: #28a745; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">Run</button>
+                            <button style="padding: 4px 8px; background: #6c757d; color: white; border: none; border-radius: 3px; font-size: 10px; cursor: pointer;">Format</button>
+                        </div>
+                    </div>
+                `,
+                width: 3,
+                height: 3
+            }));
+
+            // QR Generator Widget
+            customPalette.registerWidgetTemplate('qr-generator-widget', new GridWidget({
+                title: 'QR Generator',
+                content: `
+                    <div style="padding: 15px; text-align: center;">
+                        <div style="width: 80px; height: 80px; margin: 0 auto 15px; background: #000; display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); gap: 1px;">
+                            ${Array(64).fill().map((_, i) => `<div style="background: ${Math.random() > 0.5 ? '#000' : '#fff'};"></div>`).join('')}
+                        </div>
+                        <input type="text" placeholder="Enter text to encode" style="width: 100%; padding: 6px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; margin-bottom: 10px;">
+                        <button style="width: 100%; padding: 6px; background: #4a90e2; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Generate QR</button>
+                    </div>
+                `,
+                width: 2,
+                height: 3
+            }));
+        }
+
+        function setupEventListeners() {
+            // Dashboard events
+            dashboard.container.addEventListener('gridDashboard:widgetCreated', (e) => {
+                updateStats();
+            });
+
+            dashboard.container.addEventListener('gridDashboard:widgetRemoved', () => {
+                updateStats();
+            });
+
+            // Control event listeners
+            document.getElementById('editModeToggle').addEventListener('click', (e) => {
+                dashboard.toggleEditMode();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('gridLinesToggle').addEventListener('click', (e) => {
+                dashboard.toggleGridLines();
+                e.target.classList.toggle('active');
+            });
+
+            document.getElementById('clearDashboard').addEventListener('click', () => {
+                if (confirm('Clear all widgets?')) {
+                    const widgets = Array.from(dashboard.widgets.keys());
+                    widgets.forEach(id => dashboard.removeWidget(id));
+                    updateStats();
+                }
+            });
+
+            document.getElementById('addSample').addEventListener('click', () => {
+                // Add a sample metric widget
+                const sampleWidget = new MetricWidget({
+                    title: 'Sample Metric'
+                });
+                dashboard.addWidget(sampleWidget);
+                updateStats();
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('widgetCount').textContent = dashboard.widgets.size;
+            
+            // Count unique widget classes
+            const classes = new Set();
+            const methods = new Set();
+            
+            dashboard.widgets.forEach(widget => {
+                classes.add(widget.constructor.name);
+                
+                // Count custom methods
+                Object.getOwnPropertyNames(Object.getPrototypeOf(widget)).forEach(method => {
+                    if (method !== 'constructor' && typeof widget[method] === 'function') {
+                        methods.add(method);
+                    }
+                });
+            });
+            
+            document.getElementById('classCount').textContent = classes.size;
+            document.getElementById('methodsCount').textContent = methods.size;
+            
+            // Update drop indicator
+            const indicator = document.getElementById('dropIndicator');
+            const hasWidgets = dashboard.widgets.size > 0;
+            indicator.style.display = hasWidgets ? 'none' : 'block';
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initDemo);
+    </script>
+
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+    </style>
+</body>
+</html>
