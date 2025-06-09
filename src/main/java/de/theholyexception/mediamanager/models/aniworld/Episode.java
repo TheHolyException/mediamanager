@@ -125,7 +125,11 @@ public class Episode {
     }
 
     public void loadVideoURL(int languageId, Runnable then) {
-        if (videoUrl != null) return; // No need to parse, already parsed
+        if (videoUrl != null) {
+            if (then != null)
+                then.run();
+            return; // No need to parse, already parsed
+        }
         if (aniworldUrl == null) {
             log.error("Cant load videoURL because url is null");
             return;

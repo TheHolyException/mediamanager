@@ -217,7 +217,7 @@ public class WebSocketUtils {
         packet.removeIf(anime2 -> anime2.getId() == anime.getId());
         packet.add(anime);
         lastSendAnimes = packet;
-        sendAutoLoaderItem(socket, anime);
+        sendAutoLoaderItem(socket, packet);
     }
 
     public static void sendAutoLoaderItem(WebSocketBasic socket, List<Anime> animes) {

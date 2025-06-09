@@ -2,6 +2,7 @@ package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.mediamanager.*;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
@@ -85,13 +86,17 @@ public class AutoLoaderHandler extends Handler {
             if (log.isDebugEnabled())
                 printTableInfo("anime", "season", "episode");
 
-            subscribedAnimes.forEach(a -> {
-                a.loadMissingEpisodes();
-                a.scanDirectoryForExistingEpisodes();
-                log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false));
-                if (a.isDeepDirty())
-                    a.writeToDB(MediaManager.getInstance().getDb());
-            });
+            ExecutorHandler handler = new ExecutorHandler(Executors.newFixedThreadPool(10));
+            subscribedAnimes.forEach(a ->
+                handler.putTask(() -> {
+                    a.loadMissingEpisodes();
+                    a.scanDirectoryForExistingEpisodes();
+                    log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false));
+                    if (a.isDeepDirty())
+                        a.writeToDB(MediaManager.getInstance().getDb());
+                }, 1)
+            );
+            handler.awaitGroup(1);
             MediaManager.getInstance().getDb().getExecutorHandler().awaitGroup(-1);
 
             if (enabled)
@@ -335,6 +340,7 @@ public class AutoLoaderHandler extends Handler {
         if (optAnime.isEmpty())
             throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
 
+        log.debug("Running download for: {}", optAnime.get().getTitle());
         runDownload(optAnime.get());
         throw new WebSocketResponseException(WebSocketResponse.OK);
     }
@@ -570,10 +576,12 @@ public class AutoLoaderHandler extends Handler {
                     JSONArrayContainer list = new JSONArrayContainer();
                     list.add(data);
                     payload.set("list", list);
+                    log.debug("Sending payload: {}", payload);
                     defaultHandler.cmdPutData(null, payload);
                 });
             } catch (Exception ex) {
                 log.error("", ex);
+                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Download failed: " + ex.getMessage()));
             } finally {
                 unloadedEpisode.setDownloading(false);
             }

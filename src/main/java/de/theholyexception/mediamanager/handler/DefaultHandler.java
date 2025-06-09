@@ -527,7 +527,7 @@ public class DefaultHandler extends Handler {
                 if (title != null)
                     changeObject(content, "title", title);
             });
-        } finally {
+        } catch (Exception ex) {
             Utils.safeDelete(downloadTempFolder);
         }
     }
