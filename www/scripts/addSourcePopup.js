@@ -22,8 +22,8 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             "border-radius": "16px",
             "border": "1px solid rgba(255, 255, 255, 0.1)",
             "box-shadow": "0 20px 40px rgba(0, 0, 0, 0.5)",
-            "min-width": "600px",
-            "max-width": "800px"
+            "min-width": "min(600px, 95vw)",
+            "max-width": "min(800px, 95vw)"
         },
         " .add-download-header": {
             "display": "flex",
@@ -272,6 +272,11 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             "display": "grid",
             "grid-template-columns": "1fr 1fr",
             "gap": "16px"
+        },
+        "@media (max-width: 768px)": {
+            " .target-grid": {
+                "grid-template-columns": "1fr"
+            }
         },
         " .custom-dropdown": {
             "position": "relative"

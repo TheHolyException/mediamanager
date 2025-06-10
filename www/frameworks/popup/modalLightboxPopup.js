@@ -47,6 +47,8 @@ class ModalLightboxPopup {
             display: flex;
             flex-direction: column;
             gap: 15px;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         #editor-buttons {
@@ -54,6 +56,24 @@ class ModalLightboxPopup {
             display: flex;
             justify-content: flex-end;
             gap: 15px;
+        }
+
+        #editor-window::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #editor-window::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        #editor-window::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        #editor-window::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
         }
         `;
         const parentSelector = "#editor-window";
