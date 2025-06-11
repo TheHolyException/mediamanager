@@ -549,7 +549,11 @@ class StatisticsWidget extends BaseWidget {
             groups.push(groupElem);
         }
 
-        container.empty();
-        container.append(groups);
+        // Update statistics tables for all widgets
+        statisticsWidgets.each(function() {
+            const container = $(this).find('.statistics-tables');
+            container.empty();
+            container.append(groups.map(group => group.clone()));
+        });
     }
 }
