@@ -171,4 +171,38 @@
         }
     }
     
+    /* Force GC Button Styling */
+    .gc-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.9em;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: linear-gradient(135deg, var(--selectedBorderColor) 0%, var(--hover-color) 100%);
+        color: white;
+        margin-top: 12px;
+        min-width: 120px;
+        justify-content: center;
+        
+        &:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(8, 145, 178, 0.3);
+            background: linear-gradient(135deg, var(--hover-color) 0%, var(--selectedBorderColor) 100%);
+        }
+        
+        &:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(8, 145, 178, 0.2);
+        }
+        
+        i {
+            font-size: 0.9em;
+        }
+    }
+    
 }

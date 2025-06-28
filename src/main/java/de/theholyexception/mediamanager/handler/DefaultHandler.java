@@ -6,7 +6,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.holyapi.util.GUIUtils;
-import de.theholyexception.mediamanager.*;
+import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
@@ -22,7 +22,6 @@ import me.kaigermany.downloaders.DownloadStatusUpdateEvent;
 import me.kaigermany.downloaders.Downloader;
 import me.kaigermany.downloaders.DownloaderSelector;
 import me.kaigermany.downloaders.FFmpeg;
-import me.kaigermany.downloaders.voe.VOEDownloadEngine;
 import me.kaigermany.ultimateutils.StaticUtils;
 import me.kaigermany.ultimateutils.networking.smarthttp.HTTPRequestOptions;
 import me.kaigermany.ultimateutils.networking.smarthttp.HTTPResult;
@@ -73,7 +72,7 @@ public class DefaultHandler extends Handler {
     private SettingProperty<Integer> spDownloadThreads;
     
     /** Setting for number of VOE download threads */
-    private SettingProperty<Integer> spVoeThreads;
+    private SettingProperty<Integer> spThreads;
     
     /** Setting for retry delay in minutes */
     private SettingProperty<Integer> spRetryMinutes;
@@ -89,7 +88,7 @@ public class DefaultHandler extends Handler {
     private final Queue<JSONObject> memoryHistory = new LinkedList<>();
     private final Queue<JSONObject> downloadHistory = new LinkedList<>();
     private final Queue<JSONObject> threadHistory = new LinkedList<>();
-    private static final int MAX_HISTORY_SIZE = 720; // Keep last 720 data points (60 minutes at 5-second intervals)
+    private static final int MAX_HISTORY_SIZE = 120; // Keep last 720 data points (60 minutes at 5-second intervals)
 
     /**
      * Creates a new DefaultHandler instance for the specified target system.
@@ -117,8 +116,7 @@ public class DefaultHandler extends Handler {
         spDownloadThreads.addSubscriber(value ->
         downloadHandler.updateExecutorService(Executors.newFixedThreadPool(value)));
 
-        spVoeThreads = Settings.getSettingProperty("VOE_THREADS", 1, systemSettings);
-        spVoeThreads.addSubscriber(VOEDownloadEngine::setThreads);
+        spThreads = Settings.getSettingProperty("THREADS", 1, systemSettings);
 
         spRetryMinutes = Settings.getSettingProperty("RETRY_MINUTES", 0, systemSettings);
         spRetryMinutes.addSubscriber(value -> {
@@ -145,7 +143,6 @@ public class DefaultHandler extends Handler {
         });
 
         FFmpeg.setFFmpegPath(getTomlConfig().getString("general.ffmpeg"));
-
 
         downloadFolder = new File(getTomlConfig().getString("general.tmpDownloadFolder", () -> "./tmp"));
         if (!downloadFolder.exists() && !downloadFolder.mkdirs())
@@ -218,6 +215,11 @@ public class DefaultHandler extends Handler {
                 log.debug("Test delay");
                 Utils.sleep(5000);
                 throw new WebSocketResponseException(WebSocketResponse.OK.setMessage("Test delay done!"));
+            }
+            case "triggerGC" -> {
+                log.info("Triggering garbage collection");
+                System.gc();
+                throw new WebSocketResponseException(WebSocketResponse.OK.setMessage("Garbage collection triggered"));
             }
             case "ping" -> sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), socket);
             case "systemInfo" -> sendSystemInformation(socket);
@@ -324,7 +326,7 @@ public class DefaultHandler extends Handler {
                 String key = (String) setting.get("key");
                 String val = (String) setting.get("value");
                 switch (key) {
-                    case "VOE_THREADS" -> spVoeThreads.setValue(Integer.parseInt(val));
+                    case "THREADS" -> spThreads.setValue(Integer.parseInt(val));
                     case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
                     case "RETRY_MINUTES" -> spRetryMinutes.setValue(Integer.parseInt(val));
                     default -> throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid setting " + key));
@@ -391,9 +393,6 @@ public class DefaultHandler extends Handler {
 
         AutoLoaderHandler autoLoaderHandler = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER));
         JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
-        JSONObject options = content.getObjectContainer("options").getRaw();
-
-        options.put("useDirectMemory", getTomlConfig().getBoolean("general.useDirectMemory", () -> false)+"");
 
         var updateEvent = new DownloadStatusUpdateEvent() {
             @Override
@@ -411,6 +410,8 @@ public class DefaultHandler extends Handler {
             @Override
             public void onInfo(String s) {
                 // Not needed
+                if (log.isDebugEnabled())
+                    log.debug(s);
             }
 
             @Override
@@ -453,10 +454,15 @@ public class DefaultHandler extends Handler {
             }
         };
 
+
+        JSONObject options = content.getObjectContainer("options").getRaw();
+        options.put("useDirectMemory", getTomlConfig().getBoolean("general.useDirectMemory", () -> false)+"");
+
         // Getting the right downloader
         File downloadTempFolder = new File(downloadFolder, UUID.randomUUID().toString());
         Downloader downloader = DownloaderSelector.selectDownloader(url, downloadTempFolder, updateEvent, options);
         downloader.setProxy(ProxyHandler.getNextProxy());
+        downloader.setNumThreads(spThreads.getValue());
         tableItem.setDownloader(downloader);
 
         if (!downloadTempFolder.mkdirs() || !downloadTempFolder.exists())
@@ -490,6 +496,7 @@ public class DefaultHandler extends Handler {
                         if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("FAILED,"+url+","+tableItem.getSortIndex());}}
                         return;
                     }
+                    changeObject(content, "state", "Completed");
                     if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DONE,"+url+","+tableItem.getSortIndex());}}
 
                     File targetFile = new File(outputFolder, file.getName());

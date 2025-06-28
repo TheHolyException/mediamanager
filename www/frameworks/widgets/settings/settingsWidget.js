@@ -12,13 +12,13 @@ class SettingsWidget extends BaseWidget {
 
         this.settingsConfig = [
             {
-                key: 'VOE_THREADS',
-                label: 'VOE Threads',
+                key: 'THREADS',
+                label: 'Threads',
                 type: 'number',
                 min: 1,
                 max: 32,
                 defaultValue: 2,
-                description: 'Number of parallel threads for VOE downloads',
+                description: 'Number of parallel threads for each downloader (if supported)',
                 icon: 'fas fa-download'
             },
             {

@@ -1,6 +1,6 @@
 {
   "systemSettings": {
-    "VOE_THREADS": "2",
+    "THREADS": "2",
     "PARALLEL_DOWNLOADS": "10"
   },
   "targets": [

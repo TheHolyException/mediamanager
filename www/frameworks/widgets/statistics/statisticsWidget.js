@@ -34,6 +34,11 @@ class StatisticsWidget extends BaseWidget {
                                 <span class="label">Max:</span>
                                 <span class="value" id="memory-max">-</span>
                             </div>
+                            <div class="memory-item">
+                                <button id="gc-button" class="gc-button" onclick="StatisticsWidget.triggerGC()">
+                                    <i class="fas fa-trash"></i> Force GC
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="chart-container">
@@ -418,6 +423,10 @@ class StatisticsWidget extends BaseWidget {
         if (cmd === 'systemInfo') {
             StatisticsWidget.updateStatistics(content);
         }
+    }
+
+    static triggerGC() {
+        sendPacket('triggerGC', 'default');
     }
 
     static updateStatistics(responseData) {
