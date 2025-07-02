@@ -454,7 +454,6 @@ public class DefaultHandler extends Handler {
             }
         };
 
-
         JSONObject options = content.getObjectContainer("options").getRaw();
         options.put("useDirectMemory", getTomlConfig().getBoolean("general.useDirectMemory", () -> false)+"");
 

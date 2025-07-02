@@ -457,7 +457,7 @@ function createModernSourceInput() {
                             <i class="fas fa-hdd"></i>
                             Target Folder
                         </label>
-                        <select class="targetfolder" onchange="onTargetSelection()">
+                        <select class="targetfolder">
                         </select>
                     </div>
                     <div class="form-group">
@@ -509,6 +509,35 @@ function createModernSourceInput() {
             $('<option>').text(folder.displayName).attr("value", folder.identifier)
         );
     }
+    
+    // Restore saved target folder selection from session storage
+    const savedTargetFolder = sessionStorage.getItem('addDownloadDialog_targetFolder');
+    if (savedTargetFolder) {
+        const targetFolderSelect = content.find('.targetfolder');
+        targetFolderSelect.val(savedTargetFolder);
+        // Trigger the selection event to load subfolders with correct context
+        if (targetFolderSelect.length > 0) {
+            let selection = targetFolderSelect.val();
+            sessionStorage.setItem('addDownloadDialog_targetFolder', selection);
+            sendPacket("requestSubfolders", "default", { "selection": selection });
+            let subfolderSelection = content.find('.subfolder.download');
+            subfolderSelection.empty();
+            subfolderSelection.val('');
+        }
+    }
+
+    // Add event handler for target folder selection
+    content.find('.targetfolder').on('change', function() {
+        const selection = $(this).val();
+        
+        // Save selection to session storage
+        sessionStorage.setItem('addDownloadDialog_targetFolder', selection);
+        
+        sendPacket("requestSubfolders", "default", { "selection": selection });
+        let subfolderSelection = content.find('.subfolder.download');
+        subfolderSelection.empty();
+        subfolderSelection.val('');
+    });
 
     // Load settings
     loadModernURLSettings(content.find('.url-settings'), settings);
@@ -591,6 +620,10 @@ function getUrls(activeTab){
 
 function onTargetSelection() {
     let selection = $('.targetfolder').get(0).value;
+    
+    // Save selection to session storage
+    sessionStorage.setItem('addDownloadDialog_targetFolder', selection);
+    
     sendPacket("requestSubfolders", "default", { "selection": selection })
     let subfolderSelection = $('.subfolder.download');
     subfolderSelection.empty();

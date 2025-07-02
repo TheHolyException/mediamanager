@@ -89,7 +89,6 @@ class OptionTextfield extends HTMLElement  {
     }
 
     loadOptions() {
-        console.log("LOADED OPTIONS");
         this.options = [];
         // Get <option> elements inside <custom-textbox>
         const optionElements = this.querySelectorAll("option");
