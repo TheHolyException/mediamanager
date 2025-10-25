@@ -453,7 +453,7 @@ class SubscriptionsWidget extends BaseWidget {
                     </div>
                     <div class="card-actions">
                         <button class="action-btn scan-btn" title="Scan for new episodes">
-                            <i class="fa fa-search"></i>
+                            <i class="fa fa-rotate"></i>
                         </button>
                         <button class="action-btn download-btn" title="Download now">
                             <i class="fa fa-download"></i>

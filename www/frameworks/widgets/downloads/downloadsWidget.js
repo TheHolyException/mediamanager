@@ -194,6 +194,9 @@ class DownloadsWidget extends BaseWidget {
                         btnResent.removeClass('disabled');
                     }
 
+                    let btnResentWOValidation = row.find('[action="resendSkipValidation"]');
+                    btnResentWOValidation.toggleClass('force-hide', !(item.state.startsWith('Validation Error')))
+
                     let resentStream = row.find('[action="resendOtherStream"]')
                     resentStream.css('display', item.autoloaderData != undefined && item.state.startsWith('Error') ? 'block' : 'none')
                 }
@@ -288,13 +291,32 @@ class DownloadsWidget extends BaseWidget {
             .attr('title', 'Restart Download with other Stream')
             .addClass('action-icon-btn stream-btn')
             .append($('<i>').addClass('fa-solid fa-code-branch'))
-            .css('display', item.autoloaderData != undefined && item.state.startsWith('Error') ? 'block' : 'none')
+            .toggleClass('force-hide', !(item.autoloaderData != undefined && item.state.startsWith('Error')))
             .click(function () {
                 let data = DownloadsWidget.indexes.get(item.uuid);
                 SelectStreamPopup.request(data);
             });
 
         toolbar.append(resentBtn, deleteBtn, resentWithOtherStreamBtn);
+
+        //Column - toolbar - resend with validationSkipping
+        let resendSkipValidation = $('<button>')
+            .attr('action', 'resendSkipValidation')
+            .attr('title', 'Restart Download with Validation Skipping')
+            .addClass('action-icon-btn stream-btn')
+            .append($('<i>').addClass('fa-solid fa-forward'))
+            .toggleClass('force-hide', !(item.state.startsWith('Validation Error:')))
+            .click(function () {
+                let data = DownloadsWidget.indexes.get(item.uuid);
+                // Don't allow retry if disabled or for certain states
+                if ($(this).hasClass('disabled') || data.state === "new" || data.state.includes("Downloading")) return;
+                data.state = "new";
+                data.options.skipValidation = "true";
+                sendPacket("put", "default", {
+                    "list": [data]
+                });
+            });
+        toolbar.append(resentBtn, deleteBtn, resendSkipValidation);
         //===============================================================================
         //==============================Column - State===============================
         let statusText = item.state.split('\n')[0];
@@ -347,6 +369,10 @@ class DownloadsWidget extends BaseWidget {
     }
 
     static getStatusClass(statusMessage) {
+        if (statusMessage.includes("Validation Error")) {
+            return 'validation'
+        }
+
         if (statusMessage.includes("rror")) {
             return 'failed'
         }

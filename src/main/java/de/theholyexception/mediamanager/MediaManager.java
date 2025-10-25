@@ -19,10 +19,7 @@ import de.theholyexception.mediamanager.handler.Handler;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.Settings;
-import de.theholyexception.mediamanager.util.InitializationException;
-import de.theholyexception.mediamanager.util.ProxyHandler;
-import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.WebSocketResponseException;
+import de.theholyexception.mediamanager.util.*;
 import de.theholyexception.mediamanager.webserver.WebServer;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
@@ -92,12 +89,26 @@ public class MediaManager {
     @Getter
     private DataBaseInterface db;
 
+    private String downloadersVersion = "unknown";
+    private String ultimateutilsVersion = "unknown";
+
     static {
         executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
         executorHandler.setThreadNameFactory(cnt -> "WS-Executor-" + cnt);
     }
 
 	public MediaManager() {
+        try {
+            Properties versionProps = new Properties();
+            versionProps.load(MediaManager.class.getResourceAsStream("/version.properties"));
+            downloadersVersion = versionProps.getProperty("downloaders.version", "unknown");
+            ultimateutilsVersion = versionProps.getProperty("ultimateutils.version", "unknown");
+        } catch (Exception ex) {
+            log.warn("Could not load version properties: " + ex.getMessage());
+        }
+        log.info("Starting MediaManager");
+        log.info("\t- Downloaders: {}", downloadersVersion);
+        log.info("\t- UltimateUtils: {}", ultimateutilsVersion);
         MediaManager.instance = this;
 		List<Runnable> initListeners = Collections.synchronizedList(new ArrayList<>());
 		initListeners.add(this::loadHandlers);

@@ -80,6 +80,10 @@ public class DefaultHandler extends Handler {
     private final FileLogger fLogger = new FileLogger("DefaultHandler");
     private boolean downloadLogFiles;
     private File downloadLogFolder;
+    private boolean untrustedCertificates;
+    private boolean enableValidation;
+    private List<Target> validatorTargets;
+    private double validatorVideoLengthThreshold;
 
     private TimerTask task;
 
@@ -148,9 +152,21 @@ public class DefaultHandler extends Handler {
         if (!downloadFolder.exists() && !downloadFolder.mkdirs())
             log.error("Could not create download folder");
 
-        this.downloadLogFiles = MediaManager.getTomlConfig().getBoolean("general.logDebugDownloaderFiles", () -> false);
+        this.downloadLogFiles = getTomlConfig().getBoolean("general.logDebugDownloaderFiles", () -> false);
+        this.untrustedCertificates = getTomlConfig().getBoolean("general.untrustedCertificates", () -> false);
 
         loadTargets();
+        this.enableValidation = getTomlConfig().getBoolean("validator.enabled", () -> false);
+        this.validatorTargets = new ArrayList<>();
+        if (this.enableValidation) {
+            validatorVideoLengthThreshold = Integer.parseInt(getTomlConfig().getString("validator.videoLengthThreshold", () -> "50%").replace("%", ""))/100d;
+            String targetsCSV = getTomlConfig().getString("validator.targets", () -> "");
+            String[] virtualTargets = targetsCSV.split(",");
+            for (String virtualTarget : virtualTargets) {
+                this.validatorTargets.add(targets.get(virtualTarget));
+                log.info("Enabled validating for " + virtualTarget);
+            }
+        }
     }
 
     /**
@@ -456,6 +472,9 @@ public class DefaultHandler extends Handler {
 
         JSONObject options = content.getObjectContainer("options").getRaw();
         options.put("useDirectMemory", getTomlConfig().getBoolean("general.useDirectMemory", () -> false)+"");
+        if (untrustedCertificates)
+            options.put("disableCertificateCheck", "true");
+        boolean skipValidation = Boolean.parseBoolean((String)options.get("skipValidation"));
 
         // Getting the right downloader
         File downloadTempFolder = new File(downloadFolder, UUID.randomUUID().toString());
@@ -495,6 +514,25 @@ public class DefaultHandler extends Handler {
                         if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("FAILED,"+url+","+tableItem.getSortIndex());}}
                         return;
                     }
+
+                    if (!skipValidation) {
+                        Target target = getTargetFromContainer(content);
+                        if (target == null) {
+                            log.error("Failed to resolve target in experimental Validator, skipping validator");
+                        } else {
+                            if (validatorTargets.contains(target)) {
+                                ValidatorResponse response = validateVideoFile(file);
+                                if (response != ValidatorResponse.VALID) {
+                                    tableItem.setValidationError(true);
+                                    log.warn("Validation Error: {}", response.getDescription());
+                                    changeObject(content, "state", "Validation Error: " + response.getDescription());
+                                    if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("VALIDATION ERROR,"+url+","+tableItem.getSortIndex());}}
+                                    return;
+                                }
+                            }
+                        }
+                    }
+
                     changeObject(content, "state", "Completed");
                     if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("DONE,"+url+","+tableItem.getSortIndex());}}
 
@@ -538,6 +576,37 @@ public class DefaultHandler extends Handler {
         }
     }
 
+    private ValidatorResponse validateVideoFile(File file) throws IOException {
+        List<File> filesInFolder = Arrays.stream(file.getParentFile().listFiles()).toList();
+        filesInFolder.remove(file);
+        long videoLength = MP4Utils.getVideoDurationSeconds(file);
+        long totalLength = 0;
+        int cnt = 0;
+
+        for (File f : filesInFolder) {
+            if (!f.getName().endsWith(".mp4"))
+                continue;
+            long fileLength = MP4Utils.getVideoDurationSeconds(f);
+            if (cnt == 0)
+                totalLength += fileLength;
+            else {
+                double avg = (double)totalLength/(double)cnt;
+                if ((Math.max(avg,fileLength)/Math.min(avg,fileLength))-1 < validatorVideoLengthThreshold) {
+                    totalLength += fileLength;
+                } else
+                    log.warn("Video length is not consistent for " + f.getName() + " ignoring it for validation.");
+            }
+            cnt++;
+        }
+
+        double avg = (double)totalLength/(double)cnt;
+        if ((Math.max(avg,videoLength)/Math.min(avg,videoLength))-1 < validatorVideoLengthThreshold) {
+            return ValidatorResponse.VIDEO_LENGTH;
+        }
+
+        return ValidatorResponse.VALID;
+    }
+
     private void startSystemDataFetcher() {
         new Timer().schedule(new TimerTask() {
             @Override
@@ -545,12 +614,14 @@ public class DefaultHandler extends Handler {
                 sendSystemInformation(null);
             }
         }, 0, 5000);
-        new Timer().schedule(new TimerTask() {
-            @Override
-            public void run() {
-                checkTorNetwork();
-            }
-        }, 0, 30000);
+        if (getTomlConfig().getBoolean("proxy.enabled", () -> false)) {
+            new Timer().schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    checkTorNetwork();
+                }
+            }, 0, 30000);
+        }
     }
 
     /**
@@ -749,6 +820,14 @@ public class DefaultHandler extends Handler {
         return response;
     }
 
+    private Target getTargetFromContainer(JSONObjectContainer content) {
+        String targetPath = content.get("target", String.class);
+        log.debug("Resolving target: " + targetPath.split("/")[0]);
+        Target target = targets.get(targetPath.split("/")[0]);
+        log.debug("Target resolved!: " + target);
+        return target;
+    }
+
     /**
      * Resolves and validates the output folder for a download based on the provided content.
      * Creates the directory structure if it doesn't exist.
@@ -760,9 +839,7 @@ public class DefaultHandler extends Handler {
      */
     private File putDownloadResolveOutputFolder(WebSocketBasic socket, JSONObjectContainer content) {
         String targetPath = content.get("target", String.class);
-        log.debug("Resolving target: " + targetPath.split("/")[0]);
-        Target target = targets.get(targetPath.split("/")[0]);
-        log.debug("Target resolved!: " + target);
+        Target target = getTargetFromContainer(content);
 
         if (target == null || target.path() == null)
             throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid Target " + content.get("target", String.class)));

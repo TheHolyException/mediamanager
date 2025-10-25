@@ -567,3 +567,7 @@ body:not(:has(.toggle-input:checked)) .grid-only {
 .dashboard {
     height: calc(100vh - 170px)!important;
 }
+
+.force-hide {
+    display: none !important;
+}

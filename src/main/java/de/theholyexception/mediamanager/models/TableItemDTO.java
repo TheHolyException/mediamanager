@@ -30,6 +30,9 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     private boolean isRunning = false;
     @Setter
     private boolean isFailed = false;
+    @Setter
+    @Getter
+    private boolean validationError = false;
     private final int sortIndex = counter.getAndIncrement();
     @Getter
     private long lastUpdate;
