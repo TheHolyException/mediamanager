@@ -552,7 +552,7 @@ public class AutoLoaderHandler extends Handler {
         for (Episode unloadedEpisode : anime.getUnloadedEpisodes()) {
             unloadedEpisode.setDownloading(true);
             try {
-                unloadedEpisode.loadVideoURL(1, () -> {
+                unloadedEpisode.loadVideoURL(anime.getLanguageId(), () -> {
                     JSONObjectContainer data = new JSONObjectContainer();
                     data.set("uuid", UUID.randomUUID().toString());
                     data.set("state", "new");
