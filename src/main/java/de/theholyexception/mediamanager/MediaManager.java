@@ -55,7 +55,7 @@ public class MediaManager {
      * @param args Command line arguments (not used)
      */
     public static void main(String[] args) {
-        new MediaManager();
+		new MediaManager();
     }
 
     /**
@@ -89,7 +89,9 @@ public class MediaManager {
     @Getter
     private DataBaseInterface db;
 
+    @Getter
     private String downloadersVersion = "unknown";
+    @Getter
     private String ultimateutilsVersion = "unknown";
 
     static {

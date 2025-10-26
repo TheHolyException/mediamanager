@@ -33,8 +33,8 @@ public class FileLogger {
 		return fileLoggerCache.computeIfAbsent(name, k -> new FileLogger(name));
 	}
 
-	private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	private static final File loggerFolder = new File("./logs");
+	private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	@Getter
 	private final File file;
 	private BufferedOutputStream bos;
