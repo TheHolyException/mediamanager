@@ -448,11 +448,13 @@ class StatisticsWidget extends BaseWidget {
                 chart.data.labels = [];
                 chart.data.datasets[0].data = [];
                 
-                // Add historical data points
-                memoryData.forEach(point => {
-                    chart.data.labels.push(new Date(point.timestamp));
-                    chart.data.datasets[0].data.push(point.usagePercent);
-                });
+                // Process memory history data
+                if (memoryData.timestamp && Array.isArray(memoryData.timestamp) && memoryData.timestamp.length > 0) {
+                    memoryData.timestamp.forEach((timestamp, index) => {
+                        chart.data.labels.push(new Date(timestamp));
+                        chart.data.datasets[0].data.push(memoryData.usagePercent[index] || 0);
+                    });
+                }
                 
                 chart.update('none');
             }
@@ -474,15 +476,16 @@ class StatisticsWidget extends BaseWidget {
                     dataset.data = [];
                 });
                 
-                // Add historical data points
-                downloadData.forEach(point => {
-                    const timestamp = new Date(point.timestamp);
-                    chart.data.labels.push(timestamp);
-                    chart.data.datasets[0].data.push(point.total);        // Total Downloads
-                    chart.data.datasets[1].data.push(point.active);       // Active Downloads
-                    chart.data.datasets[2].data.push(point.failed);       // Failed Downloads
-                    chart.data.datasets[3].data.push(point.completed);    // Completed Downloads
-                });
+                // Process download history data
+                if (downloadData.timestamp && Array.isArray(downloadData.timestamp) && downloadData.timestamp.length > 0) {
+                    downloadData.timestamp.forEach((timestamp, index) => {
+                        chart.data.labels.push(new Date(timestamp));
+                        chart.data.datasets[0].data.push(downloadData.total[index] || 0);        // Total Downloads
+                        chart.data.datasets[1].data.push(downloadData.active[index] || 0);       // Active Downloads
+                        chart.data.datasets[2].data.push(downloadData.failed[index] || 0);       // Failed Downloads
+                        chart.data.datasets[3].data.push(downloadData.completed[index] || 0);    // Completed Downloads
+                    });
+                }
                 
                 chart.update('none');
             }
@@ -498,15 +501,16 @@ class StatisticsWidget extends BaseWidget {
                     dataset.data = [];
                 });
                 
-                // Add historical data points
-                threadData.forEach(point => {
-                    const timestamp = new Date(point.timestamp);
-                    chart.data.labels.push(timestamp);
-                    chart.data.datasets[0].data.push(point.active || 0);         // Active Threads
-                    chart.data.datasets[1].data.push(point.queued || 0);         // Queued Tasks
-                    chart.data.datasets[2].data.push(point.RUNNABLE || 0);       // RUNNABLE threads
-                    chart.data.datasets[3].data.push(point.WAITING || 0);        // WAITING threads
-                });
+                // Process thread history data
+                if (threadData.timestamp && Array.isArray(threadData.timestamp) && threadData.timestamp.length > 0) {
+                    threadData.timestamp.forEach((timestamp, index) => {
+                        chart.data.labels.push(new Date(timestamp));
+                        chart.data.datasets[0].data.push(threadData.active[index] || 0);         // Active Threads
+                        chart.data.datasets[1].data.push(threadData.queued[index] || 0);         // Queued Tasks
+                        chart.data.datasets[2].data.push(threadData.RUNNABLE[index] || 0);       // RUNNABLE threads
+                        chart.data.datasets[3].data.push(threadData.WAITING[index] || 0);        // WAITING threads
+                    });
+                }
                 
                 chart.update('none');
             }

@@ -425,7 +425,6 @@ public class DefaultHandler extends Handler {
 
             @Override
             public void onInfo(String s) {
-                // Not needed
                 if (log.isDebugEnabled())
                     log.debug(s);
             }
@@ -816,17 +815,9 @@ public class DefaultHandler extends Handler {
         response.put("aniworld", aniworld);
 
         // Add historical data
-        JSONArray memoryHistoryArray = new JSONArray();
-        memoryHistoryArray.addAll(memoryHistory);
-        response.put("memoryHistory", memoryHistoryArray);
-
-        JSONArray downloadHistoryArray = new JSONArray();
-        downloadHistoryArray.addAll(downloadHistory);
-        response.put("downloadHistory", downloadHistoryArray);
-
-        JSONArray threadHistoryArray = new JSONArray();
-        threadHistoryArray.addAll(threadHistory);
-        response.put("threadHistory", threadHistoryArray);
+        response.put("memoryHistory", convertHistoryData(memoryHistory, "timestamp", "usagePercent", "usedBytes"));
+        response.put("downloadHistory", convertHistoryData(downloadHistory, "timestamp", "total", "active", "failed", "completed"));
+        response.put("threadHistory", convertHistoryData(threadHistory, "timestamp", "active", "queued", "RUNNABLE", "WAITING", "NEW", "BLOCKED", "TIMED_WAITING", "TERMINATED", "max"));
 
         JSONObject version = new JSONObject();
         version.put("downloaders", MediaManager.getInstance().getDownloadersVersion());
@@ -834,6 +825,37 @@ public class DefaultHandler extends Handler {
         response.put("version", version);
 
         return response;
+    }
+
+    @SuppressWarnings("unchecked")
+    private JSONObject convertHistoryData(Queue<JSONObject> history, String... fieldNames) {
+        JSONObject convertedData = new JSONObject();
+        
+        if (history.isEmpty()) {
+            for (String fieldName : fieldNames) {
+                convertedData.put(fieldName, new JSONArray());
+            }
+            return convertedData;
+        }
+        
+        Map<String, JSONArray> fieldArrays = new HashMap<>();
+        for (String fieldName : fieldNames) {
+            fieldArrays.put(fieldName, new JSONArray());
+        }
+        
+        for (JSONObject point : history) {
+            for (String fieldName : fieldNames) {
+                Object value = point.get(fieldName);
+                if (value != null) {
+                    fieldArrays.get(fieldName).add(value);
+                } else {
+                    fieldArrays.get(fieldName).add(0);
+                }
+            }
+        }
+        
+        convertedData.putAll(fieldArrays);
+        return convertedData;
     }
 
     private Target getTargetFromContainer(JSONObjectContainer content) {
