@@ -2,8 +2,9 @@ package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
+import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.holyapi.util.ExecutorHandler;
-import de.theholyexception.mediamanager.*;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
@@ -16,17 +17,14 @@ import de.theholyexception.mediamanager.util.Utils;
 import de.theholyexception.mediamanager.util.WebSocketResponseException;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import io.javalin.websocket.WsContext;
 import lombok.extern.slf4j.Slf4j;
-import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.File;
-import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.Executors;
-
-import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
 
 /**
  * Handler for automatic downloading of anime episodes.
@@ -37,7 +35,6 @@ import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
 public class AutoLoaderHandler extends Handler {
 
     private final List<Anime> subscribedAnimes = Collections.synchronizedList(new ArrayList<>());
-    private DefaultHandler defaultHandler;
 
     private SettingProperty<Boolean> spAutoDownload;
     private final Random random = new Random();
@@ -46,9 +43,15 @@ public class AutoLoaderHandler extends Handler {
     private long checkIntervalMin;
     private long checkDelayMs;
     private boolean enabled;
+    
+    @DIInject
+    private MySQLInterface db;
 
-    public AutoLoaderHandler(TargetSystem targetSystem) {
-        super(targetSystem);
+    @DIInject
+    private DefaultHandler defaultHandler;
+
+    public AutoLoaderHandler() {
+        super(TargetSystem.AUTOLOADER);
     }
 
     /**
@@ -58,12 +61,12 @@ public class AutoLoaderHandler extends Handler {
     @Override
     public void loadConfigurations() {
         super.loadConfigurations();
-        int urlResolverThreads = Math.toIntExact(getTomlConfig().getLong("autoloader.urlResolverThreads", () -> 10));
+        int urlResolverThreads = Math.toIntExact(config.getLong("autoloader.urlResolverThreads", () -> 10));
         AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(urlResolverThreads));
 
-        checkIntervalMin = getTomlConfig().getLong("autoloader.checkIntervalMin", () -> 60);
-        checkDelayMs = getTomlConfig().getLong("autoloader.checkDelayMs", () -> 5000);
-        enabled = Boolean.TRUE.equals(getTomlConfig().getBoolean("autoloader.enabled"));
+        checkIntervalMin = config.getLong("autoloader.checkIntervalMin", () -> 60);
+        checkDelayMs = config.getLong("autoloader.checkDelayMs", () -> 5000);
+        enabled = Boolean.TRUE.equals(config.getBoolean("autoloader.enabled"));
 
         spAutoDownload = Settings.getSettingProperty("AUTO_DOWNLOAD", false, "systemSettings");
     }
@@ -76,15 +79,10 @@ public class AutoLoaderHandler extends Handler {
     @Override
     public void initialize() {
         Thread t = new Thread(() -> {
-            defaultHandler = (DefaultHandler) MediaManager.getInstance().getHandlers().get(TargetSystem.DEFAULT);
             Anime.setBaseDirectory(new File(defaultHandler.getTargets().get("stream-animes").path()));
 
-
             subscribedAnimes.clear();
-            subscribedAnimes.addAll(Anime.loadFromDB(MediaManager.getInstance().getDb()));
-
-            if (log.isDebugEnabled())
-                printTableInfo("anime", "season", "episode");
+            subscribedAnimes.addAll(Anime.loadFromDB(db));
 
             ExecutorHandler handler = new ExecutorHandler(Executors.newFixedThreadPool(10));
             subscribedAnimes.forEach(a ->
@@ -93,11 +91,11 @@ public class AutoLoaderHandler extends Handler {
                     a.scanDirectoryForExistingEpisodes();
                     log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false));
                     if (a.isDeepDirty())
-                        a.writeToDB(MediaManager.getInstance().getDb());
+                        a.writeToDB(db);
                 }, 1)
             );
             handler.awaitGroup(1);
-            MediaManager.getInstance().getDb().getExecutorHandler().awaitGroup(-1);
+            db.getExecutorHandler().awaitGroup(-1);
 
             if (enabled)
                 startThread();
@@ -117,13 +115,13 @@ public class AutoLoaderHandler extends Handler {
      * Processes incoming WebSocket commands for the auto-loader.
      * Routes commands to the appropriate handler method based on the command type.
      *
-     * @param socket The WebSocket connection that received the command
+     * @param ctx The WebSocket connection that received the command
      * @param command The command to execute (e.g., "getData", "subscribe", "unsubscribe")
      * @param content JSON data associated with the command
      * @throws WebSocketResponseException if the command is invalid or processing fails
      */
     @Override
-    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+    public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {
         try {
             while (!initialized) {
                 synchronized (this) {
@@ -138,12 +136,12 @@ public class AutoLoaderHandler extends Handler {
         }
 
         switch (command) {
-            case "getData" -> cmdGetData(socket);
+            case "getData" -> cmdGetData(ctx);
             case "subscribe" -> cmdSubscribe(content);
             case "unsubscribe" -> cmdUnsubscribe(content);
             case "modify" -> cmdModify(content);
             case "runDownload" -> cmdRunDownload(content);
-            case "getAlternateProviders" -> cmdGetAlternateProviders(socket, content);
+            case "getAlternateProviders" -> cmdGetAlternateProviders(ctx, content);
             case "pause" -> cmdPause(content);
             case "resume" -> cmdResume(content);
             case "scan" -> cmdScan(content);
@@ -156,17 +154,16 @@ public class AutoLoaderHandler extends Handler {
      * Handles the 'getData' command to retrieve the current state of subscribed anime.
      * Sends the list of all subscribed anime with their current status to the client.
      *
-     * @param socket The WebSocket connection to send the data to
+     * @param ctx The WebSocket connection to send the data to
      */
-    private void cmdGetData(WebSocketBasic socket) {
-        WebSocketUtils.sendAutoLoaderItem(socket, subscribedAnimes);
+    private void cmdGetData(WsContext ctx) {
+        WebSocketUtils.sendAutoLoaderItem(ctx, subscribedAnimes);
     }
 
     /**
      * Handles the 'subscribe' command to add a new anime to the subscription list.
      * Validates the URL, resolves the anime title, and adds it to the database.
      *
-     * @param content JSON data containing the anime URL, language ID, and other parameters
      * @throws WebSocketResponseException if the URL is invalid or already subscribed
      */
     private void cmdSubscribe(JSONObjectContainer content) {
@@ -200,16 +197,15 @@ public class AutoLoaderHandler extends Handler {
         anime.loadMissingEpisodes();
         anime.scanDirectoryForExistingEpisodes();
         subscribedAnimes.add(anime);
-        anime.writeToDB(MediaManager.getInstance().getDb());
+        anime.writeToDB(db);
 
-        MediaManager.getInstance().getDb().getExecutorHandler().awaitGroup(-1);
+        db.getExecutorHandler().awaitGroup(-1);
 
         // Inform everyone about the new item
         WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
         throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 
-    @SuppressWarnings("unchecked")
     /**
      * Handles the 'unsubscribe' command to remove an anime from the subscription list.
      * Removes the specified anime from the database and notifies all connected clients.
@@ -217,12 +213,13 @@ public class AutoLoaderHandler extends Handler {
      * @param content JSON data containing the ID of the anime to unsubscribe from
      * @throws WebSocketResponseException if the anime ID is invalid
      */
+    @SuppressWarnings("unchecked")
     private void cmdUnsubscribe(JSONObjectContainer content) {
         int id = content.get("id", Integer.class);
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
         if (optAnime.isPresent()) {
             Anime anime = optAnime.get();
-            MediaManager.getInstance().getDb().executeSafe("delete from anime where nKey = ?", id);
+            db.executeSafe("delete from anime where nKey = ?", id);
             subscribedAnimes.remove(anime);
             WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
 
@@ -310,7 +307,7 @@ public class AutoLoaderHandler extends Handler {
             // Rescan episodes after modifications
             anime.loadMissingEpisodes();
             anime.scanDirectoryForExistingEpisodes();
-            anime.writeToDB(MediaManager.getInstance().getDb());
+            anime.writeToDB(db);
             
             // Notify all clients about the update
             WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
@@ -345,15 +342,15 @@ public class AutoLoaderHandler extends Handler {
         throw new WebSocketResponseException(WebSocketResponse.OK);
     }
 
-    @SuppressWarnings("unchecked")
     /**
      * Handles the 'getAlternateProviders' command to retrieve alternative streaming sources for an episode.
      * Useful when the primary source is unavailable or has issues.
      *
-     * @param socket The WebSocket connection to send the provider list to
+     * @param ctx The WebSocket connection to send the provider list to
      * @param content JSON data containing the episode information
      */
-    private void cmdGetAlternateProviders(WebSocketBasic socket, JSONObjectContainer content) {
+    @SuppressWarnings("unchecked")
+    private void cmdGetAlternateProviders(WsContext ctx, JSONObjectContainer content) {
         Map<AniworldProvider, String> urls = getAlternativeProviders(content);
 
         JSONObject payload = new JSONObject();
@@ -365,7 +362,7 @@ public class AutoLoaderHandler extends Handler {
             array.add(object);
         }
         payload.put("providers", array);
-        WebSocketUtils.sendPacket("getAlternateProvidersResponse", TargetSystem.AUTOLOADER, payload, socket);
+        WebSocketUtils.sendPacket("getAlternateProvidersResponse", TargetSystem.AUTOLOADER, payload, ctx);
     }
 
     /**
@@ -385,7 +382,7 @@ public class AutoLoaderHandler extends Handler {
         Anime anime = optAnime.get();
         if (!anime.isPaused()) {
             anime.setPaused(true, true);
-            anime.writeToDB(MediaManager.getInstance().getDb());
+            anime.writeToDB(db);
             
             log.info("Paused anime subscription: {}", anime.getTitle());
             
@@ -413,7 +410,7 @@ public class AutoLoaderHandler extends Handler {
         Anime anime = optAnime.get();
         if (anime.isPaused()) {
             anime.setPaused(false, true);
-            anime.writeToDB(MediaManager.getInstance().getDb());
+            anime.writeToDB(db);
             
             log.info("Resumed anime subscription: {}", anime.getTitle());
             
@@ -459,7 +456,7 @@ public class AutoLoaderHandler extends Handler {
             anime.scanDirectoryForExistingEpisodes();
 
             if (anime.isDeepDirty()) {
-                anime.writeToDB(MediaManager.getInstance().getDb());
+                anime.writeToDB(db);
             }
             
             // Update the last scan time
@@ -519,7 +516,7 @@ public class AutoLoaderHandler extends Handler {
                             runDownload(anime);
 
                         if (anime.isDeepDirty())
-                            anime.writeToDB(MediaManager.getInstance().getDb());
+                            anime.writeToDB(db);
 
                         Utils.sleep(checkDelayMs);
 
@@ -587,26 +584,7 @@ public class AutoLoaderHandler extends Handler {
             }
         }
 
-        anime.writeToDB(MediaManager.getInstance().getDb());
-    }
-
-    /**
-     * Prints debug information about database tables.
-     * Logs the row count for each specified table when debug logging is enabled.
-     *
-     * @param tables The names of the tables to print information about
-     */
-    private void printTableInfo(String... tables) {
-        for (String table : tables) {
-            try {
-                ResultSet rs = MediaManager.getInstance().getDb().executeQuery("select count(*) from " + table);
-                rs.next();
-                log.debug("Table " + table + " row count: " + rs.getInt(1));
-                rs.close();
-            } catch (Exception ex) {
-                log.error(ex.getMessage());
-            }
-        }
+        anime.writeToDB(db);
     }
 
     /**

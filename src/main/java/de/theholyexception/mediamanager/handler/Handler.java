@@ -1,9 +1,11 @@
 package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.mediamanager.util.TargetSystem;
+import io.javalin.websocket.WsContext;
 import lombok.Getter;
-import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
+import org.tomlj.TomlParseResult;
 
 /**
  * Abstract base class for all handler implementations in the MediaManager application.
@@ -17,6 +19,9 @@ public abstract class Handler {
     @Getter
     private final TargetSystem targetSystem;
 
+    @DIInject
+    protected TomlParseResult config;
+
     /**
      * Creates a new Handler instance for the specified target system.
      *
@@ -29,11 +34,11 @@ public abstract class Handler {
     /**
      * Processes an incoming command for this handler's target system.
      *
-     * @param socket The WebSocket connection the command was received from
+     * @param ctx The WebSocket connection the command was received from
      * @param command The command to process
      * @param content Additional command parameters and data
      */
-    public abstract void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content);
+    public abstract void handleCommand(WsContext ctx, String command, JSONObjectContainer content);
 
     /**
      * Loads and initializes configurations specific to this handler.

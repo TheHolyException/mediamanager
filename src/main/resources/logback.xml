@@ -1,5 +1,7 @@
 <configuration>
     <logger name="de.theholyexception.holyapi" level="DEBUG" />
+    <logger name="io.javalin" level="INFO" />
+    <logger name="org.eclipse.jetty" level="INFO" />
     <!-- Zentrale Pattern-Definition -->
     <property name="logPattern" value="%d{MM/dd HH:mm:ss} [%level]\t[%thread]\t[%logger{0}]\t- %msg%n"/>
 

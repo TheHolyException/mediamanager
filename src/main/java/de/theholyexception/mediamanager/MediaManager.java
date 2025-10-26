@@ -4,14 +4,11 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.LoggerContext;
 import de.theholyexception.holyapi.datastorage.file.ConfigJSON;
 import de.theholyexception.holyapi.datastorage.file.FileConfiguration;
-import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.holyapi.datastorage.json.JSONReader;
-import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
+import de.theholyexception.holyapi.di.ComplexDIContainer;
 import de.theholyexception.holyapi.util.DataUtils;
-import de.theholyexception.holyapi.util.ExecutorHandler;
-import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.holyapi.util.ResourceUtilities;
+import de.theholyexception.mediamanager.api.WebServer;
 import de.theholyexception.mediamanager.handler.AniworldHandler;
 import de.theholyexception.mediamanager.handler.AutoLoaderHandler;
 import de.theholyexception.mediamanager.handler.DefaultHandler;
@@ -19,15 +16,13 @@ import de.theholyexception.mediamanager.handler.Handler;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.Settings;
-import de.theholyexception.mediamanager.util.*;
-import de.theholyexception.mediamanager.webserver.WebServer;
-import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import de.theholyexception.mediamanager.util.InitializationException;
+import de.theholyexception.mediamanager.util.ProxyHandler;
+import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.StaticUtils;
-import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
-import me.kaigermany.ultimateutils.networking.websocket.WebSocketEvent;
 import org.slf4j.LoggerFactory;
 import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
@@ -39,14 +34,15 @@ import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.concurrent.Executors;
 
 @Slf4j
 public class MediaManager {
 
     @Getter
     private static MediaManager instance;
-    private static final ExecutorHandler executorHandler;
+
+    @Getter
+    private final ComplexDIContainer dependencyInjector;
 
     /**
      * Main entry point for the MediaManager application.
@@ -55,16 +51,7 @@ public class MediaManager {
      * @param args Command line arguments (not used)
      */
     public static void main(String[] args) {
-		new MediaManager();
-    }
-
-    /**
-     * Retrieves the TOML configuration for the application.
-     *
-     * @return The TOML configuration parse result
-     */
-    public static TomlParseResult getTomlConfig() {
-        return instance.tomlConfig;
+        new MediaManager();
     }
 
     /**
@@ -72,7 +59,7 @@ public class MediaManager {
      * The log level is read from the 'general.logLevel' configuration property.
      */
     public void changeLogLevel() {
-        Level level = Level.valueOf(tomlConfig.getString("general.logLevel"));
+        Level level = Level.valueOf(config.getString("general.logLevel"));
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         context.getLogger("ROOT").setLevel(level);
     }
@@ -80,44 +67,44 @@ public class MediaManager {
     @Getter
     private boolean isDockerEnvironment = false;
     @Getter
-    private final List<WebSocketBasic> clientList = Collections.synchronizedList(new ArrayList<>());
-    @Getter
     private ConfigJSON systemSettings;
     @Getter
     private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
-    private TomlParseResult tomlConfig;
-    @Getter
-    private DataBaseInterface db;
+    private TomlParseResult config;
 
     @Getter
     private String downloadersVersion = "unknown";
     @Getter
     private String ultimateutilsVersion = "unknown";
-
-    static {
-        executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
-        executorHandler.setThreadNameFactory(cnt -> "WS-Executor-" + cnt);
-    }
+    @Getter
+    private String holyapiVersion = "unknown";
 
 	public MediaManager() {
+        dependencyInjector = new ComplexDIContainer().setResolveCircularDependencies(true);
+        dependencyInjector.register(MediaManager.class, this);
+
         try {
             Properties versionProps = new Properties();
             versionProps.load(MediaManager.class.getResourceAsStream("/version.properties"));
             downloadersVersion = versionProps.getProperty("downloaders.version", "unknown");
             ultimateutilsVersion = versionProps.getProperty("ultimateutils.version", "unknown");
+            holyapiVersion = versionProps.getProperty("holyapi.version", "unknown");
         } catch (Exception ex) {
             log.warn("Could not load version properties: " + ex.getMessage());
         }
         log.info("Starting MediaManager");
         log.info("\t- Downloaders: {}", downloadersVersion);
         log.info("\t- UltimateUtils: {}", ultimateutilsVersion);
+        log.info("\t- HolyAPI: {}", holyapiVersion);
+
         MediaManager.instance = this;
 		List<Runnable> initListeners = Collections.synchronizedList(new ArrayList<>());
+        initListeners.add(this::loadConfigFile);
+        initListeners.add(this::loadDatabase);
 		initListeners.add(this::loadHandlers);
         initListeners.add(this::loadConfiguration);
         initListeners.add(this::checkForDockerEnvironment);
-        initListeners.add(this::loadWebServer);
-        initListeners.add(this::loadDatabase);
+        initListeners.add(this::loadAPI);
 
         for (int i = 0; i < initListeners.size(); i++) {
             Runnable initListener = initListeners.get(i);
@@ -131,6 +118,7 @@ public class MediaManager {
             }
         }
 
+        WebSocketUtils.initialize(config);
         handlers.values().forEach(Handler::initialize);
     }
 
@@ -142,9 +130,9 @@ public class MediaManager {
      */
     private void loadHandlers() {
         try {
-            addHandler(new DefaultHandler(TargetSystem.DEFAULT));
-            addHandler(new AniworldHandler(TargetSystem.ANIWORLD));
-            addHandler(new AutoLoaderHandler(TargetSystem.AUTOLOADER));
+            addHandler(DefaultHandler.class);
+            addHandler(AniworldHandler.class);
+            addHandler(AutoLoaderHandler.class);
         } catch (Exception ex) {
             throw new InitializationException("Load Handlers", ex.getMessage());
         }
@@ -153,29 +141,29 @@ public class MediaManager {
     /**
      * Registers a handler with the application.
      *
-     * @param handler The handler to register
+     * @param clazz Class of the handler to register
      */
-    private void addHandler(Handler handler) {
-        handlers.put(handler.getTargetSystem(), handler);
+    private <T extends Handler> void addHandler(Class<T> clazz) {
+        dependencyInjector.register(clazz, clazz);
+        T instance = dependencyInjector.resolve(clazz);
+        handlers.put(instance.getTargetSystem(), instance);
     }
 
     /**
-     * Loads and validates the application configuration from various sources.
-     * This includes TOML configuration, system settings, and proxy settings.
+     * Loads the configuration file from the specified path.
      *
-     * @throws InitializationException if configuration files are missing or invalid
+     * @throws InitializationException if the configuration file could not be loaded
      */
-    private void loadConfiguration() throws InitializationException {
+    private void loadConfigFile() throws InitializationException {
         try {
             Path path = Paths.get(("./config/config.toml"));
-            tomlConfig = Toml.parse(path);
+            config = Toml.parse(path);
             StringBuilder errors = new StringBuilder();
-            tomlConfig.errors().forEach(error -> errors.append(error.getMessage()));
+            config.errors().forEach(error -> errors.append(error.getMessage()));
             if (!errors.isEmpty())
                 throw new InitializationException("Failed to parse config.toml", errors.toString());
 
-            int webSocketThreads = Math.toIntExact(getTomlConfig().getLong("webserver.webSocketThreads", () -> 10));
-            executorHandler.updateExecutorService(Executors.newFixedThreadPool(webSocketThreads));
+            dependencyInjector.register(TomlParseResult.class, config);
         } catch (IOException ex) {
             throw new InitializationException("Failed to load config.toml", ex.getMessage());
         }
@@ -183,15 +171,33 @@ public class MediaManager {
         try {
             systemSettings = new ConfigJSON(new File("./config/systemsettings.json"));
             systemSettings.loadConfig();
+            dependencyInjector.register(ConfigJSON.class, systemSettings);
+        } catch (Exception ex) {
+            throw new InitializationException("Failed to load systemsettings.json", ex.getMessage());
+        }
+
+    }
+
+    /**
+     * Loads the configuration from the database.
+     * This method is called after the configuration file has been loaded.
+     * It loads the database configuration and settings.
+     *
+     * @throws InitializationException if the database configuration could not be loaded
+     */
+    private void loadConfiguration() throws InitializationException {
+        try {
             changeLogLevel();
             Settings.init(systemSettings);
             handlers.values().forEach(Handler::loadConfigurations);
             systemSettings.saveConfig(FileConfiguration.SaveOption.PRETTY_PRINT);
         } catch (Exception ex) {
-            throw new InitializationException("Failed to load systemsettings.json", ex.getMessage());
+            var ex2 = new InitializationException("Failed to load systemsettings.json", ex.getMessage());
+            ex2.addSuppressed(ex);
+            throw ex2;
         }
 
-        ProxyHandler.initialize(tomlConfig);
+        ProxyHandler.initialize(config);
     }
 
     /**
@@ -216,59 +222,14 @@ public class MediaManager {
      * Configures the server based on settings from the TOML configuration.
      * Sets up WebSocket communication for real-time client updates.
      */
-    private void loadWebServer() {
+    private void loadAPI() throws InitializationException {
         try {
-            new WebServer(new WebServer.Configuration(
-                    Math.toIntExact(tomlConfig.getLong("webserver.port", () -> 8080)),
-                    tomlConfig.getString("webserver.host", () -> "0.0.0.0"),
-                    tomlConfig.getString("webserver.webroot", () -> "./www")
-                    , new WebSocketEvent() {
-                @Override
-                public void onMessage(String data, WebSocketBasic socket) {
-                    JSONObjectContainer dataset = (JSONObjectContainer) JSONReader.readString(data);
-
-                    String targetSystem = dataset.get("targetSystem", "default", String.class);
-                    String cmd = dataset.get("cmd", String.class);
-                    JSONObjectContainer content = dataset.getObjectContainer("content", new JSONObjectContainer());
-
-                    Handler handler = handlers.get(TargetSystem.valueOf(targetSystem.toUpperCase()));
-                    if (handler == null)
-                        throw new IllegalStateException("Invalid target-system: " + targetSystem);
-
-                    executorHandler.putTask(new ExecutorTask(() -> {
-                        WebSocketResponse response = null;
-                        try {
-                            handler.handleCommand(socket, cmd, content);
-                        } catch (WebSocketResponseException ex) {
-                            response = ex.getResponse();
-                        } catch (Exception ex) {
-                            log.error("Failed to process command", ex);
-                            response = WebSocketResponse.ERROR.setMessage(ex.getMessage());
-                        }
-                        if (response != null) {
-                            response.getResponse().set("sourceCommand", cmd);
-                            WebSocketUtils.sendPacket("response", handler.getTargetSystem(),response.getResponse().getRaw(), socket);
-                        }
-                    }));
-                }
-
-                @Override
-                public void onOpen(WebSocketBasic socket) {
-                    clientList.add(socket);
-                }
-
-                @Override
-                public void onClose(WebSocketBasic socket) {
-                    clientList.remove(socket);
-                }
-
-                @Override
-                public void onError(WebSocketBasic socket, String message, Exception exception) {
-                    clientList.remove(socket);
-                }
-            }));
+            dependencyInjector.register(WebServer.class, WebServer.class);
+            dependencyInjector.resolve(WebServer.class);
         } catch (Exception ex) {
-            throw new InitializationException("Load Webserver", ex.getMessage());
+            var ex2 = new InitializationException("Load Webserver", ex.getMessage());
+            ex2.addSuppressed(ex);
+            throw ex2;
         }
     }
 
@@ -279,21 +240,22 @@ public class MediaManager {
      */
     private void loadDatabase() throws InitializationException {
         try {
-            db = new MySQLInterface(
-                    getTomlConfig().getString("mysql.host", () -> "localhost"),
-                    Math.toIntExact(getTomlConfig().getLong("mysql.port", () -> 3306)),
-                    getTomlConfig().getString("mysql.username", () -> "mediamanager"),
-                    getTomlConfig().getString("mysql.password", () -> "mediamanager"),
-                    getTomlConfig().getString("mysql.database", () -> "mediamanager"));
+            MySQLInterface db = new MySQLInterface(
+                    config.getString("mysql.host", () -> "localhost"),
+                    Math.toIntExact(config.getLong("mysql.port", () -> 3306)),
+                config.getString("mysql.username", () -> "mediamanager"),
+                config.getString("mysql.password", () -> "mediamanager"),
+                config.getString("mysql.database", () -> "mediamanager"));
             db.asyncDataSettings(2);
             db.connect();
+            dependencyInjector.register(MySQLInterface.class, db);
 
-            if (Boolean.TRUE.equals(getTomlConfig().getBoolean("autoloader.executeDBScripts"))) {
-                executeDatabaseScripts();
+            if (Boolean.TRUE.equals(config.getBoolean("autoloader.executeDBScripts"))) {
+                executeDatabaseScripts(db);
             }
 
-            Anime.setCurrentID(getCurrentId("anime"));
-            Season.setCurrentID(getCurrentId("season"));
+            Anime.setCurrentID(getCurrentId("anime", db));
+            Season.setCurrentID(getCurrentId("season", db));
         } catch (Exception ex) {
             throw new InitializationException("Load Database", ex.getMessage());
         }
@@ -305,7 +267,7 @@ public class MediaManager {
      * 
      * @throws InitializationException if any script execution fails
      */
-    private void executeDatabaseScripts() throws InitializationException {
+    private void executeDatabaseScripts(MySQLInterface db) throws InitializationException {
         try {
             List<String> files = ResourceUtilities.listResourceFilesRecursive("sql/");
             for (String file : files.stream().sorted().toList()) {
@@ -328,7 +290,7 @@ public class MediaManager {
      * @param table The name of the table to query
      * @return The maximum ID found in the table, or 0 if the table is empty
      */
-    private int getCurrentId(String table) {
+    private int getCurrentId(String table, MySQLInterface db) {
         int result = 0;
         try {
             ResultSet rs = db.executeQuery("select nKey from " + table + " order by nKey desc");

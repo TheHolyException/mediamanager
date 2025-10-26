@@ -1,14 +1,14 @@
 package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.mediamanager.util.WebSocketResponseException;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
-import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
+import de.theholyexception.mediamanager.util.TargetSystem;
+import de.theholyexception.mediamanager.util.WebSocketResponseException;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import io.javalin.websocket.WsContext;
 import lombok.extern.slf4j.Slf4j;
-import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -28,11 +28,9 @@ public class AniworldHandler extends Handler {
 
     /**
      * Creates a new AniworldHandler for the specified target system.
-     *
-     * @param targetSystem The target system this handler is responsible for
      */
-    public AniworldHandler(TargetSystem targetSystem) {
-        super(targetSystem);
+    public AniworldHandler() {
+        super(TargetSystem.ANIWORLD);
     }
 
     /**
@@ -47,15 +45,15 @@ public class AniworldHandler extends Handler {
      * Processes incoming WebSocket commands for the Aniworld handler.
      * Routes commands to the appropriate handler method based on the command type.
      *
-     * @param socket The WebSocket connection that received the command
+     * @param ctx The WebSocket connection that received the command
      * @param command The command to execute (currently only "resolve" is supported)
      * @param content JSON data associated with the command
      * @throws WebSocketResponseException if the command is invalid or processing fails
      */
     @Override
-    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+    public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {
         switch (command) {
-            case "resolve" -> cmdResolve(socket, content);
+            case "resolve" -> cmdResolve(ctx, content);
             default ->
                 throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
         }
@@ -65,14 +63,14 @@ public class AniworldHandler extends Handler {
      * Handles the 'resolve' command to retrieve video URLs for anime episodes.
      * Supports resolving both individual seasons and entire series.
      *
-     * @param socket The WebSocket connection to send the results to
+     * @param ctx The WebSocket connection to send the results to
      * @param content JSON data containing the resolution parameters:
      *                - language: The language ID to filter episodes
      *                - url: The Aniworld URL to resolve (can be a series or season URL)
      * @throws WebSocketResponseException if resolution fails or invalid parameters are provided
      */
     @SuppressWarnings("unchecked")
-    private void cmdResolve(WebSocketBasic socket, JSONObjectContainer content) {
+    private void cmdResolve(WsContext ctx, JSONObjectContainer content) {
         try {
             int language = Integer.parseInt(content.get("language", String.class));
             String url = content.get("url", String.class);
@@ -108,7 +106,7 @@ public class AniworldHandler extends Handler {
             JSONArray ds = new JSONArray();
             ds.addAll(links);
             res.put("links", ds);
-            sendPacket("links", TargetSystem.ANIWORLD, res, socket);
+            sendPacket("links", TargetSystem.ANIWORLD, res, ctx);
         } catch (Exception ex) {
             log.error("Failed to resolve anime", ex);
             throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage(ex.getMessage()));

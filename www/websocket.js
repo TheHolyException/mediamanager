@@ -13,6 +13,18 @@ function connect() {
     ws.onmessage = function (e) {
         let data = JSON.parse(e.data);
 
+        let cmd = data.cmd;
+        let content = data.content;
+
+        // Handle keepalive messages
+        if (cmd === "keepalive") {
+            if (data.type === "ping") {
+                // Respond to server ping with pong
+                sendPacket("keepalive", "default", { type: "pong", timestamp: Date.now() });
+            }
+            return; // Don't process keepalive messages further
+        }
+
         if (data.cmd != "systemInfo" || true) {
             console.log("Receiving:")
             console.log(data)
@@ -20,9 +32,6 @@ function connect() {
 
         let targetSystem = "default";
         if (data.targetSystem != undefined) targetSystem = data.targetSystem;
-
-        let cmd = data.cmd;
-        let content = data.content;
 
         if (cmd == "response") {
             yeti.show({
@@ -74,7 +83,7 @@ function sendPacket(cmd, targetSystem, content) {
         targetSystem: targetSystem,
         content: content
     }
-    if (cmd != "systemInfo") {
+    if (cmd != "systemInfo" && cmd != "keepalive") {
         console.log("Sending")
         console.log(request)
     }

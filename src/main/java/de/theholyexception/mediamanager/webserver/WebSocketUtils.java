@@ -3,50 +3,38 @@ package de.theholyexception.mediamanager.webserver;
 import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.MediaManager;
-import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.Utils;
+import de.theholyexception.mediamanager.api.WebServer;
 import de.theholyexception.mediamanager.models.TableItemDTO;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
+import de.theholyexception.mediamanager.util.TargetSystem;
+import de.theholyexception.mediamanager.util.Utils;
+import io.javalin.websocket.WsContext;
 import lombok.extern.slf4j.Slf4j;
-import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.tomlj.TomlParseResult;
 
 import java.util.*;
 
-import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
-
 @Slf4j
 public class WebSocketUtils {
     private WebSocketUtils() {}
 
-    private static final Map<String, JSONObject> packetBuffer;
-    private static final Map<WebSocketBasic, Map<String, JSONObject>> directPacketBuffer;
-    private static final List<String> deleteBuffer = new ArrayList<>();
+    private static Map<String, JSONObject> packetBuffer;
+    private static Map<WsContext, Map<String, JSONObject>> directPacketBuffer;
+    private static List<String> deleteBuffer = new ArrayList<>();
 
-    static {
-        TomlParseResult tpr;
-        int cnt = 0;
-        while ((tpr = getTomlConfig()) == null) {
-            log.warn("Tried to load config but failed, retrying in 1s");
-            Utils.sleep(1000);
-            cnt ++;
-            if (cnt >= 5) {
-                throw new RuntimeException("Could not load config");
-            }
-        }
-        final TomlParseResult result = tpr;
+    public static void initialize(TomlParseResult config) {
 
         packetBuffer = new HashMap<>();
         directPacketBuffer = new HashMap<>();
 
-        if (Boolean.TRUE.equals(tpr.getBoolean("general.enablePacketBuffer", () -> true))) {Thread packetThread = new Thread(() -> {
+        if (Boolean.TRUE.equals(config.getBoolean("general.enablePacketBuffer", () -> true))) {Thread packetThread = new Thread(() -> {
             while (true) {
                 try {
-                    Utils.sleep(result.getLong("general.packetBufferSleep", () -> 1000));
+                    Utils.sleep(config.getLong("general.packetBufferSleep", () -> 1000));
                     synchronized (packetBuffer) {
                         if (!packetBuffer.isEmpty()) {
                             JSONObject response = new JSONObject();
@@ -61,14 +49,14 @@ public class WebSocketUtils {
                     }
                     synchronized (directPacketBuffer) {
                         if (!directPacketBuffer.isEmpty()) {
-                            for (WebSocketBasic socket : directPacketBuffer.keySet()) {
+                            for (WsContext ctx : directPacketBuffer.keySet()) {
                                 JSONObject response = new JSONObject();
                                 JSONArray dataset = new JSONArray();
-                                for (JSONObject value : directPacketBuffer.get(socket).values()) {
+                                for (JSONObject value : directPacketBuffer.get(ctx).values()) {
                                     dataset.add(value);
                                 }
                                 response.put("data", dataset);
-                                sendPacket("syn", TargetSystem.DEFAULT, response, socket);
+                                sendPacket("syn", TargetSystem.DEFAULT, response, ctx);
                             }
                             directPacketBuffer.clear();
                         }
@@ -101,16 +89,16 @@ public class WebSocketUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static void sendObject(WebSocketBasic socket, List<JSONObject> objects) {
+    public static void sendObject(WsContext ctx, List<JSONObject> objects) {
         synchronized (packetBuffer) {
             for (JSONObject object : objects) {
                 String uuid = object.get("uuid").toString();
                 packetBuffer.put(uuid, object);
             }
         }
-        if (socket != null) {
+        if (ctx != null) {
             synchronized (directPacketBuffer) {
-                Map<String, JSONObject> map1 = directPacketBuffer.computeIfAbsent(socket, k -> new HashMap<>());
+                Map<String, JSONObject> map1 = directPacketBuffer.computeIfAbsent(ctx, k -> new HashMap<>());
                 for (JSONObject object : objects) {
                     String uuid = object.get("uuid").toString();
                     map1.put(uuid, object);
@@ -120,16 +108,16 @@ public class WebSocketUtils {
     }
 
     @SuppressWarnings("unchecked")
-    public static void sendWarn(WebSocketBasic socket, String sourceType, String message) {
+    public static void sendWarn(WsContext ctx, String sourceType, String message) {
         JSONObject body = new JSONObject();
         body.put("level", "warn");
         body.put("sourceType", sourceType);
         body.put("message", message);
-        sendPacket("response", TargetSystem.DEFAULT, body, socket);
+        sendPacket("response", TargetSystem.DEFAULT, body, ctx);
     }
 
     @SuppressWarnings("unchecked")
-    public static void sendSettings(WebSocketBasic socket) {
+    public static void sendSettings(WsContext ctx) {
         JSONObject dataset = new JSONObject();
         JSONArray array = new JSONArray();
         for (Map.Entry<String, SettingProperty<?>> entry : Settings.SETTING_PROPERTIES.entrySet()) {
@@ -139,7 +127,7 @@ public class WebSocketUtils {
             array.add(data);
         }
         dataset.put("settings", array);
-        sendPacket("setting", TargetSystem.DEFAULT, dataset, socket);
+        sendPacket("setting", TargetSystem.DEFAULT, dataset, ctx);
     }
 
     public static void sendObjectToAll(JSONObject... objects) {
@@ -178,23 +166,24 @@ public class WebSocketUtils {
 
 
     @SuppressWarnings("unchecked")
-    public static void sendPacket(String cmd, TargetSystem targetSystem, JSONObject content, WebSocketBasic socket) {
+    public static void sendPacket(String cmd, TargetSystem targetSystem, JSONObject content, WsContext ctx) {
         JSONObject packet = new JSONObject();
         packet.put("cmd", cmd);
         packet.put("targetSystem", targetSystem.toString());
         packet.put("content", content);
-        if (socket != null) // Broadcast when target websocket is null
-            socket.send(packet.toJSONString());
+        if (ctx != null) // Broadcast when target websocket is null
+            ctx.send(packet.toJSONString());
         else {
-            for (WebSocketBasic webSocketBasic : new ArrayList<>(MediaManager.getInstance().getClientList())) {
-                sendPacket(cmd, targetSystem, content, webSocketBasic);
+            WebServer server = MediaManager.getInstance().getDependencyInjector().resolve(WebServer.class);
+            for (var ctx2 : server.getActiveConnections()) {
+                sendPacket(cmd, targetSystem, content, ctx2);
             }
         }
     }
 
-    public static void sendWebsSocketResponse(WebSocketBasic socket, WebSocketResponse response, TargetSystem targetSystem, String sourceCommand) {
+    public static void sendWebsSocketResponse(WsContext ctx, WebSocketResponse response, TargetSystem targetSystem, String sourceCommand) {
         if (sourceCommand != null) response.getResponse().set("sourceCommand", sourceCommand);
-        sendPacket("response", targetSystem, response.getResponse().getRaw(), socket);
+        sendPacket("response", targetSystem, response.getResponse().getRaw(), ctx);
     }
 
     /**
@@ -212,15 +201,15 @@ public class WebSocketUtils {
 
     private static List<Anime> lastSendAnimes = new ArrayList<>();
 
-    public static void sendAutoLoaderItem(WebSocketBasic socket, Anime anime) {
+    public static void sendAutoLoaderItem(WsContext ctx, Anime anime) {
         List<Anime> packet = new ArrayList<>(lastSendAnimes);
         packet.removeIf(anime2 -> anime2.getId() == anime.getId());
         packet.add(anime);
         lastSendAnimes = packet;
-        sendAutoLoaderItem(socket, packet);
+        sendAutoLoaderItem(ctx, packet);
     }
 
-    public static void sendAutoLoaderItem(WebSocketBasic socket, List<Anime> animes) {
+    public static void sendAutoLoaderItem(WsContext ctx, List<Anime> animes) {
         lastSendAnimes = animes;
         JSONObjectContainer response = new JSONObjectContainer();
         JSONArrayContainer items = new JSONArrayContainer();
@@ -228,6 +217,6 @@ public class WebSocketUtils {
             items.add(anime.toJSONObject());   
         }
         response.set("items", items);
-        sendPacket("syn", TargetSystem.AUTOLOADER, response.getRaw(), socket);
+        sendPacket("syn", TargetSystem.AUTOLOADER, response.getRaw(), ctx);
     }
 }

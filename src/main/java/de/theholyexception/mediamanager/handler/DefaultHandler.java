@@ -3,6 +3,7 @@ package de.theholyexception.mediamanager.handler;
 import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
+import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.holyapi.util.GUIUtils;
@@ -16,6 +17,7 @@ import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.*;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import io.javalin.websocket.WsContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.downloaders.DownloadStatusUpdateEvent;
@@ -26,7 +28,6 @@ import me.kaigermany.ultimateutils.StaticUtils;
 import me.kaigermany.ultimateutils.networking.smarthttp.HTTPRequestOptions;
 import me.kaigermany.ultimateutils.networking.smarthttp.HTTPResult;
 import me.kaigermany.ultimateutils.networking.smarthttp.SmartHTTP;
-import me.kaigermany.ultimateutils.networking.websocket.WebSocketBasic;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -45,7 +46,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static de.theholyexception.mediamanager.MediaManager.getTomlConfig;
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
 
 /**
@@ -94,13 +94,15 @@ public class DefaultHandler extends Handler {
     private final Queue<JSONObject> threadHistory = new LinkedList<>();
     private static final int MAX_HISTORY_SIZE = 120; // Keep last 720 data points (60 minutes at 5-second intervals)
 
+    @DIInject
+    private AutoLoaderHandler autoLoaderHandler;
+
     /**
      * Creates a new DefaultHandler instance for the specified target system.
-     * 
-     * @param targetSystem The target system this handler is responsible for
+     *
      */
-    public DefaultHandler(TargetSystem targetSystem) {
-        super(targetSystem);
+    public DefaultHandler() {
+        super(TargetSystem.DEFAULT);
         downloadHandler = new ExecutorHandler(Executors.newFixedThreadPool(1));
         downloadHandler.setThreadNameFactory(cnt -> "DownloadThread-" + cnt);
         titleResolverHandler = new ExecutorHandler(Executors.newFixedThreadPool(5));
@@ -146,21 +148,21 @@ public class DefaultHandler extends Handler {
             }
         });
 
-        FFmpeg.setFFmpegPath(getTomlConfig().getString("general.ffmpeg"));
+        FFmpeg.setFFmpegPath(config.getString("general.ffmpeg"));
 
-        downloadFolder = new File(getTomlConfig().getString("general.tmpDownloadFolder", () -> "./tmp"));
+        downloadFolder = new File(config.getString("general.tmpDownloadFolder", () -> "./tmp"));
         if (!downloadFolder.exists() && !downloadFolder.mkdirs())
             log.error("Could not create download folder");
 
-        this.downloadLogFiles = getTomlConfig().getBoolean("general.logDebugDownloaderFiles", () -> false);
-        this.untrustedCertificates = getTomlConfig().getBoolean("general.untrustedCertificates", () -> false);
+        this.downloadLogFiles = config.getBoolean("general.logDebugDownloaderFiles", () -> false);
+        this.untrustedCertificates = config.getBoolean("general.untrustedCertificates", () -> false);
 
         loadTargets();
-        this.enableValidation = getTomlConfig().getBoolean("validator.enabled", () -> false);
+        this.enableValidation = config.getBoolean("validator.enabled", () -> false);
         this.validatorTargets = new ArrayList<>();
         if (this.enableValidation) {
-            validatorVideoLengthThreshold = Integer.parseInt(getTomlConfig().getString("validator.videoLengthThreshold", () -> "50%").replace("%", ""))/100d;
-            String targetsCSV = getTomlConfig().getString("validator.targets", () -> "");
+            validatorVideoLengthThreshold = Integer.parseInt(config.getString("validator.videoLengthThreshold", () -> "50%").replace("%", ""))/100d;
+            String targetsCSV = config.getString("validator.targets", () -> "");
             String[] virtualTargets = targetsCSV.split(",");
             for (String virtualTarget : virtualTargets) {
                 this.validatorTargets.add(targets.get(virtualTarget));
@@ -178,7 +180,7 @@ public class DefaultHandler extends Handler {
         startSystemDataFetcher();
 
         if (this.downloadLogFiles) {
-            String folderName = MediaManager.getTomlConfig().getString("general.logDebugDownloaderFolder", () -> "./downloader-logs");
+            String folderName = config.getString("general.logDebugDownloaderFolder", () -> "./downloader-logs");
             File folder = new File(folderName);
             folder.mkdirs();
             downloadLogFolder = folder;
@@ -192,7 +194,7 @@ public class DefaultHandler extends Handler {
      * @throws InitializationException if the targets configuration is invalid or missing
      */
     private void loadTargets() {
-        TomlArray targetArray = getTomlConfig().getArray("target");
+        TomlArray targetArray = config.getArray("target");
         if (targetArray == null)
             throw new InitializationException("LoadTargets", "Failed to load targets");
 
@@ -213,20 +215,20 @@ public class DefaultHandler extends Handler {
      * Processes incoming WebSocket commands and routes them to the appropriate handler method.
      * This is the main entry point for all commands processed by this handler.
      *
-     * @param socket The WebSocket connection that received the command
+     * @param ctx The WebSocket connection that received the command
      * @param command The command to execute (e.g., "syn", "put", "del")
      * @param content JSON data associated with the command
      * @throws WebSocketResponseException if the command is invalid, processing fails or just a feedback for the client
      */
     @Override
-    public void handleCommand(WebSocketBasic socket, String command, JSONObjectContainer content) {
+    public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {
         switch (command) {
-            case "syn" -> cmdSyncData(socket);
-            case "put" -> cmdPutData(socket, content);
+            case "syn" -> cmdSyncData(ctx);
+            case "put" -> cmdPutData(ctx, content);
             case "del" -> cmdDelete(content);
-            case "del-all" -> cmdDeleteAll(socket);
-            case "setting" -> cmdChangeSetting(socket, content);
-            case "requestSubfolders" -> cmdRequestSubFolders(socket, content);
+            case "del-all" -> cmdDeleteAll(ctx);
+            case "setting" -> cmdChangeSetting(ctx, content);
+            case "requestSubfolders" -> cmdRequestSubFolders(ctx, content);
             case "testDelay" -> {
                 log.debug("Test delay");
                 Utils.sleep(5000);
@@ -237,8 +239,8 @@ public class DefaultHandler extends Handler {
                 System.gc();
                 throw new WebSocketResponseException(WebSocketResponse.OK.setMessage("Garbage collection triggered"));
             }
-            case "ping" -> sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), socket);
-            case "systemInfo" -> sendSystemInformation(socket);
+            case "ping" -> sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), ctx);
+            case "systemInfo" -> sendSystemInformation(ctx);
             default ->
                 throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
         }
@@ -249,33 +251,33 @@ public class DefaultHandler extends Handler {
      * Sends the current state of downloads, settings, system information, and target folders
      * to the requesting client.
      *
-     * @param socket The WebSocket connection to send the synchronized data to
+     * @param ctx The WebSocket connection to send the synchronized data to
      */
-    private void cmdSyncData(WebSocketBasic socket) {
+    private void cmdSyncData(WsContext ctx) {
         List<JSONObjectContainer> jsonData = urls.values().stream()
                 .sorted(TableItemDTO::compareTo)
                 .map(TableItemDTO::getJsonObject)
                 .toList();
-        sendObject(socket, jsonData.stream().map(JSONObjectContainer::getRaw).toList());
-        sendSettings(socket);
-        sendSystemInformation(socket);
-        sendTargetFolders(socket);
+        sendObject(ctx, jsonData.stream().map(JSONObjectContainer::getRaw).toList());
+        sendSettings(ctx);
+        sendSystemInformation(ctx);
+        sendTargetFolders(ctx);
     }
 
     /**
      * Handles the 'put' command to add new download items to the queue.
      * Processes each item in the provided list and schedules downloads.
      *
-     * @param socket The WebSocket connection that sent the command
+     * @param ctx The WebSocket connection that sent the command
      * @param content JSON data containing an array of download items to add
      */
-    protected void cmdPutData(WebSocketBasic socket, JSONObjectContainer content) {
+    protected void cmdPutData(WsContext ctx, JSONObjectContainer content) {
         for (Object data : content.getArrayContainer("list").getRaw()) {
             JSONObjectContainer item = (JSONObjectContainer) JSONReader.readString(data.toString());
             try {
-                scheduleDownload(socket, item);
+                scheduleDownload(ctx, item);
             } catch (WebSocketResponseException ex) {
-                WebSocketUtils.sendWebsSocketResponse(socket, ex.getResponse(), TargetSystem.DEFAULT, "put");
+                WebSocketUtils.sendWebsSocketResponse(ctx, ex.getResponse(), TargetSystem.DEFAULT, "put");
             }
         }
     }
@@ -309,14 +311,14 @@ public class DefaultHandler extends Handler {
     /**
      * Handles the 'del-all' command to clear all downloads from the queue.
      * 
-     * @param socket The WebSocket connection that sent the command
+     * @param ctx The WebSocket connection that sent the command
      */
-    private void cmdDeleteAll(WebSocketBasic socket) {
+    private void cmdDeleteAll(WsContext ctx) {
         List<TableItemDTO> toDelete = new ArrayList<>();
         for (TableItemDTO value : new HashMap<>(urls).values()) {
             WebSocketResponse response = deleteObject(value, toDelete);
             if (response != null)
-                WebSocketUtils.sendWebsSocketResponse(socket, response, TargetSystem.DEFAULT, "del-all");
+                WebSocketUtils.sendWebsSocketResponse(ctx, response, TargetSystem.DEFAULT, "del-all");
         }
 
         // Skip if nothing to delete
@@ -331,10 +333,10 @@ public class DefaultHandler extends Handler {
     /**
      * Handles the 'setting' command to update application settings.
      * 
-     * @param basic The WebSocket connection that sent the command
+     * @param ctx The WebSocket connection that sent the command
      * @param content JSON data containing the settings to update
      */
-    private void cmdChangeSetting(WebSocketBasic basic, JSONObjectContainer content) {
+    private void cmdChangeSetting(WsContext ctx, JSONObjectContainer content) {
         JSONArrayContainer settings = content.getArrayContainer("settings");
         for (Object o : settings.getRaw()) {
             try {
@@ -349,7 +351,7 @@ public class DefaultHandler extends Handler {
                 }
                 log.info("Changed setting {} to: {}", key, val);
             } catch (Exception ex) {
-                WebSocketUtils.sendPacket("response", TargetSystem.DEFAULT, WebSocketResponse.ERROR.setMessage(ex.getMessage()).getResponse().getRaw(), basic);
+                WebSocketUtils.sendPacket("response", TargetSystem.DEFAULT, WebSocketResponse.ERROR.setMessage(ex.getMessage()).getResponse().getRaw(), ctx);
             }
         }
         sendSettings(null);
@@ -358,11 +360,11 @@ public class DefaultHandler extends Handler {
     /**
      * Handles the 'requestSubfolders' command to retrieve subfolders for a given target.
      * 
-     * @param socket The WebSocket connection to send the subfolder list to
+     * @param ctx The WebSocket connection to send the subfolder list to
      * @param content JSON data containing the target to scan for subfolders
      */
     @SuppressWarnings("unchecked")
-    private void cmdRequestSubFolders(WebSocketBasic socket, JSONObjectContainer content) {
+    private void cmdRequestSubFolders(WsContext ctx, JSONObjectContainer content) {
         String targetPath = content.get("selection", String.class);
         Target target = targets.get(targetPath.split("/")[0]);
 
@@ -379,21 +381,21 @@ public class DefaultHandler extends Handler {
                     .toList());
         response.put("subfolders", array);
 
-        sendPacket("requestSubfoldersResponse", TargetSystem.DEFAULT, response, socket);
+        sendPacket("requestSubfoldersResponse", TargetSystem.DEFAULT, response, ctx);
     }
     // endregion commands
 
-    @SuppressWarnings("unchecked")
     /**
      * Schedules a download task based on the provided content.
      * Validates the input and creates a new download task if all requirements are met.
      * 
-     * @param socket The WebSocket connection that requested the download (can be null for retries or autoloader)
+     * @param ctx The WebSocket connection that requested the download (can be null for retries or autoloader)
      * @param content JSON data containing download information
      * @throws WebSocketResponseException if the download cannot be scheduled
      */
-    private void scheduleDownload(WebSocketBasic socket, JSONObjectContainer content) {
-        File outputFolder = resolveOutputFolder(socket, content);
+    @SuppressWarnings("unchecked")
+    private void scheduleDownload(WsContext ctx, JSONObjectContainer content) {
+        File outputFolder = resolveOutputFolder(ctx, content);
 
         TableItemDTO tableItem = new TableItemDTO(content);
         urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
@@ -407,83 +409,26 @@ public class DefaultHandler extends Handler {
 
         if (log.isDebugEnabled()) {synchronized (fLogger) {fLogger.log("PUT,"+url+","+tableItem.getSortIndex());}}
 
-        AutoLoaderHandler autoLoaderHandler = ((AutoLoaderHandler)MediaManager.getInstance().getHandlers().get(TargetSystem.AUTOLOADER));
         JSONObjectContainer autoloaderData = content.getObjectContainer("autoloaderData");
 
-        var updateEvent = new DownloadStatusUpdateEvent() {
-            @Override
-            public void onProgressUpdate(double v) {
-                tableItem.update();
-                if (tableItem.isDeleted())
-                    return;
-                if (v >= 1) {
-                    changeObject(content, "state", "Completed");
-                } else {
-                    changeObject(content, "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
-                }
-            }
-
-            @Override
-            public void onInfo(String s) {
-                if (log.isDebugEnabled())
-                    log.debug(s);
-            }
-
-            @Override
-            public void onWarn(String s) {
-                log.warn(s);
-            }
-
-            @Override
-            public void onError(String s) {
-                if (tableItem.isRunning() && !tableItem.isDeleted()) {
-                    String line = s.split("\n")[0];
-                    if (line.length() > 50)
-                        s = s.substring(0, 50) + "\n" + s.substring(50);
-                    changeObject(content, "state", "Error: " + s);
-                    tableItem.update();
-                }
-            }
-
-            @Override
-            public void onLogFile(String fileName, byte[] bytes) {
-                if (downloadLogFiles) {
-                    try (FileOutputStream fos = new FileOutputStream(new File(downloadLogFolder, fileName))) {
-                        fos.write(bytes);
-                    } catch (IOException e) {
-                        log.error("Failed to write log file", e);
-                    }
-                }
-            }
-
-            @Override
-            public void onException(Throwable error) {
-                tableItem.update();
-                if (log.isDebugEnabled()) {
-                    log.debug("Download failed!", error);
-                }
-                if (tableItem.isRunning() && !tableItem.isDeleted()) {
-                    tableItem.setFailed(true);
-                    changeObject(content, "state", "Error: " + error.getMessage());
-                }
-            }
-        };
+        var updateEvent = createDownloadStatusUpdateEvent(tableItem, content);
 
         JSONObject options = content.getObjectContainer("options").getRaw();
-        options.put("useDirectMemory", getTomlConfig().getBoolean("general.useDirectMemory", () -> false)+"");
+        options.put("useDirectMemory", config.getBoolean("general.useDirectMemory", () -> false)+"");
         if (untrustedCertificates)
             options.put("disableCertificateCheck", "true");
         boolean skipValidation = Boolean.parseBoolean((String)options.get("skipValidation"));
 
-        // Getting the right downloader
+        // Creating the temp folder to download the file into
         File downloadTempFolder = new File(downloadFolder, UUID.randomUUID().toString());
+        if (!downloadTempFolder.mkdirs() || !downloadTempFolder.exists())
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create temp folder"));
+
+        // Getting the right downloader
         Downloader downloader = DownloaderSelector.selectDownloader(url, downloadTempFolder, updateEvent, options);
         downloader.setProxy(ProxyHandler.getNextProxy());
         downloader.setNumThreads(spThreads.getValue());
         tableItem.setDownloader(downloader);
-
-        if (!downloadTempFolder.mkdirs() || !downloadTempFolder.exists())
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create temp folder"));
 
         try {
             // Start the download
@@ -575,6 +520,67 @@ public class DefaultHandler extends Handler {
         }
     }
 
+    private DownloadStatusUpdateEvent createDownloadStatusUpdateEvent(TableItemDTO tableItem, JSONObjectContainer content) {
+        return new DownloadStatusUpdateEvent() {
+            @Override
+            public void onProgressUpdate(double v) {
+                tableItem.update();
+                if (tableItem.isDeleted())
+                    return;
+                if (v >= 1) {
+                    changeObject(content, "state", "Completed");
+                } else {
+                    changeObject(content, "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
+                }
+            }
+
+            @Override
+            public void onInfo(String s) {
+                if (log.isDebugEnabled())
+                    log.debug(s);
+            }
+
+            @Override
+            public void onWarn(String s) {
+                log.warn(s);
+            }
+
+            @Override
+            public void onError(String s) {
+                if (tableItem.isRunning() && !tableItem.isDeleted()) {
+                    String line = s.split("\n")[0];
+                    if (line.length() > 50)
+                        s = s.substring(0, 50) + "\n" + s.substring(50);
+                    changeObject(content, "state", "Error: " + s);
+                    tableItem.update();
+                }
+            }
+
+            @Override
+            public void onLogFile(String fileName, byte[] bytes) {
+                if (downloadLogFiles) {
+                    try (FileOutputStream fos = new FileOutputStream(new File(downloadLogFolder, fileName))) {
+                        fos.write(bytes);
+                    } catch (IOException e) {
+                        log.error("Failed to write log file", e);
+                    }
+                }
+            }
+
+            @Override
+            public void onException(Throwable error) {
+                tableItem.update();
+                if (log.isDebugEnabled()) {
+                    log.debug("Download failed!", error);
+                }
+                if (tableItem.isRunning() && !tableItem.isDeleted()) {
+                    tableItem.setFailed(true);
+                    changeObject(content, "state", "Error: " + error.getMessage());
+                }
+            }
+        };
+    }
+
     private ValidatorResponse validateVideoFile(File file, File outputFolder) throws IOException {
         // Return valid when the file is not mp4
         // Currently the validation only supports mp4 files
@@ -624,7 +630,7 @@ public class DefaultHandler extends Handler {
                 sendSystemInformation(null);
             }
         }, 0, 5000);
-        if (getTomlConfig().getBoolean("proxy.enabled", () -> false)) {
+        if (config.getBoolean("proxy.enabled", () -> false)) {
             new Timer().schedule(new TimerTask() {
                 @Override
                 public void run() {
@@ -636,29 +642,27 @@ public class DefaultHandler extends Handler {
 
     /**
      * Sends system information to the specified WebSocket client.
-     * 
-     * @param target The WebSocket connection to send the information to
      */
-    private void sendSystemInformation(WebSocketBasic target) {
+    private void sendSystemInformation(WsContext ctx) {
         try {
             if (MediaManager.getInstance().isDockerEnvironment()) {
                 dockerMemoryLimit = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.max").start().getInputStream())).trim());
                 dockerMemoryUsage = Long.parseLong(new String(StaticUtils.readAllBytes(new ProcessBuilder("cat", "/sys/fs/cgroup/memory.current").start().getInputStream())).trim());
             }
-            sendPacket("systemInfo", TargetSystem.DEFAULT, formatSystemInfo(), target);
+            sendPacket("systemInfo", TargetSystem.DEFAULT, formatSystemInfo(), ctx);
         } catch (Exception ex) {
             log.error(ex.getMessage());
         }
     }
 
-    @SuppressWarnings("unchecked")
     /**
      * Sends the list of available target folders to the specified WebSocket client.
      * These folders represent the base directories where files can be downloaded to.
      * 
-     * @param socket The WebSocket connection to send the folder list to
+     * @param ctx The WebSocket connection to send the folder list to
      */
-    private void sendTargetFolders(WebSocketBasic socket) {
+    @SuppressWarnings("unchecked")
+    private void sendTargetFolders(WsContext ctx) {
         JSONObject response = new JSONObject();
         JSONArray array = new JSONArray();
         for (Target value : targets.values()) {
@@ -668,7 +672,7 @@ public class DefaultHandler extends Handler {
             array.add(segment);
         }
         response.put("targets", array);
-        sendPacket("targetFolders", TargetSystem.DEFAULT, response, socket);
+        sendPacket("targetFolders", TargetSystem.DEFAULT, response, ctx);
     }
 
     /**
@@ -715,12 +719,12 @@ public class DefaultHandler extends Handler {
         torNetworkStatus = result;
     }
 
-    @SuppressWarnings("unchecked")
     /**
      * Collects and formats system information into a JSON object.
      * 
      * @return JSONObject containing system metrics including memory usage, thread pool information, etc.
      */
+    @SuppressWarnings("unchecked")
     private JSONObject formatSystemInfo() {
         JSONObject response = new JSONObject();
         long currentTime = System.currentTimeMillis();
@@ -869,13 +873,12 @@ public class DefaultHandler extends Handler {
     /**
      * Resolves and validates the output folder for a download based on the provided content.
      * Creates the directory structure if it doesn't exist.
-     * 
-     * @param socket The WebSocket connection that requested the download
+     *
      * @param content JSON data containing the target path and other download parameters
      * @return The resolved output folder as a File object
      * @throws WebSocketResponseException if the target path is invalid or inaccessible
      */
-    private File resolveOutputFolder(WebSocketBasic socket, JSONObjectContainer content) {
+    private File resolveOutputFolder(WsContext ctx, JSONObjectContainer content) {
         String targetPath = content.get("target", String.class);
         Target target = getTargetFromContainer(content);
 
@@ -887,7 +890,7 @@ public class DefaultHandler extends Handler {
             String aniworldUrl = content.get("aniworld-url", String.class);
             if (aniworldUrl != null && !aniworldUrl.isEmpty()) {
                 subDirectory = AniworldHelper.getAnimeTitle(aniworldUrl);
-                WebSocketUtils.sendWebsSocketResponse(socket, WebSocketResponse.WARN.setMessage("Subdirectory not specified, using " + subDirectory + " instead"), TargetSystem.DEFAULT, "put");
+                WebSocketUtils.sendWebsSocketResponse(ctx, WebSocketResponse.WARN.setMessage("Subdirectory not specified, using " + subDirectory + " instead"), TargetSystem.DEFAULT, "put");
             } else
                 throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Subdirectory not specified"));
         }
