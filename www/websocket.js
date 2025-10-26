@@ -14,7 +14,7 @@ function connect() {
         let data = JSON.parse(e.data);
 
         if (data.cmd != "systemInfo" || true) {
-            console.log("<-")
+            console.log("Receiving:")
             console.log(data)
         }
 
@@ -75,8 +75,8 @@ function sendPacket(cmd, targetSystem, content) {
         content: content
     }
     if (cmd != "systemInfo") {
-        console.log("->")
-        console.log(JSON.stringify(request))
+        console.log("Sending")
+        console.log(request)
     }
     ws.send(JSON.stringify(request));
 }
