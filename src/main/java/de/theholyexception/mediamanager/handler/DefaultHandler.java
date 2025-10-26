@@ -393,7 +393,7 @@ public class DefaultHandler extends Handler {
      * @throws WebSocketResponseException if the download cannot be scheduled
      */
     private void scheduleDownload(WebSocketBasic socket, JSONObjectContainer content) {
-        File outputFolder = putDownloadResolveOutputFolder(socket, content);
+        File outputFolder = resolveOutputFolder(socket, content);
 
         TableItemDTO tableItem = new TableItemDTO(content);
         urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
@@ -521,7 +521,7 @@ public class DefaultHandler extends Handler {
                             log.error("Failed to resolve target in experimental Validator, skipping validator");
                         } else {
                             if (validatorTargets.contains(target)) {
-                                ValidatorResponse response = validateVideoFile(file);
+                                ValidatorResponse response = validateVideoFile(file, outputFolder);
                                 if (response != ValidatorResponse.VALID) {
                                     tableItem.setValidationError(true);
                                     log.warn("Validation Error: {}", response.getDescription());
@@ -576,9 +576,18 @@ public class DefaultHandler extends Handler {
         }
     }
 
-    private ValidatorResponse validateVideoFile(File file) throws IOException {
-        List<File> filesInFolder = Arrays.stream(file.getParentFile().listFiles()).toList();
-        filesInFolder.remove(file);
+    private ValidatorResponse validateVideoFile(File file, File outputFolder) throws IOException {
+        // Return valid when the file is not mp4
+        // Currently the validation only supports mp4 files
+        if (!file.getName().endsWith(".mp4"))
+            return ValidatorResponse.VALID;
+
+        // Return valid when no other files are found
+        File[] files = outputFolder.getParentFile().listFiles();
+        if (files == null)
+            return ValidatorResponse.VALID;
+
+        List<File> filesInFolder = new ArrayList<>(Arrays.asList(files));
         long videoLength = MP4Utils.getVideoDurationSeconds(file);
         long totalLength = 0;
         int cnt = 0;
@@ -587,6 +596,8 @@ public class DefaultHandler extends Handler {
             if (!f.getName().endsWith(".mp4"))
                 continue;
             long fileLength = MP4Utils.getVideoDurationSeconds(f);
+            if (fileLength == -1)
+                continue;
             if (cnt == 0)
                 totalLength += fileLength;
             else {
@@ -817,6 +828,11 @@ public class DefaultHandler extends Handler {
         threadHistoryArray.addAll(threadHistory);
         response.put("threadHistory", threadHistoryArray);
 
+        JSONObject version = new JSONObject();
+        version.put("downloaders", MediaManager.getInstance().getDownloadersVersion());
+        version.put("ultimateutils", MediaManager.getInstance().getUltimateutilsVersion());
+        response.put("version", version);
+
         return response;
     }
 
@@ -837,7 +853,7 @@ public class DefaultHandler extends Handler {
      * @return The resolved output folder as a File object
      * @throws WebSocketResponseException if the target path is invalid or inaccessible
      */
-    private File putDownloadResolveOutputFolder(WebSocketBasic socket, JSONObjectContainer content) {
+    private File resolveOutputFolder(WebSocketBasic socket, JSONObjectContainer content) {
         String targetPath = content.get("target", String.class);
         Target target = getTargetFromContainer(content);
 
