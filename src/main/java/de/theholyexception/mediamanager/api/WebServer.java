@@ -2,6 +2,7 @@ package de.theholyexception.mediamanager.api;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
+import de.theholyexception.holyapi.di.DIInitializer;
 import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
@@ -28,32 +29,37 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 
 @Slf4j
-public class WebServer {
+public class WebServer implements DIInitializer {
 
 	@Getter
 	private Javalin app = null;
-	private final ExecutorHandler executorHandler;
-	private final ScheduledExecutorService keepAliveExecutor;
+	private ExecutorHandler executorHandler;
+	private ScheduledExecutorService keepAliveExecutor;
 	@Getter
-	private final Set<WsContext> activeConnections;
+	private Set<WsContext> activeConnections;
 
 	@DIInject
 	private MediaManager mediaManager;
 	@DIInject
 	private TomlParseResult config;
 
-	public WebServer() {
+	@Override
+	public void initialize() {
 		if (app != null)
-			throw new IllegalStateException("Javeline API already initialized");
+			throw new IllegalStateException("WebServer already initialized");
 
-		int webSocketThreads = 1; //Math.toIntExact(config.getLong("webserver.webSocketThreads", () -> 10));
+		int webSocketThreads = Math.toIntExact(config.getLong("webserver.webSocketThreads", () -> 10));
 		executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(webSocketThreads));
 		executorHandler.setThreadNameFactory(cnt -> "WS-Executor-" + cnt);
-		
+
 		// Initialize keepalive system
 		keepAliveExecutor = Executors.newScheduledThreadPool(1);
 		activeConnections = ConcurrentHashMap.newKeySet();
 		startKeepAliveTimer();
+
+		String webserverHost = config.getString("webserver.host", () -> "localhost");
+		int webserverPort = Math.toIntExact(config.getLong("webserver.port", () -> 8080));
+		String webRoot = config.getString("webserver.webroot", () -> "./www");
 
 		app = Javalin.create(config -> {
 				config.registerPlugin(new OpenApiPlugin(pluginConfig -> {
@@ -67,7 +73,7 @@ public class WebServer {
 				}));
 				config.staticFiles.add(staticFiles -> {
 					staticFiles.hostedPath = "/";
-					staticFiles.directory = "./www";
+					staticFiles.directory = webRoot;
 					staticFiles.location = Location.EXTERNAL;
 				});
 				config.showJavalinBanner = false;
@@ -75,7 +81,7 @@ public class WebServer {
 				config.registerPlugin(new SwaggerPlugin());
 
 			})
-			.start(8080);
+			.start(webserverHost, webserverPort);
 
 		app.ws("/", ws -> {
 			ws.onConnect(activeConnections::add);
@@ -88,8 +94,6 @@ public class WebServer {
 				log.error("WebSocket error for {}: {}", ctx.sessionId(), errorMsg);
 			});
 		});
-
-		//app.get("/api/test", MediaManager::test);
 	}
 
 	private void handleWebsocketMessage(WsMessageContext ctx) {
