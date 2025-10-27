@@ -530,7 +530,35 @@ public class DefaultHandler extends Handler {
                 if (v >= 1) {
                     changeObject(content, "state", "Completed");
                 } else {
-                    changeObject(content, "state", "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%");
+                    long currentTime = System.currentTimeMillis();
+                    
+                    // Initialize download start time on first progress update
+                    if (tableItem.getDownloadStartTime() == 0) {
+                        tableItem.setDownloadStartTime(currentTime);
+                        tableItem.setLastProgress(v);
+                    }
+                    
+                    String progressText = "Downloading - " + Math.round(v * 10000.0) / 100.0 + "%";
+                    
+                    // Calculate ETA if we have meaningful progress (>5%) and some time has passed
+                    if (v > 0.05 && currentTime - tableItem.getDownloadStartTime() > 10000) { // Wait at least 10 seconds
+                        long elapsedTime = currentTime - tableItem.getDownloadStartTime();
+                        double progressMade = v;
+                        
+                        if (progressMade > 0) {
+                            double downloadRate = progressMade / (elapsedTime / 1000.0); // progress per second
+                            double remainingProgress = 1.0 - v;
+                            long etaSeconds = Math.round(remainingProgress / downloadRate);
+                            
+                            if (etaSeconds > 0 && etaSeconds < 86400) { // Cap at 24 hours
+                                String etaText = formatETA(etaSeconds);
+                                progressText += " (ETA: " + etaText + ")";
+                            }
+                        }
+                    }
+                    
+                    changeObject(content, "state", progressText);
+                    tableItem.setLastProgress(v);
                 }
             }
 
@@ -907,6 +935,26 @@ public class DefaultHandler extends Handler {
             throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create output folder " + outputFolder.getAbsolutePath()));
         }
         return outputFolder;
+    }
+
+    /**
+     * Formats the estimated time remaining into a human-readable string.
+     * 
+     * @param etaSeconds The estimated time remaining in seconds
+     * @return Formatted ETA string (e.g., "2m 30s", "1h 15m", "45s")
+     */
+    private String formatETA(long etaSeconds) {
+        if (etaSeconds < 60) {
+            return etaSeconds + "s";
+        } else if (etaSeconds < 3600) {
+            long minutes = etaSeconds / 60;
+            long seconds = etaSeconds % 60;
+            return minutes + "m" + (seconds > 0 ? " " + seconds + "s" : "");
+        } else {
+            long hours = etaSeconds / 3600;
+            long minutes = (etaSeconds % 3600) / 60;
+            return hours + "h" + (minutes > 0 ? " " + minutes + "m" : "");
+        }
     }
 
 }

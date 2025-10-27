@@ -36,6 +36,12 @@ public class TableItemDTO implements Comparable<TableItemDTO> {
     private final int sortIndex = counter.getAndIncrement();
     @Getter
     private long lastUpdate;
+    @Setter
+    @Getter
+    private long downloadStartTime = 0;
+    @Setter
+    @Getter 
+    private double lastProgress = 0.0;
 
 
     public TableItemDTO(JSONObjectContainer content) {
