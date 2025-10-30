@@ -30,7 +30,7 @@ class DownloadsWidget extends BaseWidget {
                             </div>
                         </div>
                         <div class="stat-card">
-                            <div class="stat-icon"><i class="fas fa-spinner fa-spin"></i></div>
+                            <div class="stat-icon"><i class="fas fa-bars-progress"></i></div>
                             <div class="stat-info">
                                 <span class="stat-value" id="active-downloads-count">0</span>
                                 <span class="stat-label">Active</span>
@@ -431,4 +431,5 @@ class DownloadsWidget extends BaseWidget {
                 break;
         }
     }
+
 }

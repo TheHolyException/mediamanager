@@ -9,10 +9,7 @@ import de.theholyexception.holyapi.di.ComplexDIContainer;
 import de.theholyexception.holyapi.util.DataUtils;
 import de.theholyexception.holyapi.util.ResourceUtilities;
 import de.theholyexception.mediamanager.api.WebServer;
-import de.theholyexception.mediamanager.handler.AniworldHandler;
-import de.theholyexception.mediamanager.handler.AutoLoaderHandler;
-import de.theholyexception.mediamanager.handler.DefaultHandler;
-import de.theholyexception.mediamanager.handler.Handler;
+import de.theholyexception.mediamanager.handler.*;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.Settings;
@@ -133,8 +130,11 @@ public class MediaManager {
             addHandler(DefaultHandler.class);
             addHandler(AniworldHandler.class);
             addHandler(AutoLoaderHandler.class);
+            addHandler(StatisticsHandler.class);
         } catch (Exception ex) {
-            throw new InitializationException("Load Handlers", ex.getMessage());
+            InitializationException initException = new InitializationException("Handler initialization", ex.getMessage());
+            initException.addSuppressed(ex);
+            throw initException;
         }
     }
 

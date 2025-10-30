@@ -110,6 +110,26 @@ public class ProxyHandler {
 	}
 
 	/**
+	 * Checks the status of the Tor network by making a request to the Tor project's check.torproject.org API.
+	 */
+	public static JSONObject getProxyStatus() {
+		JSONObject result = new JSONObject();
+
+		for (Proxy proxy : ProxyHandler.getProxies()) {
+			try {
+				HTTPResult response = SmartHTTP.request(new HTTPRequestOptions("https://check.torproject.org/api/ip").setProxy(proxy));
+				JSONObject responseJ = (JSONObject) new JSONParser().parse(new String(response.getData()));
+				result.put(proxy.address().toString(), responseJ.get("IP").toString());
+			} catch (IOException | ParseException ex) {
+				log.error(ex.getMessage());
+				result.put(proxy.address().toString(), "NOT CONNECTED");
+			}
+		}
+
+		return result;
+	}
+
+	/**
 	 * Retrieves an unmodifiable list of all configured proxies.
 	 *
 	 * @return List of all configured Proxy instances

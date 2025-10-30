@@ -11,6 +11,10 @@ class StatisticsWidget extends BaseWidget {
         this.threadChart = null;
     }
 
+    // Static properties for managing global polling
+    static activeWidgets = new Set();
+    static pollingInterval = null;
+
     createContent() {
         let widget = $(`
         <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="StatisticsWidget">
@@ -97,8 +101,10 @@ class StatisticsWidget extends BaseWidget {
         
         // Store widget instance for updates
         widget.data('widgetInstance', self);
-        
-        sendPacket('systemInfo', 'default');
+
+        // Register this widget for polling
+        StatisticsWidget.registerWidget(self);
+
         return widget.get(0);
     }
 
@@ -119,6 +125,10 @@ class StatisticsWidget extends BaseWidget {
         if (window.statisticsWidgetInstance === this) {
             window.statisticsWidgetInstance = null;
         }
+        
+        // Unregister this widget from polling
+        StatisticsWidget.unregisterWidget(this);
+        
         super.destroy();
     }
 
@@ -426,7 +436,22 @@ class StatisticsWidget extends BaseWidget {
     }
 
     static triggerGC() {
-        sendPacket('triggerGC', 'default');
+        $.ajax({
+            url: '/api/system/gc',
+            method: 'POST',
+            success: function(response) {
+                console.log('Garbage collection triggered successfully:', response);
+                if (typeof handleAPISuccess === 'function') {
+                    handleAPISuccess(response, 'Garbage collection triggered successfully');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Failed to trigger garbage collection:', error);
+                if (typeof handleAPIError === 'function') {
+                    handleAPIError(xhr, 'Failed to trigger garbage collection');
+                }
+            }
+        });
     }
 
     static updateStatistics(responseData) {
@@ -568,5 +593,50 @@ class StatisticsWidget extends BaseWidget {
             container.empty();
             container.append(groups.map(group => group.clone()));
         });
+    }
+
+    // Static methods for managing polling
+    static registerWidget(widget) {
+        this.activeWidgets.add(widget);
+        console.log(`Statistics widget registered. Active count: ${this.activeWidgets.size}`);
+        
+        // Start polling if this is the first widget
+        if (this.activeWidgets.size === 1 && this.pollingInterval === null) {
+            this.startPolling();
+        }
+        
+        // Immediately fetch data for the new widget
+        if (typeof getSystemInfoAPI === 'function') {
+            getSystemInfoAPI();
+        }
+    }
+
+    static unregisterWidget(widget) {
+        this.activeWidgets.delete(widget);
+        console.log(`Statistics widget unregistered. Active count: ${this.activeWidgets.size}`);
+        
+        // Stop polling if no widgets are left
+        if (this.activeWidgets.size === 0 && this.pollingInterval !== null) {
+            this.stopPolling();
+        }
+    }
+
+    static startPolling() {
+        if (this.pollingInterval !== null) return;
+        
+        console.log('Starting system info polling');
+        this.pollingInterval = setInterval(() => {
+            if (typeof getSystemInfoAPI === 'function') {
+                getSystemInfoAPI();
+            }
+        }, 5000);
+    }
+
+    static stopPolling() {
+        if (this.pollingInterval === null) return;
+        
+        console.log('Stopping system info polling');
+        clearInterval(this.pollingInterval);
+        this.pollingInterval = null;
     }
 }

@@ -82,8 +82,8 @@ class SettingsWidget extends BaseWidget {
         this.#initSettingValues(widget);
         this.#initEvents(widget);
         
-        // Request current settings from server
-        sendPacket('syn', 'default');
+        // Request current settings from server via REST API
+        this.#loadSettings();
         
         return widget.get(0);
     }
@@ -119,19 +119,15 @@ class SettingsWidget extends BaseWidget {
     }
 
     static onWSResponse(cmd, content) {
-        if (cmd === 'setting') {
-            // Update current settings from server
-            if (content.settings) {
-                content.settings.forEach(setting => {
-                    SettingsWidget.currentSettings[setting.key] = setting.val;
-                });
-                
-                // Update all visible settings widgets
+        if (cmd === 'data-changed') {
+            // Handle universal data change notifications
+            if (content.dataType === 'settings') {
+                // Reload settings when notified of changes
                 $('[widget-name="SettingsWidget"]').each(function() {
                     const widget = $(this);
                     const widgetInstance = widget.data('widgetInstance');
                     if (widgetInstance) {
-                        widgetInstance.#updateDisplayedValues(widget);
+                        widgetInstance.#loadSettings();
                     }
                 });
             }
@@ -256,6 +252,30 @@ class SettingsWidget extends BaseWidget {
         saveBtn.prop('disabled', !hasChanges || SettingsWidget.isLoading);
     }
 
+    #loadSettings() {
+        fetch('/api/settings')
+        .then(response => response.json())
+        .then(data => {
+            if (data.settings) {
+                data.settings.forEach(setting => {
+                    SettingsWidget.currentSettings[setting.key] = setting.val;
+                });
+                
+                // Update all visible settings widgets
+                $('[widget-name="SettingsWidget"]').each(function() {
+                    const widget = $(this);
+                    const widgetInstance = widget.data('widgetInstance');
+                    if (widgetInstance) {
+                        widgetInstance.#updateDisplayedValues(widget);
+                    }
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error loading settings:', error);
+        });
+    }
+
     #saveSettings(widget) {
         SettingsWidget.isLoading = true;
         const saveBtn = widget.find('.save-settings-btn');
@@ -276,23 +296,41 @@ class SettingsWidget extends BaseWidget {
             });
         }
 
-        sendPacket("setting", "default", {
-            "settings": settingPacket
-        });
-
-        // Show temporary success (will be updated by server response)
-        setTimeout(() => {
-            this.#showStatus(widget, 'success', 'Settings saved successfully');
+        // Use REST API instead of WebSocket
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                settings: settingPacket
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                this.#showStatus(widget, 'success', 'Settings saved successfully');
+                
+                // Update original values
+                widget.find('.setting-input').each((_, input) => {
+                    const $input = $(input);
+                    const settingKey = $input.closest('[setting]').attr('setting');
+                    $input.attr('data-original-value', $input.val());
+                    SettingsWidget.currentSettings[settingKey] = $input.val();
+                });
+                
+                this.#updateSaveButtonState(widget);
+            } else {
+                this.#showStatus(widget, 'error', data.message || 'Failed to save settings');
+            }
+        })
+        .catch(error => {
+            console.error('Error saving settings:', error);
+            this.#showStatus(widget, 'error', 'Failed to save settings');
+        })
+        .finally(() => {
             this.#resetSaveButton(widget);
-            
-            // Update original values
-            widget.find('.setting-input').each((_, input) => {
-                const $input = $(input);
-                $input.attr('data-original-value', $input.val());
-            });
-            
-            this.#updateSaveButtonState(widget);
-        }, 1000);
+        });
     }
 
     #resetSettings(widget) {

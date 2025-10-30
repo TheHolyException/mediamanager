@@ -1,6 +1,7 @@
 const yeti = new Yeti();
 let dashboard;
 let targetFolders = [];
+getTargetsAPI();
 
 const settings = [
     {
@@ -153,12 +154,46 @@ function deleteAllDownloadsAPI(onSuccess, onError) {
     });
 }
 
+function getTargetsAPI() {
+    $.ajax({
+        url: '/api/targets',
+        method: 'GET',
+        success: function(response) {
+            targetFolders = response;
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to get targets:', error);
+            const errorMessage = handleAPIError(xhr, 'Failed to get targets');
+            if (onError) onError(errorMessage);
+        }
+    });
+}
+
+function getSystemInfoAPI() {
+    $.ajax({
+        url: '/api/system',
+        method: 'GET',
+        success: function(response) {
+            StatisticsWidget.updateStatistics(response);
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to get system info:', error);
+            const errorMessage = handleAPIError(xhr, 'Failed to get system info');
+            if (onError) onError(errorMessage);
+        }
+    })
+}
+
 function initUI() {
     // Initialize tab navigation - TabBar constructor initializes itself
     const tabNavigation = new TabBar($('.embeded-widget-toolbar'), $('.embeded-widget'), true, {
         downloads: function () { $('.embeded-widget').html(new DownloadsWidget().createContent()); },
         settings: function () { $('.embeded-widget').html(new SettingsWidget().createContent()); },
-        statistics: function () { $('.embeded-widget').html(new StatisticsWidget().createContent()); },
+        statistics: function () { 
+            $('.embeded-widget').html(new StatisticsWidget().createContent()); 
+            // Trigger immediate system info request when statistics tab is opened
+            getSystemInfoAPI();
+        },
         subscriptions: function () { $('.embeded-widget').html(new SubscriptionsWidget().createContent()); },
     });
     // TabBar instance stored for potential future use
@@ -329,23 +364,6 @@ function addRemoveButtonToWidget(widget){
 
 function onWSResponseDefault(cmd, content) {
     switch (cmd) {
-        case "systemInfo":
-            StatisticsWidget.updateStatistics(content);
-            break;
-        /* case "syn": // Acknowledge data sync
-            for (i = 0; i < content.data.length; i++) {
-                let entry = content.data[i];
-                DownloadsWidget.addDownloaderItem(entry);
-            }
-            break; */
-        case "targetFolders":
-            targetFolders = content.targets;
-            break;
-        /* case "del":
-            indexes.delete(content.uuid);
-            document.getElementById(content.uuid).remove();
-            break;
-            break;*/
         case "setting":
             SettingsWidget.updateSettings(content.settings);
 

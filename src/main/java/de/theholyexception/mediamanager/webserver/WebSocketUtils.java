@@ -4,7 +4,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.api.WebServer;
-import de.theholyexception.mediamanager.models.TableItemDTO;
+import de.theholyexception.mediamanager.models.DownloadTask;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
@@ -142,8 +142,8 @@ public class WebSocketUtils {
         }
     }
 
-    public static void deleteObjectToAll(List<TableItemDTO> objects) {
-        for (TableItemDTO object : objects) {
+    public static void deleteObjectToAll(List<DownloadTask> objects) {
+        for (DownloadTask object : objects) {
             deleteBuffer.add(object.getUuid().toString());
         }
     }
@@ -171,15 +171,15 @@ public class WebSocketUtils {
         packet.put("cmd", cmd);
         packet.put("targetSystem", targetSystem.toString());
         packet.put("content", content);
-        if (ctx != null) // Broadcast when target websocket is null
-            ctx.send(packet.toJSONString());
-        else {
-            WebServer server = MediaManager.getInstance().getDependencyInjector().resolve(WebServer.class);
-            for (var ctx2 : server.getActiveConnections()) {
-                sendPacket(cmd, targetSystem, content, ctx2);
-            }
-        }
-    }
+		if (ctx != null) // Broadcast when target websocket is null
+			ctx.send(packet.toJSONString());
+		else {
+			WebServer server = MediaManager.getInstance().getDependencyInjector().resolve(WebServer.class);
+			for (var ctx2 : server.getActiveConnections()) {
+				sendPacket(cmd, targetSystem, content, ctx2);
+			}
+		}
+	}
 
     public static void sendWebsSocketResponse(WsContext ctx, WebSocketResponse response, TargetSystem targetSystem, String sourceCommand) {
         if (sourceCommand != null) response.getResponse().set("sourceCommand", sourceCommand);

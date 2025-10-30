@@ -18,7 +18,7 @@ public abstract class Handler {
     protected JSONObjectContainer handlerConfiguration;
 
     @Getter
-    private final TargetSystem targetSystem;
+    private TargetSystem targetSystem;
 
     @DIInject
     protected TomlParseResult config;
@@ -31,6 +31,7 @@ public abstract class Handler {
     protected Handler(TargetSystem targetSystem) {
         this.targetSystem = targetSystem;
     }
+    protected Handler() {}
 
     /**
      * Processes an incoming command for this handler's target system.
@@ -39,7 +40,7 @@ public abstract class Handler {
      * @param command The command to process
      * @param content Additional command parameters and data
      */
-    public abstract void handleCommand(WsContext ctx, String command, JSONObjectContainer content);
+    public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {}
 
     /**
      * Loads and initializes configurations specific to this handler.
@@ -53,7 +54,7 @@ public abstract class Handler {
      * This method is called after all configurations have been loaded.
      * Subclasses must implement this method to perform their specific initialization.
      */
-    public abstract void initialize();
+    public void initialize() {}
 
     /**
      * Registers API endpoints for this handler.
