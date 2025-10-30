@@ -519,7 +519,7 @@ function createModernSourceInput() {
         if (targetFolderSelect.length > 0) {
             let selection = targetFolderSelect.val();
             sessionStorage.setItem('addDownloadDialog_targetFolder', selection);
-            sendPacket("requestSubfolders", "default", { "selection": selection });
+            fetchSubfolders(selection, content.find('.subfolder.download'));
             let subfolderSelection = content.find('.subfolder.download');
             subfolderSelection.empty();
             subfolderSelection.val('');
@@ -533,7 +533,7 @@ function createModernSourceInput() {
         // Save selection to session storage
         sessionStorage.setItem('addDownloadDialog_targetFolder', selection);
         
-        sendPacket("requestSubfolders", "default", { "selection": selection });
+        fetchSubfolders(selection, content.find('.subfolder.download'));
         let subfolderSelection = content.find('.subfolder.download');
         subfolderSelection.empty();
         subfolderSelection.val('');
@@ -624,10 +624,49 @@ function onTargetSelection() {
     // Save selection to session storage
     sessionStorage.setItem('addDownloadDialog_targetFolder', selection);
     
-    sendPacket("requestSubfolders", "default", { "selection": selection })
+    fetchSubfolders(selection, $('.subfolder.download'));
     let subfolderSelection = $('.subfolder.download');
     subfolderSelection.empty();
     subfolderSelection.val('');
+}
+
+/**
+ * Fetches subfolders from the REST API
+ * @param {string} targetPath - The target path to get subfolders for
+ * @param {jQuery} $subfolderElement - The jQuery element to populate with options
+ */
+function fetchSubfolders(targetPath, $subfolderElement) {
+    if (!targetPath) return;
+    
+    // Clear existing options
+    $subfolderElement.empty();
+    $subfolderElement.val('');
+    
+    // Make REST API call
+    $.ajax({
+        url: `/api/subfolders/${encodeURIComponent(targetPath)}`,
+        method: 'GET',
+        success: function(subfolders) {
+            // Add empty option first
+            $subfolderElement.append($('<option>'));
+            
+            // Add each subfolder as an option
+            for (let folder of subfolders) {
+                let option = $('<option>');
+                option.attr('value', folder);
+                option.text(folder);
+                $subfolderElement.append(option);
+            }
+        },
+        error: function(xhr, status, error) {
+            console.warn('Failed to fetch subfolders:', error);
+            
+            // Only show error popup for actual errors (not 204 No Content)
+            if (xhr.status !== 204) {
+                handleAPIError(xhr, 'Failed to load subfolders');
+            }
+        }
+    });
 }
 
 // Make sure the function is available when the document is ready

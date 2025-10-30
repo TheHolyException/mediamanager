@@ -17,6 +17,12 @@ import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.*;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import io.javalin.Javalin;
+import io.javalin.http.Context;
+import io.javalin.openapi.HttpMethod;
+import io.javalin.openapi.OpenApi;
+import io.javalin.openapi.OpenApiParam;
+import io.javalin.openapi.OpenApiResponse;
 import io.javalin.websocket.WsContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -224,11 +230,7 @@ public class DefaultHandler extends Handler {
     public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {
         switch (command) {
             case "syn" -> cmdSyncData(ctx);
-            case "put" -> cmdPutData(ctx, content);
-            case "del" -> cmdDelete(content);
-            case "del-all" -> cmdDeleteAll(ctx);
             case "setting" -> cmdChangeSetting(ctx, content);
-            case "requestSubfolders" -> cmdRequestSubFolders(ctx, content);
             case "testDelay" -> {
                 log.debug("Test delay");
                 Utils.sleep(5000);
@@ -264,71 +266,7 @@ public class DefaultHandler extends Handler {
         sendTargetFolders(ctx);
     }
 
-    /**
-     * Handles the 'put' command to add new download items to the queue.
-     * Processes each item in the provided list and schedules downloads.
-     *
-     * @param ctx The WebSocket connection that sent the command
-     * @param content JSON data containing an array of download items to add
-     */
-    protected void cmdPutData(WsContext ctx, JSONObjectContainer content) {
-        for (Object data : content.getArrayContainer("list").getRaw()) {
-            JSONObjectContainer item = (JSONObjectContainer) JSONReader.readString(data.toString());
-            try {
-                scheduleDownload(ctx, item);
-            } catch (WebSocketResponseException ex) {
-                WebSocketUtils.sendWebsSocketResponse(ctx, ex.getResponse(), TargetSystem.DEFAULT, "put");
-            }
-        }
-    }
 
-    /**
-     * Handles the 'del' command to remove a download from the queue.
-     * 
-     * @param content JSON data containing the UUID of the download to remove
-     * @throws WebSocketResponseException if the download ID is invalid or removal fails
-     */
-    private void cmdDelete(JSONObjectContainer content) {
-        UUID uuid = UUID.fromString(content.get("uuid", String.class));
-
-        List<TableItemDTO> toDelete = new ArrayList<>();
-        TableItemDTO item = urls.get(uuid);
-        if (item == null)
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to find object, is it already deleted?"));
-
-        WebSocketResponse response = deleteObject(item, toDelete);
-        if (response != null)
-            throw new WebSocketResponseException(response);
-
-        // Skip if nothing to delete
-        if (toDelete.isEmpty())
-            return;
-
-        deleteObjectToAll(toDelete);
-        urls.remove(uuid);
-    }
-
-    /**
-     * Handles the 'del-all' command to clear all downloads from the queue.
-     * 
-     * @param ctx The WebSocket connection that sent the command
-     */
-    private void cmdDeleteAll(WsContext ctx) {
-        List<TableItemDTO> toDelete = new ArrayList<>();
-        for (TableItemDTO value : new HashMap<>(urls).values()) {
-            WebSocketResponse response = deleteObject(value, toDelete);
-            if (response != null)
-                WebSocketUtils.sendWebsSocketResponse(ctx, response, TargetSystem.DEFAULT, "del-all");
-        }
-
-        // Skip if nothing to delete
-        if (toDelete.isEmpty())
-            return;
-
-        deleteObjectToAll(toDelete);
-        for (TableItemDTO tableItemDTO : toDelete)
-            urls.remove(tableItemDTO.getUuid());
-    }
 
     /**
      * Handles the 'setting' command to update application settings.
@@ -355,33 +293,6 @@ public class DefaultHandler extends Handler {
             }
         }
         sendSettings(null);
-    }
-
-    /**
-     * Handles the 'requestSubfolders' command to retrieve subfolders for a given target.
-     * 
-     * @param ctx The WebSocket connection to send the subfolder list to
-     * @param content JSON data containing the target to scan for subfolders
-     */
-    @SuppressWarnings("unchecked")
-    private void cmdRequestSubFolders(WsContext ctx, JSONObjectContainer content) {
-        String targetPath = content.get("selection", String.class);
-        Target target = targets.get(targetPath.split("/")[0]);
-
-        if (!target.subFolders())
-            return;
-
-        JSONObject response = new JSONObject();
-        JSONArray array = new JSONArray();
-        File subFolder = new File(target.path());
-        if (subFolder.listFiles() != null)
-            array.addAll(Arrays.stream(subFolder.listFiles())
-                    .filter(File::isDirectory)
-                    .map(File::getName)
-                    .toList());
-        response.put("subfolders", array);
-
-        sendPacket("requestSubfoldersResponse", TargetSystem.DEFAULT, response, ctx);
     }
     // endregion commands
 
@@ -956,5 +867,235 @@ public class DefaultHandler extends Handler {
             return hours + "h" + (minutes > 0 ? " " + minutes + "m" : "");
         }
     }
+
+
+    /**
+     * Internal method for other handlers to schedule downloads directly.
+     * This bypasses WebSocket/REST API layers for internal Java-to-Java communication.
+     * 
+     * @param downloadItems List of download items to schedule
+     */
+    public void scheduleDownloads(List<JSONObjectContainer> downloadItems) {
+        for (JSONObjectContainer item : downloadItems) {
+            try {
+                scheduleDownload(null, item); // null context since this is internal
+            } catch (WebSocketResponseException ex) {
+                log.warn("Failed to schedule internal download: {}", ex.getMessage());
+            }
+        }
+    }
+
+    //region OpenAPI
+    @Override
+    public void registerAPI(Javalin app) {
+        app.get("/api/subfolders/{target}", this::getSubfoldersRequest);
+        app.post("/api/downloads", this::addDownloadsRequest);
+        app.delete("/api/downloads/{uuid}", this::deleteDownloadRequest);
+        app.delete("/api/downloads", this::deleteAllDownloadsRequest);
+    }
+
+    @OpenApi(
+        summary = "Gets the subfolders for the requested target",
+        operationId = "getSubfolders",
+        path = "/api/subfolders/{target}",
+        methods = HttpMethod.GET,
+        pathParams = {
+            @OpenApiParam(name = "target", description = "The target to get the subfolders for", required = true)
+        },
+        responses = {
+            @OpenApiResponse(status = "200", description = "Success"),
+            @OpenApiResponse(status = "204", description = "No Subfolders"),
+            @OpenApiResponse(status = "404", description = "Target not found")
+        }
+    )
+    private void getSubfoldersRequest(Context ctx) {
+        String targetString = ctx.pathParam("target");
+        Target target = targets.get(targetString.split("/")[0]);
+
+        if (target == null) {
+            ctx.status(404);
+            return;
+        }
+
+        if (!target.subFolders()) {
+            ctx.status(204);
+            return;
+        }
+
+        File folder = new File(target.path());
+        File[] folders = folder.listFiles();
+        if (folders == null) {
+            ctx.status(204);
+            return;
+        }
+
+        ctx.json(Arrays.stream(folders)
+            .filter(File::isDirectory)
+            .map(File::getName)
+            .toList());
+    }
+
+
+    /**
+     * REST API endpoint to add new download items to the queue.
+     * Processes each item in the provided list and schedules downloads.
+     */
+    @OpenApi(
+        summary = "Add new download items to the queue",
+        operationId = "addDownloads",
+        path = "/api/downloads",
+        methods = HttpMethod.POST,
+        responses = {
+            @OpenApiResponse(status = "200", description = "Downloads added successfully"),
+            @OpenApiResponse(status = "400", description = "Invalid request data"),
+            @OpenApiResponse(status = "500", description = "Server error")
+        }
+    )
+    public void addDownloadsRequest(Context ctx) {
+        try {
+            JSONObjectContainer requestData = (JSONObjectContainer) JSONReader.readString(ctx.body());
+            
+            for (Object data : requestData.getArrayContainer("list").getRaw()) {
+                JSONObjectContainer item = (JSONObjectContainer) JSONReader.readString(data.toString());
+                try {
+                    scheduleDownload(null, item); // Pass null for WebSocket context since this is REST
+                } catch (WebSocketResponseException ex) {
+                    // For REST API, return error response instead of WebSocket message
+                    ctx.status(400);
+                    ctx.json(Map.of("error", ex.getResponse()));
+                    return;
+                }
+            }
+            
+            // Return success response
+            ctx.status(200);
+            ctx.json(Map.of("status", "success", "message", "Downloads added successfully"));
+            
+        } catch (Exception ex) {
+            log.error("Failed to add downloads via REST API", ex);
+            ctx.status(500);
+            ctx.json(Map.of("error", "Internal server error: " + ex.getMessage()));
+        }
+    }
+
+    /**
+     * REST API endpoint to delete a specific download from the queue.
+     * Removes the download identified by UUID and cancels it if running.
+     */
+    @OpenApi(
+        summary = "Delete a specific download from the queue",
+        operationId = "deleteDownload",
+        path = "/api/downloads/{uuid}",
+        methods = HttpMethod.DELETE,
+        pathParams = {
+            @OpenApiParam(name = "uuid", description = "The UUID of the download to delete", required = true)
+        },
+        responses = {
+            @OpenApiResponse(status = "200", description = "Download deleted successfully"),
+            @OpenApiResponse(status = "404", description = "Download not found"),
+            @OpenApiResponse(status = "400", description = "Invalid UUID format"),
+            @OpenApiResponse(status = "500", description = "Server error")
+        }
+    )
+    public void deleteDownloadRequest(Context ctx) {
+        try {
+            String uuidStr = ctx.pathParam("uuid");
+            UUID uuid = UUID.fromString(uuidStr);
+
+            List<TableItemDTO> toDelete = new ArrayList<>();
+            TableItemDTO item = urls.get(uuid);
+            if (item == null) {
+                ctx.status(404);
+                ctx.json(Map.of("error", "Download not found"));
+                return;
+            }
+
+            WebSocketResponse response = deleteObject(item, toDelete);
+            if (response != null) {
+                ctx.status(400);
+                ctx.json(Map.of("error", response.getResponse().get("message", String.class)));
+                return;
+            }
+
+            // Skip if nothing to delete
+            if (toDelete.isEmpty()) {
+                ctx.status(200);
+                ctx.json(Map.of("status", "success", "message", "No items to delete"));
+                return;
+            }
+
+            deleteObjectToAll(toDelete);
+            urls.remove(uuid);
+
+            ctx.status(200);
+            ctx.json(Map.of("status", "success", "message", "Download deleted successfully"));
+
+        } catch (IllegalArgumentException ex) {
+            ctx.status(400);
+            ctx.json(Map.of("error", "Invalid UUID format"));
+        } catch (Exception ex) {
+            log.error("Failed to delete download via REST API", ex);
+            ctx.status(500);
+            ctx.json(Map.of("error", "Internal server error: " + ex.getMessage()));
+        }
+    }
+
+    /**
+     * REST API endpoint to delete all downloads from the queue.
+     * Removes all downloads and cancels running ones.
+     */
+    @OpenApi(
+        summary = "Delete all downloads from the queue",
+        operationId = "deleteAllDownloads",
+        path = "/api/downloads",
+        methods = HttpMethod.DELETE,
+        responses = {
+            @OpenApiResponse(status = "200", description = "All downloads deleted successfully"),
+            @OpenApiResponse(status = "500", description = "Server error")
+        }
+    )
+    public void deleteAllDownloadsRequest(Context ctx) {
+        try {
+            List<TableItemDTO> toDelete = new ArrayList<>();
+            List<String> warnings = new ArrayList<>();
+            
+            for (TableItemDTO value : new HashMap<>(urls).values()) {
+                WebSocketResponse response = deleteObject(value, toDelete);
+                if (response != null) {
+                    warnings.add("Warning for " + value.getUuid() + ": " + response.getResponse().get("message", String.class));
+                }
+            }
+
+            // Skip if nothing to delete
+            if (toDelete.isEmpty()) {
+                ctx.status(200);
+                ctx.json(Map.of("status", "success", "message", "No downloads to delete"));
+                return;
+            }
+
+            deleteObjectToAll(toDelete);
+            for (TableItemDTO tableItemDTO : toDelete) {
+                urls.remove(tableItemDTO.getUuid());
+            }
+
+            Map<String, Object> responseMap = new HashMap<>();
+            responseMap.put("status", "success");
+            responseMap.put("message", "All downloads deleted successfully");
+            responseMap.put("deletedCount", toDelete.size());
+            if (!warnings.isEmpty()) {
+                responseMap.put("warnings", warnings);
+            }
+
+            ctx.status(200);
+            ctx.json(responseMap);
+
+        } catch (Exception ex) {
+            log.error("Failed to delete all downloads via REST API", ex);
+            ctx.status(500);
+            ctx.json(Map.of("error", "Internal server error: " + ex.getMessage()));
+        }
+    }
+
+    //endregion OpenAPI
 
 }

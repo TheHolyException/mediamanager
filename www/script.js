@@ -26,6 +26,133 @@ $(document).ready(function () {
     $('.embeded-widget').html(new DownloadsWidget().createContent());
 });
 
+/**
+ * Centralized API error handler using Yeti popups
+ * @param {object} xhr - The jQuery XHR object from the failed AJAX request
+ * @param {string} defaultMessage - Default error message to show if parsing fails
+ * @param {object} options - Additional options for Yeti popup
+ */
+function handleAPIError(xhr, defaultMessage, options = {}) {
+    let errorMessage = defaultMessage || 'An error occurred';
+    
+    // Try to extract error message from response
+    try {
+        if (xhr.responseText) {
+            const errorResponse = JSON.parse(xhr.responseText);
+            errorMessage = errorResponse.error || errorMessage;
+        }
+    } catch (e) {
+        // Use default message if response parsing fails
+    }
+    
+    // Show error popup using Yeti
+    yeti.show({
+        message: errorMessage,
+        severity: 'nok',
+        time: 5000,
+        ...options // Allow overriding default options
+    });
+    
+    return errorMessage;
+}
+
+/**
+ * Centralized API success handler using Yeti popups
+ * @param {object} response - The response data from successful API call
+ * @param {string} defaultMessage - Default success message to show
+ * @param {object} options - Additional options for Yeti popup
+ */
+function handleAPISuccess(response, defaultMessage, options = {}) {
+    let successMessage = defaultMessage || 'Operation completed successfully';
+    
+    // Try to extract success message from response
+    if (response && response.message) {
+        successMessage = response.message;
+    }
+    
+    // Show success popup using Yeti
+    yeti.show({
+        message: successMessage,
+        severity: 'ok',
+        time: 3000,
+        ...options // Allow overriding default options
+    });
+    
+    return successMessage;
+}
+
+/**
+ * Adds downloads using the REST API
+ * @param {Array} downloadList - Array of download items to add
+ * @param {Function} onSuccess - Callback for successful API call
+ * @param {Function} onError - Callback for failed API call
+ */
+function addDownloadsAPI(downloadList, onSuccess, onError) {
+    $.ajax({
+        url: '/api/downloads',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            list: downloadList
+        }),
+        success: function(response) {
+            console.log('Downloads added successfully:', response);
+            handleAPISuccess(response, 'Downloads added successfully');
+            if (onSuccess) onSuccess(response);
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to add downloads:', error);
+            const errorMessage = handleAPIError(xhr, 'Failed to add downloads');
+            if (onError) onError(errorMessage);
+        }
+    });
+}
+
+/**
+ * Deletes a specific download using the REST API instead of WebSocket
+ * @param {string} uuid - UUID of the download to delete
+ * @param {Function} onSuccess - Callback for successful API call
+ * @param {Function} onError - Callback for failed API call
+ */
+function deleteDownloadAPI(uuid, onSuccess, onError) {
+    $.ajax({
+        url: `/api/downloads/${encodeURIComponent(uuid)}`,
+        method: 'DELETE',
+        success: function(response) {
+            console.log('Download deleted successfully:', response);
+            handleAPISuccess(response, 'Download deleted successfully');
+            if (onSuccess) onSuccess(response);
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to delete download:', error);
+            const errorMessage = handleAPIError(xhr, 'Failed to delete download');
+            if (onError) onError(errorMessage);
+        }
+    });
+}
+
+/**
+ * Deletes all downloads using the REST API instead of WebSocket
+ * @param {Function} onSuccess - Callback for successful API call
+ * @param {Function} onError - Callback for failed API call
+ */
+function deleteAllDownloadsAPI(onSuccess, onError) {
+    $.ajax({
+        url: '/api/downloads',
+        method: 'DELETE',
+        success: function(response) {
+            console.log('All downloads deleted successfully:', response);
+            handleAPISuccess(response, 'All downloads deleted successfully');
+            if (onSuccess) onSuccess(response);
+        },
+        error: function(xhr, status, error) {
+            console.error('Failed to delete all downloads:', error);
+            const errorMessage = handleAPIError(xhr, 'Failed to delete all downloads');
+            if (onError) onError(errorMessage);
+        }
+    });
+}
+
 function initUI() {
     // Initialize tab navigation - TabBar constructor initializes itself
     const tabNavigation = new TabBar($('.embeded-widget-toolbar'), $('.embeded-widget'), true, {
@@ -223,19 +350,6 @@ function onWSResponseDefault(cmd, content) {
             SettingsWidget.updateSettings(content.settings);
 
             break;
-        case "requestSubfoldersResponse": {
-            let subfolderSelection = $('.subfolder.download');
-            subfolderSelection.empty();
-            subfolderSelection.append($('<option>'));
-
-            for (let folder of content.subfolders) {
-                let option = $('<option>');
-                option.attr('value', folder);
-                option.text(folder);
-                subfolderSelection.append(option);
-            }
-            break;
-        }
     }
 }
 

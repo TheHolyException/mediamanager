@@ -128,7 +128,7 @@ class DownloadsWidget extends BaseWidget {
         });
 
         widgetContent.find('.delete-all-btn').click(function () {
-            sendPacket("del-all", "default");
+            deleteAllDownloadsAPI();
         });
 
         widgetContent.find('.delete-completed-btn').click(function () {
@@ -147,9 +147,7 @@ class DownloadsWidget extends BaseWidget {
             commitPacket.push(data);
         }
 
-        sendPacket("put", "default", {
-            "list": commitPacket
-        });
+        addDownloadsAPI(commitPacket);
     }
 
     static addDownloaderItem(item) {
@@ -257,9 +255,10 @@ class DownloadsWidget extends BaseWidget {
             .click(function () {
                 let data = DownloadsWidget.indexes.get(item.uuid);
                 if (data.state != "new") {
-                    sendPacket("del", "default", { "uuid": item.uuid });
+                    deleteDownloadAPI(item.uuid);
                 }
                 DownloadsWidget.indexes.delete(item.uuid);
+                $(this).closest('tr').remove();
                 DownloadsWidget.updateStatistics();
             });
 
@@ -275,9 +274,7 @@ class DownloadsWidget extends BaseWidget {
                 // Don't allow retry if disabled or for certain states
                 if ($(this).hasClass('disabled') || data.state === "new" || data.state.includes("Downloading")) return;
                 data.state = "new";
-                sendPacket("put", "default", {
-                    "list": [data]
-                });
+                addDownloadsAPI([data]);
             });
 
         // Set initial disabled state based on item state
@@ -312,9 +309,7 @@ class DownloadsWidget extends BaseWidget {
                 if ($(this).hasClass('disabled') || data.state === "new" || data.state.includes("Downloading")) return;
                 data.state = "new";
                 data.options.skipValidation = "true";
-                sendPacket("put", "default", {
-                    "list": [data]
-                });
+                addDownloadsAPI([data]);
             });
         toolbar.append(resentBtn, deleteBtn, resendSkipValidation);
         //===============================================================================

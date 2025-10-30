@@ -85,9 +85,7 @@ class SelectStreamPopup {
                     return;
                 }
 
-                sendPacket("put", "default", {
-                    "list": [data]
-                });
+                addDownloadsAPI([data]);
             },
             closePopup: true,
             displayText: "Submit"

@@ -7,6 +7,7 @@ import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.MediaManager;
+import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.handler.Handler;
 import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.util.WebSocketResponseException;
@@ -22,11 +23,11 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.tomlj.TomlParseResult;
 
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Set;
 
 @Slf4j
 public class WebServer implements DIInitializer {
@@ -42,6 +43,9 @@ public class WebServer implements DIInitializer {
 	private MediaManager mediaManager;
 	@DIInject
 	private TomlParseResult config;
+
+	@DIInject
+	private DefaultHandler defaultHandler;
 
 	@Override
 	public void initialize() {
@@ -94,6 +98,9 @@ public class WebServer implements DIInitializer {
 				log.error("WebSocket error for {}: {}", ctx.sessionId(), errorMsg);
 			});
 		});
+
+
+		mediaManager.getHandlers().values().forEach(handler -> handler.registerAPI(app));
 	}
 
 	private void handleWebsocketMessage(WsMessageContext ctx) {
@@ -163,5 +170,7 @@ public class WebServer implements DIInitializer {
 			}
 		}
 	}
+
+
 
 }

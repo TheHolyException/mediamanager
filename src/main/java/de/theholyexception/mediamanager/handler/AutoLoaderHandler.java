@@ -1,6 +1,5 @@
 package de.theholyexception.mediamanager.handler;
 
-import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
 import de.theholyexception.holyapi.di.DIInject;
@@ -569,12 +568,8 @@ public class AutoLoaderHandler extends Handler {
                     options.set("enableSeasonAndEpisodeRenaming", "true");
                     data.set("options", options.getRaw());
 
-                    JSONObjectContainer payload = new JSONObjectContainer();
-                    JSONArrayContainer list = new JSONArrayContainer();
-                    list.add(data);
-                    payload.set("list", list);
-                    log.debug("Sending payload: {}", payload);
-                    defaultHandler.cmdPutData(null, payload);
+                    log.debug("Scheduling download internally: {}", data);
+                    defaultHandler.scheduleDownloads(List.of(data));
                 });
             } catch (Exception ex) {
                 log.error("", ex);

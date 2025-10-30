@@ -3,6 +3,7 @@ package de.theholyexception.mediamanager.handler;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.mediamanager.util.TargetSystem;
+import io.javalin.Javalin;
 import io.javalin.websocket.WsContext;
 import lombok.Getter;
 import org.tomlj.TomlParseResult;
@@ -53,5 +54,12 @@ public abstract class Handler {
      * Subclasses must implement this method to perform their specific initialization.
      */
     public abstract void initialize();
+
+    /**
+     * Registers API endpoints for this handler.
+     * This method is called after all configurations have been loaded.
+     * Subclasses must implement this method to register their specific API endpoints.
+     */
+    public void registerAPI(Javalin app) {}
 
 }
