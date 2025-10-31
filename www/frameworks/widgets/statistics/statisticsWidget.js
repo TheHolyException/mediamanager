@@ -12,8 +12,10 @@ class StatisticsWidget extends BaseWidget {
     }
 
     // Static properties for managing global polling
-    static activeWidgets = new Set();
     static pollingInterval = null;
+    static intersectionObserver = null;
+    static mutationObserver = null;
+    static isPollingActive = false;
 
     createContent() {
         let widget = $(`
@@ -102,8 +104,8 @@ class StatisticsWidget extends BaseWidget {
         // Store widget instance for updates
         widget.data('widgetInstance', self);
 
-        // Register this widget for polling
-        StatisticsWidget.registerWidget(self);
+        // Initialize visibility monitoring when widget is created
+        StatisticsWidget.initializeVisibilityMonitoring();
 
         return widget.get(0);
     }
@@ -125,9 +127,6 @@ class StatisticsWidget extends BaseWidget {
         if (window.statisticsWidgetInstance === this) {
             window.statisticsWidgetInstance = null;
         }
-        
-        // Unregister this widget from polling
-        StatisticsWidget.unregisterWidget(this);
         
         super.destroy();
     }
@@ -595,28 +594,141 @@ class StatisticsWidget extends BaseWidget {
         });
     }
 
-    // Static methods for managing polling
-    static registerWidget(widget) {
-        this.activeWidgets.add(widget);
-        console.log(`Statistics widget registered. Active count: ${this.activeWidgets.size}`);
-        
-        // Start polling if this is the first widget
-        if (this.activeWidgets.size === 1 && this.pollingInterval === null) {
-            this.startPolling();
+    // Static methods for visibility-based polling management
+    static initializeVisibilityMonitoring() {
+        // Only initialize once
+        if (this.intersectionObserver && this.mutationObserver) {
+            return;
         }
-        
-        // Immediately fetch data for the new widget
-        if (typeof getSystemInfoAPI === 'function') {
-            getSystemInfoAPI();
-        }
+
+        // Set up Intersection Observer to detect when statistics widgets are visible
+        this.intersectionObserver = new IntersectionObserver((entries) => {
+            let hasVisibleWidget = false;
+            
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.target.matches('[widget-name="StatisticsWidget"]')) {
+                    console.log('Statistics widget became visible');
+                    hasVisibleWidget = true;
+                    
+                    // Immediately fetch data when widget becomes visible, but only if charts are ready
+                    const widget = $(entry.target);
+                    const widgetInstance = widget.data('widgetInstance');
+                    
+                    if (widgetInstance && widgetInstance.memoryChart && typeof getSystemInfoAPI === 'function') {
+                        // Charts are ready, fetch data immediately
+                        getSystemInfoAPI();
+                    } else {
+                        // Charts not ready yet, wait for them to initialize
+                        const checkCharts = setInterval(() => {
+                            const updatedWidgetInstance = widget.data('widgetInstance');
+                            if (updatedWidgetInstance && updatedWidgetInstance.memoryChart && typeof getSystemInfoAPI === 'function') {
+                                clearInterval(checkCharts);
+                                console.log('Charts ready, fetching initial data');
+                                getSystemInfoAPI();
+                            }
+                        }, 50);
+                        
+                        // Safety timeout to avoid infinite waiting
+                        setTimeout(() => clearInterval(checkCharts), 2000);
+                    }
+                }
+            });
+            
+            // Check if any statistics widgets are currently visible
+            this.updatePollingState();
+        }, {
+            threshold: 0.1 // Trigger when 10% of the widget is visible
+        });
+
+        // Set up Mutation Observer to watch for statistics widgets being added/removed
+        this.mutationObserver = new MutationObserver((mutations) => {
+            let shouldUpdate = false;
+            
+            mutations.forEach(mutation => {
+                // Check added nodes
+                mutation.addedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.matches && node.matches('[widget-name="StatisticsWidget"]')) {
+                            console.log('Statistics widget added to DOM');
+                            this.intersectionObserver.observe(node);
+                            shouldUpdate = true;
+                        }
+                        // Also check child nodes
+                        const statsWidgets = node.querySelectorAll && node.querySelectorAll('[widget-name="StatisticsWidget"]');
+                        if (statsWidgets && statsWidgets.length > 0) {
+                            statsWidgets.forEach(widget => {
+                                console.log('Statistics widget found in added subtree');
+                                this.intersectionObserver.observe(widget);
+                            });
+                            shouldUpdate = true;
+                        }
+                    }
+                });
+                
+                // Check removed nodes
+                mutation.removedNodes.forEach(node => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        if (node.matches && node.matches('[widget-name="StatisticsWidget"]')) {
+                            console.log('Statistics widget removed from DOM');
+                            this.intersectionObserver.unobserve(node);
+                            shouldUpdate = true;
+                        }
+                        // Also check child nodes
+                        const statsWidgets = node.querySelectorAll && node.querySelectorAll('[widget-name="StatisticsWidget"]');
+                        if (statsWidgets && statsWidgets.length > 0) {
+                            statsWidgets.forEach(widget => {
+                                console.log('Statistics widget found in removed subtree');
+                                this.intersectionObserver.unobserve(widget);
+                            });
+                            shouldUpdate = true;
+                        }
+                    }
+                });
+            });
+            
+            if (shouldUpdate) {
+                this.updatePollingState();
+            }
+        });
+
+        // Start observing the document body for changes
+        this.mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        // Observe any existing statistics widgets
+        const existingWidgets = document.querySelectorAll('[widget-name="StatisticsWidget"]');
+        existingWidgets.forEach(widget => {
+            this.intersectionObserver.observe(widget);
+        });
+
+        // Initial polling state update
+        this.updatePollingState();
     }
 
-    static unregisterWidget(widget) {
-        this.activeWidgets.delete(widget);
-        console.log(`Statistics widget unregistered. Active count: ${this.activeWidgets.size}`);
+    static updatePollingState() {
+        // Check if any statistics widgets are currently visible
+        const allStatsWidgets = document.querySelectorAll('[widget-name="StatisticsWidget"]');
+        let hasVisibleWidget = false;
         
-        // Stop polling if no widgets are left
-        if (this.activeWidgets.size === 0 && this.pollingInterval !== null) {
+        allStatsWidgets.forEach(widget => {
+            const rect = widget.getBoundingClientRect();
+            const isVisible = rect.top < window.innerHeight && 
+                            rect.bottom > 0 && 
+                            rect.left < window.innerWidth && 
+                            rect.right > 0 &&
+                            widget.offsetParent !== null; // Check if element is not hidden
+            
+            if (isVisible) {
+                hasVisibleWidget = true;
+            }
+        });
+
+        // Start or stop polling based on visibility
+        if (hasVisibleWidget && !this.isPollingActive) {
+            this.startPolling();
+        } else if (!hasVisibleWidget && this.isPollingActive) {
             this.stopPolling();
         }
     }
@@ -624,7 +736,8 @@ class StatisticsWidget extends BaseWidget {
     static startPolling() {
         if (this.pollingInterval !== null) return;
         
-        console.log('Starting system info polling');
+        console.log('Starting system info polling - statistics widget is visible');
+        this.isPollingActive = true;
         this.pollingInterval = setInterval(() => {
             if (typeof getSystemInfoAPI === 'function') {
                 getSystemInfoAPI();
@@ -635,7 +748,8 @@ class StatisticsWidget extends BaseWidget {
     static stopPolling() {
         if (this.pollingInterval === null) return;
         
-        console.log('Stopping system info polling');
+        console.log('Stopping system info polling - no visible statistics widgets');
+        this.isPollingActive = false;
         clearInterval(this.pollingInterval);
         this.pollingInterval = null;
     }

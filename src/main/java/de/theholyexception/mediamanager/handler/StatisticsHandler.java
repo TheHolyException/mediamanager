@@ -95,7 +95,28 @@ public class StatisticsHandler extends Handler {
 		}
 	)
 	private void getSystemInformation(Context ctx) {
-		ctx.json(formatSystemInfo());
+		// Enable gzip compression for this response
+		ctx.header("Content-Encoding", "gzip");
+		ctx.header("Content-Type", "application/json");
+		
+		// Get the JSON data
+		JSONObject systemInfo = formatSystemInfo();
+		String jsonString = systemInfo.toJSONString();
+		
+		try {
+			// Compress the JSON with gzip
+			java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+			java.util.zip.GZIPOutputStream gzipOut = new java.util.zip.GZIPOutputStream(baos);
+			gzipOut.write(jsonString.getBytes("UTF-8"));
+			gzipOut.close();
+			
+			// Send compressed response
+			ctx.result(baos.toByteArray());
+		} catch (Exception e) {
+			log.error("Failed to compress system info response", e);
+			// Fallback to uncompressed
+			ctx.json(systemInfo);
+		}
 	}
 
 	/**

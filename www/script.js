@@ -173,6 +173,9 @@ function getSystemInfoAPI() {
     $.ajax({
         url: '/api/system',
         method: 'GET',
+        headers: {
+            'Accept-Encoding': 'gzip, deflate'
+        },
         success: function(response) {
             StatisticsWidget.updateStatistics(response);
         },
