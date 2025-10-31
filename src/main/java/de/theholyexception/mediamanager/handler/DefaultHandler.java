@@ -90,10 +90,10 @@ public class DefaultHandler extends Handler {
                     @Override
                     public void run() {
                         urls.forEach((uuid, downloadTask) -> {
-                            if (downloadTask.getJsonObject().get("state", String.class).toLowerCase().startsWith("error")
+                            if (downloadTask.getContent().get("state", String.class).toLowerCase().startsWith("error")
                                 && System.currentTimeMillis()- downloadTask.getLastUpdate() < value*60_000) {
                                 log.info("Rescheduling download for {}", downloadTask.getUrl());
-                                scheduleDownload(downloadTask.getJsonObject());
+                                scheduleDownload(downloadTask.getContent());
                             }
                         });
                     }
@@ -169,7 +169,7 @@ public class DefaultHandler extends Handler {
     private void cmdSyncData(WsContext ctx) {
         List<JSONObjectContainer> jsonData = urls.values().stream()
                 .sorted(DownloadTask::compareTo)
-                .map(DownloadTask::getJsonObject)
+                .map(DownloadTask::getContent)
                 .toList();
         sendObject(ctx, jsonData.stream().map(JSONObjectContainer::getRaw).toList());
         sendSettings(ctx);

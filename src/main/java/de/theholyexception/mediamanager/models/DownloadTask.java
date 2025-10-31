@@ -26,10 +26,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -38,14 +35,17 @@ import static de.theholyexception.mediamanager.webserver.WebSocketUtils.changeOb
 @Slf4j
 public class DownloadTask implements Comparable<DownloadTask> {
 
-    private static final AtomicInteger counter = new AtomicInteger(0);
-    private static File debugLogFolder = new File("./debug-logs");
+    private static final String PACKET_KEY_STATE = "state";
+    private static final AtomicInteger SORT_INDEX_COUNTER = new AtomicInteger(0);
+    private static final File DEBUG_LOG_FOLDER = new File("./debug-logs");
+
     private static DefaultHandler defaultHandler;
     private static AutoLoaderHandler autoLoaderHandler;
+
     @Getter
     private static ExecutorHandler downloadHandler;
+    @Getter
     private static ExecutorHandler titleResolveHandler;
-
 
     private static boolean initialized = false;
 
@@ -61,8 +61,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private static boolean enableDebugFileLogging = false;
 
     static {
-        if (!debugLogFolder.exists()) {
-            debugLogFolder.mkdirs();
+        if (!DEBUG_LOG_FOLDER.exists() && !DEBUG_LOG_FOLDER.mkdirs()) {
+            throw new IllegalStateException("Failed to create debug log folder");
         }
     }
 
@@ -106,7 +106,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
     @Getter
     private final UUID uuid;
     @Getter
-    private final JSONObjectContainer jsonObject;
+    private final JSONObjectContainer content;
     @Getter
     private ExecutorTask downloadExecutorTask;
     @Getter
@@ -119,7 +119,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private boolean isFailed = false;
     @Getter
     private boolean validationError = false;
-    private final int sortIndex = counter.getAndIncrement();
+    private final int sortIndex = SORT_INDEX_COUNTER.getAndIncrement();
     @Getter
     private long lastUpdate;
     @Setter
@@ -136,8 +136,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
         if (!initialized)
             throw new IllegalStateException("DownloadTask is not initialized");
 
-        jsonObject = content;
-        setState(content.get("state", String.class));
+        this.content = content;
+        setState(content.get(PACKET_KEY_STATE, String.class));
         url = content.get("url", String.class);
         uuid = UUID.fromString(content.get("uuid", String.class));
         lastUpdate = System.currentTimeMillis();
@@ -145,7 +145,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
         if (url == null || url.isEmpty())
             throw new IllegalArgumentException("URL is null or empty");
 
-        WebSocketUtils.changeObject(content, "state", "Committed", "sortIndex", sortIndex);
+        WebSocketUtils.changeObject(content, PACKET_KEY_STATE, "Committed", "sortIndex", sortIndex);
 
         autoloaderData = content.getObjectContainer("autoloaderData");
         JSONObject options = content.getObjectContainer("options").getRaw();
@@ -166,7 +166,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
     public void resolveTitle() {
         String title = downloader.resolveTitle();
-        changeObject(jsonObject, "title", title);
+        changeObject(content, "title", title);
     }
 
     public void start(int threads) {
@@ -175,7 +175,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
                 return;
             String title = downloader.resolveTitle();
             if (title != null)
-                changeObject(jsonObject, "title", title);
+                changeObject(content, "title", title);
         });
 
         downloadExecutorTask = new ExecutorTask(() -> download(threads));
@@ -308,16 +308,6 @@ public class DownloadTask implements Comparable<DownloadTask> {
         }
     }
 
-    /*
-        a negative integer, zero, or a positive integer as this object is less than, equal to, or greater than the specified object
-     */
-    @Override
-    public int compareTo(DownloadTask o) {
-        Long l1 = (long) sortIndex;
-        Long l2 = (long) o.sortIndex;
-        return l1.compareTo(l2);
-    }
-
     public void update() {
         lastUpdate = System.currentTimeMillis();
     }
@@ -364,7 +354,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
                     String line = s.split("\n")[0];
                     if (line.length() > 50)
                         s = s.substring(0, 50) + "\n" + s.substring(50);
-                    changeObject(jsonObject, "state", "Error: " + s);
+                    changeObject(content, PACKET_KEY_STATE, "Error: " + s);
                     update();
                 }
             }
@@ -372,7 +362,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             @Override
             public void onLogFile(String fileName, byte[] bytes) {
                 if (enableDebugFileLogging) {
-                    try (FileOutputStream fos = new FileOutputStream(new File(debugLogFolder, fileName))) {
+                    try (FileOutputStream fos = new FileOutputStream(new File(DEBUG_LOG_FOLDER, fileName))) {
                         fos.write(bytes);
                     } catch (IOException e) {
                         log.error("Failed to write log file", e);
@@ -388,7 +378,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
                 }
                 if (isRunning && !isDeleted) {
                     isFailed = true;
-                    changeObject(jsonObject, "state", "Error: " + error.getMessage());
+                    changeObject(content, PACKET_KEY_STATE, "Error: " + error.getMessage());
                 }
             }
         };
@@ -435,7 +425,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     private void setState(String state) {
-        changeObject(jsonObject, "state", state);
+        changeObject(content, PACKET_KEY_STATE, state);
         update();
     }
 
@@ -447,14 +437,14 @@ public class DownloadTask implements Comparable<DownloadTask> {
      * @throws WebSocketResponseException if the target path is invalid or inaccessible
      */
     private File resolveOutputFolder() {
-        String targetPath = jsonObject.get("target", String.class);
+        String targetPath = content.get("target", String.class);
 
         if (target == null || target.path() == null)
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid Target " + jsonObject.get("target", String.class)));
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid Target " + content.get("target", String.class)));
 
         String subDirectory = targetPath.replace(targetPath.split("/")[0] + "/", "");
         if (target.subFolders() && subDirectory.isEmpty()) {
-            String aniworldUrl = jsonObject.get("aniworld-url", String.class);
+            String aniworldUrl = content.get("aniworld-url", String.class);
             if (aniworldUrl != null && !aniworldUrl.isEmpty()) {
                 subDirectory = AniworldHelper.getAnimeTitle(aniworldUrl);
                 throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Subdirectory not specified, using " + subDirectory + " instead"));
@@ -477,12 +467,32 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     public void resolveTarget() {
-        String targetPath = jsonObject.get("target", String.class);
+        String targetPath = content.get("target", String.class);
 		log.debug("Resolving target: {}", targetPath.split("/")[0]);
         target = defaultHandler.getTargets().get(targetPath.split("/")[0]);
         if (target == null) {
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid Target " + jsonObject.get("target", String.class)));
+            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid Target " + content.get("target", String.class)));
         }
 		log.debug("Target resolved!: {}", target);
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        DownloadTask that = (DownloadTask) o;
+        return sortIndex == that.sortIndex;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(sortIndex);
+    }
+
+    @Override
+    public int compareTo(DownloadTask o) {
+        Long l1 = (long) sortIndex;
+        Long l2 = (long) o.sortIndex;
+        return l1.compareTo(l2);
     }
 }
