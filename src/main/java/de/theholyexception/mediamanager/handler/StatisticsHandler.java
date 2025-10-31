@@ -89,6 +89,7 @@ public class StatisticsHandler extends Handler {
 		summary = "Gets the system statistics and information",
 		operationId = "getSystemInformation",
 		path = "/api/system",
+		tags = {"Statistics"},
 		methods = HttpMethod.GET,
 		responses = {
 			@OpenApiResponse(status = "200", description = "System information")

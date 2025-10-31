@@ -398,7 +398,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
             if (etaSeconds > 0 && etaSeconds < 86400) { // Cap at 24 hours
                 String etaText = formatETA(etaSeconds);
-                progressText += " (ETA: " + etaText + ")";
+                progressText += "[\uD83C\uDDE9\uD83C\uDDEA](ETA: " + etaText + ")";
             }
         }
         return progressText;

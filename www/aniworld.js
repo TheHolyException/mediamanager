@@ -18,12 +18,35 @@ class Aniworld{
 
         Aniworld.setAniworldStatusColor("WAIT");
         Aniworld.stateLabel.text("Processing...");
-        sendPacket("resolve", "aniworld", {
-            url: links,
-            language: languageID
-        });
-
+        
         Aniworld.isResolving = true;
+        
+        const params = new URLSearchParams({
+            url: links,
+            language: languageID.toString()
+        });
+        
+        fetch(`/api/aniworld/resolve?${params}`, {
+            method: 'GET'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                Aniworld.stateLabel.text(data.error);
+                Aniworld.setAniworldStatusColor("ERROR");
+            } else {
+                Aniworld.resolvedLinks = data.links.join(';');
+                Aniworld.stateLabel.text("Resolved " + data.links.length + " Links");
+                Aniworld.setAniworldStatusColor("OK");
+            }
+            Aniworld.isResolving = false;
+        })
+        .catch(error => {
+            console.error('Error resolving anime links:', error);
+            Aniworld.stateLabel.text("Error: " + error.message);
+            Aniworld.setAniworldStatusColor("ERROR");
+            Aniworld.isResolving = false;
+        });
     }
 
     static resetResolvedLinks() {
@@ -36,25 +59,4 @@ class Aniworld{
         Aniworld.stateLabel.attr('state', state);
     }
 
-    static onWSResponseAniworldParser(cmd, content) {
-        let responseText = "";
-    
-        switch (cmd) {
-            case "links":
-                if (content.error != undefined) {
-                    responseText = content.error;
-                    Aniworld.setAniworldStatusColor("ERROR");
-                    break;
-                }
-
-                let links = content.links;
-                Aniworld.resolvedLinks = links.join(';');
-                responseText = "Resolved " + links.length + " Links"
-                Aniworld.setAniworldStatusColor("OK");
-                Aniworld.isResolving = false;
-                break;
-        }
-    
-        Aniworld.stateLabel.text(responseText);
-    }
 }

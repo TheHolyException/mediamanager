@@ -1,21 +1,20 @@
 package de.theholyexception.mediamanager.handler;
 
-import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.WebSocketResponseException;
-import de.theholyexception.mediamanager.webserver.WebSocketResponse;
-import io.javalin.websocket.WsContext;
+import io.javalin.Javalin;
+import io.javalin.http.Context;
+import io.javalin.openapi.HttpMethod;
+import io.javalin.openapi.OpenApi;
+import io.javalin.openapi.OpenApiParam;
+import io.javalin.openapi.OpenApiResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import static de.theholyexception.mediamanager.webserver.WebSocketUtils.sendPacket;
+import java.util.Map;
 
 /**
  * Handler for resolving anime episode links from Aniworld.
@@ -41,76 +40,99 @@ public class AniworldHandler extends Handler {
         // No initialization needed
     }
 
-    /**
-     * Processes incoming WebSocket commands for the Aniworld handler.
-     * Routes commands to the appropriate handler method based on the command type.
-     *
-     * @param ctx The WebSocket connection that received the command
-     * @param command The command to execute (currently only "resolve" is supported)
-     * @param content JSON data associated with the command
-     * @throws WebSocketResponseException if the command is invalid or processing fails
-     */
     @Override
-    public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {
-        switch (command) {
-            case "resolve" -> cmdResolve(ctx, content);
-            default ->
-                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
+    public void registerAPI(Javalin app) {
+        app.get("/api/aniworld/resolve", this::resolveAnimeRequest);
+    }
+
+    /**
+     * REST API endpoint to resolve anime episode links.
+     * Expects query parameters 'language' and 'url'.
+     *
+     * @param ctx The HTTP context
+     */
+    @OpenApi(
+            summary = "Resolve anime episode links",
+            description = "Resolves video URLs for anime episodes from Aniworld URLs",
+            operationId = "resolveAnimeLinks",
+            path = "/api/aniworld/resolve",
+            tags = {"Aniworld"},
+            methods = HttpMethod.GET,
+            queryParams = {
+                    @OpenApiParam(name = "url", description = "The Aniworld URL to resolve", required = true),
+                    @OpenApiParam(name = "language", description = "Language ID to filter episodes", required = true)
+               },
+            responses = {
+                    @OpenApiResponse(status = "200", description = "Successfully resolved episode links"),
+                    @OpenApiResponse(status = "400", description = "Invalid request data"),
+                    @OpenApiResponse(status = "500", description = "Server error")
+            }
+    )
+    private void resolveAnimeRequest(Context ctx) {
+        try {
+            String url = ctx.queryParam("url");
+            String languageStr = ctx.queryParam("language");
+            
+            if (url == null || languageStr == null) {
+                ctx.status(400).json(Map.of("error", "Missing required parameters: url and language"));
+                return;
+            }
+
+            int language;
+            try {
+                language = Integer.parseInt(languageStr);
+            } catch (NumberFormatException e) {
+                ctx.status(400).json(Map.of("error", "Invalid language ID format"));
+                return;
+            }
+
+            List<String> links = resolveAnimeLinks(language, url);
+            ctx.json(Map.of("links", links));
+        } catch (Exception ex) {
+            log.error("Failed to resolve anime via REST API", ex);
+            ctx.status(500).json(Map.of("error", ex.getMessage()));
         }
     }
 
     /**
-     * Handles the 'resolve' command to retrieve video URLs for anime episodes.
-     * Supports resolving both individual seasons and entire series.
+     * Core logic to resolve anime episode links.
+     * Extracted from cmdResolve to be reusable for both WebSocket and REST API.
      *
-     * @param ctx The WebSocket connection to send the results to
-     * @param content JSON data containing the resolution parameters:
-     *                - language: The language ID to filter episodes
-     *                - url: The Aniworld URL to resolve (can be a series or season URL)
-     * @throws WebSocketResponseException if resolution fails or invalid parameters are provided
+     * @param language The language ID to filter episodes
+     * @param url The Aniworld URL to resolve
+     * @return List of resolved video URLs
      */
-    @SuppressWarnings("unchecked")
-    private void cmdResolve(WsContext ctx, JSONObjectContainer content) {
-        try {
-            int language = Integer.parseInt(content.get("language", String.class));
-            String url = content.get("url", String.class);
+    private List<String> resolveAnimeLinks(int language, String url) {
+        List<String> links = new ArrayList<>();
+        List<Season> seasonList;
+        
+        if (!AniworldHelper.isSeasonLink(url)) {
+            seasonList = AniworldHelper.getSeasons(url);
+        } else {
+            String[] urlSeg = url.split("/");
+            String selector = urlSeg[urlSeg.length-1];
 
-            List<String> links = new ArrayList<>();
-            List<Season> seasonList;
-            if (!AniworldHelper.isSeasonLink(url)) {
-                seasonList = AniworldHelper.getSeasons(url);
-            } else {
-                String[] urlSeg = url.split("/");
-                String selector = urlSeg[urlSeg.length-1];
-
-                int number = 0;
-                if (selector.contains("staffel")) {
-                    number = Integer.parseInt(selector.split("-")[1]);
-                }
-
-                seasonList = new ArrayList<>();
-                seasonList.add(AniworldHelper.getSeason(url, number));
+            int number = 0;
+            if (selector.contains("staffel")) {
+                number = Integer.parseInt(selector.split("-")[1]);
             }
 
-            seasonList.forEach(Season::loadEpisodes);
-            seasonList.forEach(s -> s.loadVideoURLs(language));
-            AniworldHelper.urlResolver.awaitGroup(1);
-            for (Season season : seasonList) {
-                for (Episode episode : season.getEpisodeList()) {
-                    if (episode.getLanguageIds().contains(language))
-                        links.add(episode.getVideoUrl());
-                }
-            }
-
-            JSONObject res = new JSONObject();
-            JSONArray ds = new JSONArray();
-            ds.addAll(links);
-            res.put("links", ds);
-            sendPacket("links", TargetSystem.ANIWORLD, res, ctx);
-        } catch (Exception ex) {
-            log.error("Failed to resolve anime", ex);
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage(ex.getMessage()));
+            seasonList = new ArrayList<>();
+            seasonList.add(AniworldHelper.getSeason(url, number));
         }
+
+        seasonList.forEach(Season::loadEpisodes);
+        seasonList.forEach(s -> s.loadVideoURLs(language));
+        AniworldHelper.urlResolver.awaitGroup(1);
+        
+        for (Season season : seasonList) {
+            for (Episode episode : season.getEpisodeList()) {
+                if (episode.getLanguageIds().contains(language))
+                    links.add(episode.getVideoUrl());
+            }
+        }
+        
+        return links;
     }
 
 }

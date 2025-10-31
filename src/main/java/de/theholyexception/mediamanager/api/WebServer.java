@@ -87,6 +87,8 @@ public class WebServer implements DIInitializer {
 			})
 			.start(webserverHost, webserverPort);
 
+		mediaManager.getHandlers().values().forEach(handler -> handler.registerAPI(app));
+
 		app.ws("/", ws -> {
 			ws.onConnect(activeConnections::add);
 			ws.onMessage(this::handleWebsocketMessage);
@@ -100,7 +102,6 @@ public class WebServer implements DIInitializer {
 		});
 
 
-		mediaManager.getHandlers().values().forEach(handler -> handler.registerAPI(app));
 	}
 
 	private void handleWebsocketMessage(WsMessageContext ctx) {
@@ -170,7 +171,5 @@ public class WebServer implements DIInitializer {
 			}
 		}
 	}
-
-
 
 }

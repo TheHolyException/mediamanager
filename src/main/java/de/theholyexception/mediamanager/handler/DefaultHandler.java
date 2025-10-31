@@ -207,7 +207,6 @@ public class DefaultHandler extends Handler {
         return null;
     }
 
-
     /**
      * Internal method for other handlers to schedule downloads directly.
      * This bypasses WebSocket/REST API layers for internal Java-to-Java communication.
@@ -241,6 +240,7 @@ public class DefaultHandler extends Handler {
         summary = "Gets the subfolders for the requested target",
         operationId = "getSubfolders",
         path = "/api/subfolders/{target}",
+        tags = {"Downloader"},
         methods = HttpMethod.GET,
         pathParams = {
             @OpenApiParam(name = "target", description = "The target to get the subfolders for", required = true)
@@ -286,6 +286,7 @@ public class DefaultHandler extends Handler {
         summary = "Add new download items to the queue",
         operationId = "addDownloads",
         path = "/api/downloads",
+        tags = {"Downloader"},
         methods = HttpMethod.POST,
         responses = {
             @OpenApiResponse(status = "200", description = "Downloads added successfully"),
@@ -328,6 +329,7 @@ public class DefaultHandler extends Handler {
         summary = "Delete a specific download from the queue",
         operationId = "deleteDownload",
         path = "/api/downloads/{uuid}",
+        tags = {"Downloader"},
         methods = HttpMethod.DELETE,
         pathParams = {
             @OpenApiParam(name = "uuid", description = "The UUID of the download to delete", required = true)
@@ -390,6 +392,7 @@ public class DefaultHandler extends Handler {
         summary = "Delete all downloads from the queue",
         operationId = "deleteAllDownloads",
         path = "/api/downloads",
+        tags = {"Downloader"},
         methods = HttpMethod.DELETE,
         responses = {
             @OpenApiResponse(status = "200", description = "All downloads deleted successfully"),
@@ -442,6 +445,7 @@ public class DefaultHandler extends Handler {
         summary = "Gets all defined Targets",
         operationId = "getTargets",
         path = "/api/targets",
+        tags = {"Downloader"},
         methods = HttpMethod.GET,
         responses = {
             @OpenApiResponse(status = "200", description = "List of targets")
@@ -462,6 +466,7 @@ public class DefaultHandler extends Handler {
         summary = "Gets current system settings",
         operationId = "getSettings", 
         path = "/api/settings",
+        tags = {"Settings"},
         methods = HttpMethod.GET,
         responses = {
             @OpenApiResponse(status = "200", description = "Current settings")
@@ -499,7 +504,8 @@ public class DefaultHandler extends Handler {
     @OpenApi(
         summary = "Updates system settings",
         operationId = "updateSettings",
-        path = "/api/settings", 
+        path = "/api/settings",
+        tags = {"Settings"},
         methods = HttpMethod.POST,
         responses = {
             @OpenApiResponse(status = "200", description = "Settings updated successfully"),
@@ -557,6 +563,7 @@ public class DefaultHandler extends Handler {
         summary = "Triggers garbage collection",
         operationId = "triggerGarbageCollection",
         path = "/api/system/gc",
+        tags = {"System"},
         methods = HttpMethod.POST,
         responses = {
             @OpenApiResponse(status = "200", description = "Garbage collection triggered successfully"),
@@ -591,6 +598,6 @@ public class DefaultHandler extends Handler {
         notification.put("timestamp", System.currentTimeMillis());
         sendPacket("data-changed", TargetSystem.DEFAULT, notification, null);
     }
-
     //endregion OpenAPI
+
 }

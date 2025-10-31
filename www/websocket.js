@@ -49,9 +49,6 @@ function connect() {
                 StatisticsWidget.onWSResponse(cmd, content);
                 SettingsWidget.onWSResponse(cmd, content);
                 break;
-            case "aniworld":
-                Aniworld.onWSResponseAniworldParser(cmd, content);
-                break;
             case "autoloader":
                 SubscriptionsWidget.onWSResponse(cmd, content);
                 SelectStreamPopup.onWSResponse(cmd, content);
