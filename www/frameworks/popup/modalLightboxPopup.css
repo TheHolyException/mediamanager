@@ -1,0 +1,146 @@
+/* ModalLightboxPopup Styles */
+
+html:has(#editor-window) {
+    overflow: hidden;
+}
+
+#editor-overlay {
+    position: fixed;
+    z-index: 99999999999999999999999;
+    inset: 0px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+#editor-window {
+    max-height: 90vh;
+    background-color: var(--darkgray);
+    padding: 25px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    margin: 10px;
+    max-width: calc(100vw - 20px);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#editor-buttons {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+#editor-buttons > button {
+    padding: 10px 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 14px;
+    font-family: inherit;
+}
+
+#editor-buttons > button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+#editor-buttons > button.primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-color: #007bff;
+}
+
+#editor-buttons > button.secondary {
+    background: linear-gradient(135deg, #6c757d, #545b62);
+    border-color: #6c757d;
+}
+
+#editor-window::-webkit-scrollbar {
+    width: 8px;
+}
+
+#editor-window::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+}
+
+#editor-window::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+#editor-window::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    #editor-overlay {
+        align-items: stretch;
+        padding: 10px;
+    }
+    
+    #editor-window {
+        margin: 0;
+        padding: 20px;
+        border-radius: 12px;
+        max-height: calc(100vh - 20px);
+        height: auto;
+        min-height: auto;
+    }
+    
+    #editor-buttons {
+        flex-direction: column-reverse;
+        gap: 10px;
+        margin-top: 16px;
+    }
+    
+    #editor-buttons > button {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 16px;
+        min-height: 44px; /* Touch target size */
+    }
+}
+
+@media (max-width: 480px) {
+    #editor-overlay {
+        padding: 5px;
+    }
+    
+    #editor-window {
+        padding: 16px;
+        gap: 12px;
+        border-radius: 8px;
+        max-height: calc(100vh - 10px);
+    }
+    
+    #editor-buttons > button {
+        padding: 14px 16px;
+        font-size: 16px;
+        font-weight: 600;
+    }
+}
+
+/* Landscape mobile optimization */
+@media (max-height: 500px) and (orientation: landscape) {
+    #editor-window {
+        max-height: calc(100vh - 10px);
+        padding: 15px;
+    }
+    
+    #editor-buttons {
+        margin-top: 10px;
+    }
+}
