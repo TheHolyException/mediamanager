@@ -213,11 +213,13 @@ function initUI() {
             saveIcon.removeClass('hidden');
             btnText.text('Save');
             $(this).attr('title', 'Save Changes');
+            $('body').addClass('grid-editing');
         } else {
             editIcon.removeClass('hidden');
             saveIcon.addClass('hidden');
             btnText.text('Edit');
             $(this).attr('title', 'Toggle Edit Mode');
+            $('body').removeClass('grid-editing');
         }
         
         dashboard.setEditMode(newEditingState)

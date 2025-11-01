@@ -309,6 +309,17 @@
         .setting-card {
             width: 48%;
         }
+        
+        .save-settings-btn {
+            min-width: 120px;
+            padding: 8px 12px;
+            font-size: 0.85em;
+        }
+        
+        .reset-settings-btn {
+            padding: 8px 12px;
+            font-size: 0.85em;
+        }
     }
 
     @container (max-width: 500px) {
@@ -320,6 +331,17 @@
 
         .settings-actions {
             justify-content: center;
+        }
+        
+        .save-settings-btn {
+            min-width: 100px;
+            padding: 8px 10px;
+            font-size: 0.8em;
+        }
+        
+        .reset-settings-btn {
+            padding: 8px 10px;
+            font-size: 0.8em;
         }
 
         .settings-container {
@@ -391,6 +413,23 @@
         .setting-input {
             padding: 8px 10px;
             font-size: 0.85em;
+        }
+        
+        .save-settings-btn {
+            min-width: 80px;
+            padding: 6px 8px;
+            font-size: 0.75em;
+            gap: 6px;
+        }
+        
+        .reset-settings-btn {
+            padding: 6px 8px;
+            font-size: 0.75em;
+            gap: 6px;
+        }
+        
+        .settings-actions {
+            gap: 8px;
         }
     }
 

@@ -542,6 +542,11 @@ body:not(:has(.toggle-input:checked)) .grid-only {
     display: none;
 }
 
+/* Hide nav-container in grid view, but show when editing */
+body.grid-view:not(.grid-editing) .nav-container {
+    display: none;
+}
+
 /* Edit button specific styling */
 .edit-save-btn {
     display: flex;
