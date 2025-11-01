@@ -52,6 +52,12 @@ public class DefaultHandler extends Handler {
     
     /** Setting for number of VOE download threads */
     private SettingProperty<Integer> spThreads;
+    
+    /** Setting for retry delay calculation formula */
+    private SettingProperty<String> spRetryDelayFormula;
+    
+    /** Setting for maximum retry delay in minutes */
+    private SettingProperty<Integer> spMaxRetryDelayMinutes;
 
     private TimerTask retryTask;
 
@@ -96,6 +102,10 @@ public class DefaultHandler extends Handler {
         spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
 
         spThreads = Settings.getSettingProperty("THREADS", 1, systemSettings);
+        
+        spRetryDelayFormula = Settings.getSettingProperty("RETRY_DELAY_FORMULA", "errorCount * errorCount * 600", systemSettings);
+        
+        spMaxRetryDelayMinutes = Settings.getSettingProperty("MAX_RETRY_DELAY_MINUTES", 1440, systemSettings);
 
         FFmpeg.setFFmpegPath(config.getString("general.ffmpeg"));
 
@@ -103,6 +113,22 @@ public class DefaultHandler extends Handler {
 
         DownloadTask.initialize(config);
         spDownloadThreads.addSubscriber(value -> DownloadTask.getDownloadHandler().updateExecutorService(Executors.newFixedThreadPool(value)));
+    }
+    
+    /**
+     * Gets the retry delay formula setting value.
+     * @return The current retry delay formula
+     */
+    public String getRetryDelayFormula() {
+        return spRetryDelayFormula.getValue();
+    }
+    
+    /**
+     * Gets the maximum retry delay in minutes setting value.
+     * @return The current maximum retry delay in minutes
+     */
+    public int getMaxRetryDelayMinutes() {
+        return spMaxRetryDelayMinutes.getValue();
     }
 
     /**
@@ -520,6 +546,16 @@ public class DefaultHandler extends Handler {
             parallelSetting.put("val", spDownloadThreads.getValue());
             settings.add(parallelSetting);
             
+            JSONObject retryFormulaSetting = new JSONObject();
+            retryFormulaSetting.put("key", "RETRY_DELAY_FORMULA");
+            retryFormulaSetting.put("val", spRetryDelayFormula.getValue());
+            settings.add(retryFormulaSetting);
+            
+            JSONObject maxRetrySetting = new JSONObject();
+            maxRetrySetting.put("key", "MAX_RETRY_DELAY_MINUTES");
+            maxRetrySetting.put("val", spMaxRetryDelayMinutes.getValue());
+            settings.add(maxRetrySetting);
+            
             ctx.status(200);
             ctx.json(Map.of("settings", settings));
             
@@ -558,6 +594,8 @@ public class DefaultHandler extends Handler {
                     switch (key) {
                         case "THREADS" -> spThreads.setValue(Integer.parseInt(val));
                         case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
+                        case "RETRY_DELAY_FORMULA" -> spRetryDelayFormula.setValue(val);
+                        case "MAX_RETRY_DELAY_MINUTES" -> spMaxRetryDelayMinutes.setValue(Integer.parseInt(val));
                         default -> errors.add("Invalid setting: " + key);
                     }
                     log.info("Changed setting {} to: {}", key, val);

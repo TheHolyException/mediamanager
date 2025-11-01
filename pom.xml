@@ -113,6 +113,13 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Nashorn JavaScript Engine for Java 15+ -->
+        <dependency>
+            <groupId>org.openjdk.nashorn</groupId>
+            <artifactId>nashorn-core</artifactId>
+            <version>15.4</version>
+        </dependency>
+
     </dependencies>
 
     <build>

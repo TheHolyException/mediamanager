@@ -257,8 +257,11 @@ public class DownloadTask implements Comparable<DownloadTask> {
         if (isFailed) {
             writeLogLine(Level.WARNING, "Download has failed");
             errorCount ++;
-            long delay = errorCount*errorCount*600L*1000L;
-            if (delay < 86400000) {
+            long delay = calculateRetryDelay();
+            log.info(delay + "");
+            long maxDelayMs = getMaxRetryDelayMs();
+            
+            if (delay < maxDelayMs) {
                 retryTimestamp = System.currentTimeMillis() + delay;
                 changeObject(content, PACKET_KEY_STATE, "Retry scheduled for:\n" + new SimpleDateFormat("HH:mm:ss").format(new Date(retryTimestamp)));
             } else {
@@ -636,6 +639,78 @@ public class DownloadTask implements Comparable<DownloadTask> {
         Long l1 = (long) sortIndex;
         Long l2 = (long) o.sortIndex;
         return l1.compareTo(l2);
+    }
+
+    /**
+     * Calculates the retry delay using the configurable formula from system settings.
+     * The formula can use the variable 'errorCount' which represents the current error count.
+     * @return The calculated delay in milliseconds
+     */
+    private long calculateRetryDelay() {
+        try {
+            String formula = defaultHandler.getRetryDelayFormula();
+            return evaluateFormula(formula, errorCount);
+        } catch (Exception e) {
+            log.warn("Failed to evaluate retry delay formula, using default calculation", e);
+            // Fallback to original calculation
+            return errorCount * errorCount * 600L * 1000L;
+        }
+    }
+    
+    /**
+     * Gets the maximum retry delay in milliseconds from system settings.
+     * @return The maximum retry delay in milliseconds
+     */
+    private long getMaxRetryDelayMs() {
+        try {
+            int maxDelayMinutes = defaultHandler.getMaxRetryDelayMinutes();
+            return maxDelayMinutes * 60L * 1000L; // Convert minutes to milliseconds
+        } catch (Exception e) {
+            log.warn("Failed to get max retry delay setting, using default value", e);
+            return 86400000L; // 24 hours as fallback
+        }
+    }
+    
+    /**
+     * Simple expression evaluator for mathematical formulas containing the errorCount variable.
+     * Supports basic arithmetic operations: +, -, *, /, parentheses
+     * @param formula The mathematical formula as a string
+     * @param errorCount The current error count to substitute in the formula
+     * @return The evaluated result
+     */
+    private long evaluateFormula(String formula, int errorCount) {
+        if (formula == null || formula.trim().isEmpty()) {
+            throw new IllegalArgumentException("Formula cannot be null or empty");
+        }
+        
+        // Replace the errorCount variable with its actual value
+        String expression = formula.replace("errorCount", String.valueOf(errorCount));
+        
+        // Basic validation - ensure only allowed characters
+        if (!expression.matches("[0-9+\\-*/()\\s.]+")) {
+            throw new IllegalArgumentException("Formula contains invalid characters");
+        }
+        
+        try {
+            // Use JavaScript engine for expression evaluation
+            javax.script.ScriptEngineManager manager = new javax.script.ScriptEngineManager();
+            javax.script.ScriptEngine engine = manager.getEngineByName("nashorn");
+            
+            if (engine == null) {
+                throw new RuntimeException("Nashorn JavaScript engine not available");
+            }
+            
+            Object result = engine.eval(expression);
+            
+            if (result instanceof Number number) {
+                // Convert seconds to milliseconds for internal use
+                return number.longValue() * 1000L;
+            } else {
+                throw new IllegalArgumentException("Formula did not evaluate to a number: " + result);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to evaluate formula: " + expression, e);
+        }
     }
 
     @Override

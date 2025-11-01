@@ -30,6 +30,24 @@ class SettingsWidget extends BaseWidget {
                 defaultValue: 10,
                 description: 'Maximum number of simultaneous downloads',
                 icon: 'fas fa-stream'
+            },
+            {
+                key: 'RETRY_DELAY_FORMULA',
+                label: 'Retry Delay Formula',
+                type: 'text',
+                defaultValue: 'errorCount * errorCount * 600',
+                description: 'Mathematical formula to calculate retry delay in seconds. Available variables: errorCount',
+                icon: 'fas fa-calculator'
+            },
+            {
+                key: 'MAX_RETRY_DELAY_MINUTES',
+                label: 'Max Retry Delay (Minutes)',
+                type: 'number',
+                min: 1,
+                max: 10080,
+                defaultValue: 1440,
+                description: 'Maximum retry delay in minutes (1440 = 24 hours)',
+                icon: 'fas fa-clock'
             }
         ];
     }
@@ -186,21 +204,42 @@ class SettingsWidget extends BaseWidget {
     }
 
     #validateInput(input, showErrors = false) {
-        const value = parseFloat(input.val());
-        const min = parseFloat(input.attr('min'));
-        const max = parseFloat(input.attr('max'));
+        const inputType = input.attr('type');
         const card = input.closest('.setting-card');
         const validation = card.find('.input-validation');
         
         let isValid = true;
         let message = '';
 
-        if (isNaN(value) || value < min) {
-            isValid = false;
-            message = `Value must be at least ${min}`;
-        } else if (max && value > max) {
-            isValid = false;
-            message = `Value cannot exceed ${max}`;
+        if (inputType === 'number') {
+            const value = parseFloat(input.val());
+            const min = parseFloat(input.attr('min'));
+            const max = parseFloat(input.attr('max'));
+
+            if (isNaN(value) || value < min) {
+                isValid = false;
+                message = `Value must be at least ${min}`;
+            } else if (max && value > max) {
+                isValid = false;
+                message = `Value cannot exceed ${max}`;
+            }
+        } else if (inputType === 'text') {
+            const value = input.val().trim();
+            
+            if (value === '') {
+                isValid = false;
+                message = 'This field cannot be empty';
+            } else if (card.attr('setting') === 'RETRY_DELAY_FORMULA') {
+                // Basic validation for formula - check for common mathematical operators and variables
+                const allowedPattern = /^[a-zA-Z0-9\s\+\-\*\/\(\)\.\,]+$/;
+                if (!allowedPattern.test(value)) {
+                    isValid = false;
+                    message = 'Formula contains invalid characters';
+                } else if (!value.includes('errorCount')) {
+                    isValid = false;
+                    message = 'Formula must include "errorCount" variable';
+                }
+            }
         }
 
         if (isValid) {

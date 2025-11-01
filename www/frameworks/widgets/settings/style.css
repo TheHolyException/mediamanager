@@ -351,7 +351,7 @@
 
         .setting-card {
             width: 100%;
-            height: 14vh;
+            height: auto;
             min-height: 140px;
         }
 
