@@ -24,3 +24,12 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #555;
 }
+
+/* Show scrollbars normally, hide them when NOT hovering */
+.scrollbar-on-hover:not(:hover) *::-webkit-scrollbar-thumb {
+    background: var(--darkBGColor3);
+}
+
+.scrollbar-on-hover:not(:hover) *::-webkit-scrollbar-track {
+    background: var(--darkBGColor3);
+}
