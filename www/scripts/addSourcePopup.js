@@ -29,8 +29,6 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             "display": "flex",
             "align-items": "center",
             "gap": "12px",
-            "margin-bottom": "24px",
-            "padding-bottom": "16px",
             "border-bottom": "1px solid rgba(255, 255, 255, 0.1)"
         },
         " .add-download-header h2": {
@@ -47,7 +45,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             "color": "#007bff",
             "background": "rgba(0, 123, 255, 0.1)",
             "padding": "12px",
-            "border-radius": "12px"
+            "border-radius": "3px"
         },
         " .src-input-container": {
             "display": "flex",
@@ -56,7 +54,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         },
         " .tab-section": {
             "background": "rgba(255, 255, 255, 0.02)",
-            "border-radius": "12px",
+            "border-radius": "3px",
             "border": "1px solid rgba(255, 255, 255, 0.05)",
             "overflow": "hidden"
         },
@@ -122,7 +120,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         " .form-group input, .form-group select": {
             "background": "rgba(255, 255, 255, 0.05)",
             "border": "1px solid rgba(255, 255, 255, 0.1)",
-            "border-radius": "8px",
+            "border-radius": "3px",
             "padding": "12px 16px",
             "color": "#ffffff",
             "font-size": "14px",
@@ -168,7 +166,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         },
         " .action-btn": {
             "padding": "10px 16px",
-            "border-radius": "6px",
+            "border-radius": "3px",
             "border": "1px solid rgba(255, 255, 255, 0.2)",
             "background": "rgba(255, 255, 255, 0.05)",
             "color": "#ffffff",
@@ -192,7 +190,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         " .resolve-info": {
             "background": "rgba(40, 167, 69, 0.1)",
             "border": "1px solid rgba(40, 167, 69, 0.3)",
-            "border-radius": "8px",
+            "border-radius": "3px",
             "padding": "12px 16px",
             "color": "#28a745",
             "font-size": "14px",
@@ -203,7 +201,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         },
         " .settings-section": {
             "background": "rgba(255, 255, 255, 0.02)",
-            "border-radius": "12px",
+            "border-radius": "3px",
             "border": "1px solid rgba(255, 255, 255, 0.05)",
             "padding": "20px"
         },
@@ -252,7 +250,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         },
         " .target-section": {
             "background": "rgba(255, 255, 255, 0.02)",
-            "border-radius": "12px",
+            "border-radius": "3px",
             "border": "1px solid rgba(255, 255, 255, 0.05)",
             "padding": "20px"
         },
@@ -276,6 +274,61 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         "@media (max-width: 768px)": {
             " .target-grid": {
                 "grid-template-columns": "1fr"
+            },
+            " .add-download-header": {
+                "flex-direction": "column",
+                "align-items": "flex-start",
+                "gap": "8px",
+                "text-align": "left"
+            },
+            " .add-download-header h2": {
+                "font-size": "20px"
+            },
+            " .tab-bar": {
+                "flex-direction": "column"
+            },
+            " .tab-btn": {
+                "padding": "12px 16px",
+                "font-size": "16px"
+            },
+            " .form-group input, .form-group select": {
+                "padding": "14px 16px",
+                "font-size": "16px"
+            },
+            " .action-buttons": {
+                "flex-direction": "column",
+                "gap": "8px"
+            },
+            " .action-btn": {
+                "padding": "12px 16px",
+                "font-size": "16px",
+                "width": "100%"
+            },
+            " .settings-section, .target-section": {
+                "padding": "16px"
+            }
+        },
+        "@media (max-width: 480px)": {
+            " .add-download-header .header-icon": {
+                "font-size": "24px",
+                "padding": "8px"
+            },
+            " .add-download-header h2": {
+                "font-size": "18px"
+            },
+            " .tab-btn": {
+                "padding": "10px 12px",
+                "font-size": "14px"
+            },
+            " .form-group input, .form-group select": {
+                "padding": "12px 14px",
+                "font-size": "16px"
+            },
+            " .settings-section, .target-section": {
+                "padding": "12px"
+            },
+            " .settings-section h3, .target-section h3": {
+                "font-size": "16px"
             }
         },
         " .custom-dropdown": {
@@ -284,7 +337,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         " .dropdown-input": {
             "background": "rgba(255, 255, 255, 0.05)",
             "border": "1px solid rgba(255, 255, 255, 0.1)",
-            "border-radius": "8px",
+            "border-radius": "2px",
             "padding": "12px 16px",
             "color": "#ffffff",
             "font-size": "14px",
@@ -300,7 +353,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             "background": "rgba(255, 255, 255, 0.05)",
             "color": "#ffffff",
             "border": "1px solid rgba(255, 255, 255, 0.1)",
-            "border-radius": "8px",
+            "border-radius": "2px",
             "padding": "12px 16px",
             "font-size": "14px",
             "width": "100%",
@@ -334,7 +387,8 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             console.log("closing");
         },
         closePopup: true,
-        displayText: "Cancel"
+        displayText: "Cancel",
+        buttonType: "secondary"
     });
 
     popup.addNavbarButton({
@@ -347,7 +401,8 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             );
         },
         closePopup: true,
-        displayText: "Add Downloads"
+        displayText: "Add Downloads",
+        buttonType: "primary"
     });
 
     popup.showIn($('html'));

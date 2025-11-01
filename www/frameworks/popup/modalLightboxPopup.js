@@ -23,59 +23,7 @@ class ModalLightboxPopup {
         let overlay = $('<section id="editor-overlay"></section>');
         let editorWindow = $('<main id="editor-window"></main>');
 
-        let completeStyle = `
-        html:has(#editor-window) {
-            overflow: hidden;
-        }
-
-        #editor-overlay {
-            position: fixed;
-            z-index: 99999999999999999999999;
-            inset: 0px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            backdrop-filter: blur(5px);
-        }
-
-        #editor-window {
-            /* max-width: clamp(250px, 75vw, 500px); */
-            max-height: 75svh;
-            background-color: var(--darkgray);
-            padding: 25px;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            overflow-y: auto;
-            overflow-x: hidden;
-        }
-
-        #editor-buttons {
-            width: 100%;
-            display: flex;
-            justify-content: flex-end;
-            gap: 15px;
-        }
-
-        #editor-window::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        #editor-window::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-        }
-
-        #editor-window::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-        }
-
-        #editor-window::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.5);
-        }
-        `;
+        let completeStyle = ``;
         const parentSelector = "#editor-window";
         for(let selector in this.selectorStyles){
             completeStyle += parentSelector + selector + " {";
@@ -94,11 +42,10 @@ class ModalLightboxPopup {
         overlay.append(editorWindow);
 
         if(this.addNavbar){
-            let navBarBtnsStyle = $('<style>#editor-buttons > a {cursor: pointer; &:hover {color: var(--hoverColor);}}</style>')
             let navBar = $('<nav id="editor-buttons"></nav>');
 
             this.addNavbarButtons.forEach((item) => {
-                let btn = $('<a></a>');
+                let btn = $('<button></button>');
 
                 for (var key in item) {
                     if (item.hasOwnProperty(key)) {
@@ -121,6 +68,9 @@ class ModalLightboxPopup {
                             case "displayText":
                                 btn.text(item[key]);
                             break;
+                            case "buttonType":
+                                btn.addClass(item[key]);
+                            break;
                         }
                     }
                 }
@@ -128,7 +78,7 @@ class ModalLightboxPopup {
                 navBar.append(btn);
             });
 
-            editorWindow.append(navBarBtnsStyle, navBar);
+            editorWindow.append(navBar);
         }
 
 

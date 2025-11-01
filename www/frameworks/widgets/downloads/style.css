@@ -13,7 +13,7 @@
         display: flex;
         flex-direction: column;
         gap: 20px;
-        padding: 15px;
+        padding-top: 15px;
         height: calc(100% - 80px); /* Subtract header height */
         overflow: hidden; /* Prevent content from overflowing the widget */
         box-sizing: border-box;
@@ -27,8 +27,9 @@
     }
 
     .queue-stats {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        display: flex;
+        justify-content: space-between;
+        --grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
         gap: 15px;
     }
 
@@ -41,6 +42,7 @@
         align-items: center;
         gap: 12px;
         transition: all 0.3s ease;
+        width: 24%;
 
         &:hover {
             background: rgba(255, 255, 255, 0.08);

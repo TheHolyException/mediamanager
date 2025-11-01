@@ -109,7 +109,7 @@
 
     /* Container Styling */
     .settings-container {
-        padding: 24px;
+        padding-top: 15px;
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
