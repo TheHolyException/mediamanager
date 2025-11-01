@@ -405,6 +405,25 @@ window.openAddSourcePopup = function openAddSourcePopup() {
         buttonType: "primary"
     });
 
+    popup.addNavbarButton({
+        func: function () {
+            DownloadsWidget.addNewElement(
+                getUrls($('.tab-btn.active').attr('tab-name')), 
+                getSettings($('.settings-section').find('[config]')),
+                $('.targetfolder').val(),
+                $('.subfolder.download').val()
+            );
+            
+            // Auto-start the downloads
+            setTimeout(function() {
+                DownloadsWidget.commit();
+            }, 100);
+        },
+        closePopup: true,
+        displayText: "Add & Start",
+        buttonType: "primary"
+    });
+
     popup.showIn($('html'));
 };
 
