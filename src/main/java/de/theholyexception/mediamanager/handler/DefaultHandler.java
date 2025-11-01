@@ -10,7 +10,6 @@ import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.InitializationException;
 import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.Utils;
 import de.theholyexception.mediamanager.util.WebSocketResponseException;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import io.javalin.Javalin;
@@ -147,11 +146,6 @@ public class DefaultHandler extends Handler {
     public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {
         switch (command) {
             case "syn" -> cmdSyncData(ctx);
-            case "testDelay" -> {
-                log.debug("Test delay");
-                Utils.sleep(5000);
-                throw new WebSocketResponseException(WebSocketResponse.OK.setMessage("Test delay done!"));
-            }
             // WebSocket ping
             case "ping" -> sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), ctx);
             default ->
@@ -176,10 +170,11 @@ public class DefaultHandler extends Handler {
     }
 
 
-    private void scheduleDownload(JSONObjectContainer content) {
-        DownloadTask tableItem = new DownloadTask(content);
-        urls.put(UUID.fromString(content.get("uuid", String.class)), tableItem);
-        tableItem.start(spThreads.getValue());
+    private DownloadTask scheduleDownload(JSONObjectContainer content) {
+        DownloadTask downloadTask = new DownloadTask(content);
+        urls.put(UUID.fromString(content.get("uuid", String.class)), downloadTask);
+        downloadTask.start(spThreads.getValue());
+        return downloadTask;
     }
 
     /**
@@ -213,14 +208,15 @@ public class DefaultHandler extends Handler {
      * 
      * @param downloadItems List of download items to schedule
      */
-    public void scheduleDownloads(List<JSONObjectContainer> downloadItems) {
+    public DownloadTask scheduleDownloads(List<JSONObjectContainer> downloadItems) {
         for (JSONObjectContainer item : downloadItems) {
             try {
-                scheduleDownload(item); // null context since this is internal
+                return scheduleDownload(item);
             } catch (WebSocketResponseException ex) {
                 log.warn("Failed to schedule internal download: {}", ex.getMessage());
             }
         }
+        return null;
     }
 
     //region OpenAPI

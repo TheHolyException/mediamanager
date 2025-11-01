@@ -253,8 +253,7 @@ class SettingsWidget extends BaseWidget {
     }
 
     #loadSettings() {
-        fetch('/api/settings')
-        .then(response => response.json())
+        ApiClient.getSettings()
         .then(data => {
             if (data.settings) {
                 data.settings.forEach(setting => {
@@ -297,16 +296,9 @@ class SettingsWidget extends BaseWidget {
         }
 
         // Use REST API instead of WebSocket
-        fetch('/api/settings', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                settings: settingPacket
-            })
+        ApiClient.updateSettings({
+            settings: settingPacket
         })
-        .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
                 this.#showStatus(widget, 'success', 'Settings saved successfully');

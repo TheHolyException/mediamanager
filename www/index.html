@@ -12,6 +12,9 @@
     <script src="/frameworks/gridDashboard/gridWidget.js"></script>
     <script src="/frameworks/gridDashboard/customHTMLWidgetPalette.js"></script>
 
+    <!-- API Client - must be loaded before widgets -->
+    <script src="./api/apiClient.js"></script>
+    
     <script src="./frameworks/widgets/baseWidget.js"></script>
     <!-- <script src="./frameworks/widgets/downloads/downloadsWidget.js"></script> -->
     <script src="./frameworks/widgets/downloads/downloadsWidget.js"></script>
@@ -120,7 +123,6 @@
                 <button class="action-btn edit-save-btn" title="Toggle Edit Mode">
                     <i class="edit-icon fa-solid fa-pen"></i>
                     <i class="save-icon fa-solid fa-floppy-disk hidden"></i>
-                    <span class="btn-text">Edit</span>
                     <input type="checkbox" class="edit-checkbox" style="display: none;">
                 </button>
             </div>

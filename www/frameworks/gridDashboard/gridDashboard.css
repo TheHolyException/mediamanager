@@ -9,7 +9,7 @@
     --surface-secondary: #f8f9fa;
     --surface-tertiary: #e9ecef;
     --border-primary: #e1e5e9;
-    --border-radius: 8px;
+    --border-radius: 2px;
     --accent-primary: #00d4ff;
     --accent-tertiary: #0099cc;
     --text-primary: #333333;
@@ -118,7 +118,7 @@
     border: none;
     cursor: pointer;
     padding: 6px 8px;
-    border-radius: 4px;
+    border-radius: 2px;
     transition: background-color 0.2s ease;
     color: var(--text-secondary);
     font-size: 14px;

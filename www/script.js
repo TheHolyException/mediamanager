@@ -83,7 +83,7 @@ function handleAPISuccess(response, defaultMessage, options = {}) {
 }
 
 /**
- * Adds downloads using the REST API
+ * Adds downloads
  * @param {Array} downloadList - Array of download items to add
  * @param {Function} onSuccess - Callback for successful API call
  * @param {Function} onError - Callback for failed API call
@@ -97,7 +97,6 @@ function addDownloadsAPI(downloadList, onSuccess, onError) {
             list: downloadList
         }),
         success: function(response) {
-            console.log('Downloads added successfully:', response);
             handleAPISuccess(response, 'Downloads added successfully');
             if (onSuccess) onSuccess(response);
         },
@@ -110,7 +109,7 @@ function addDownloadsAPI(downloadList, onSuccess, onError) {
 }
 
 /**
- * Deletes a specific download using the REST API instead of WebSocket
+ * Deletes a specific download
  * @param {string} uuid - UUID of the download to delete
  * @param {Function} onSuccess - Callback for successful API call
  * @param {Function} onError - Callback for failed API call
@@ -120,7 +119,6 @@ function deleteDownloadAPI(uuid, onSuccess, onError) {
         url: `/api/downloads/${encodeURIComponent(uuid)}`,
         method: 'DELETE',
         success: function(response) {
-            console.log('Download deleted successfully:', response);
             handleAPISuccess(response, 'Download deleted successfully');
             if (onSuccess) onSuccess(response);
         },
@@ -133,7 +131,7 @@ function deleteDownloadAPI(uuid, onSuccess, onError) {
 }
 
 /**
- * Deletes all downloads using the REST API instead of WebSocket
+ * Deletes all downloads
  * @param {Function} onSuccess - Callback for successful API call
  * @param {Function} onError - Callback for failed API call
  */
@@ -142,7 +140,6 @@ function deleteAllDownloadsAPI(onSuccess, onError) {
         url: '/api/downloads',
         method: 'DELETE',
         success: function(response) {
-            console.log('All downloads deleted successfully:', response);
             handleAPISuccess(response, 'All downloads deleted successfully');
             if (onSuccess) onSuccess(response);
         },
@@ -173,9 +170,6 @@ function getSystemInfoAPI() {
     $.ajax({
         url: '/api/system',
         method: 'GET',
-        headers: {
-            'Accept-Encoding': 'gzip, deflate'
-        },
         success: function(response) {
             StatisticsWidget.updateStatistics(response);
         },

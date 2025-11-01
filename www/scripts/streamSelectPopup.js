@@ -3,7 +3,12 @@ class SelectStreamPopup {
 
     static request(downloadData) {
         SelectStreamPopup.downloadData = downloadData;
-        sendPacket("getAlternateProviders", "autoloader", downloadData.autoloaderData);
+        const { animeId, seasonId, episodeId } = downloadData.autoloaderData;
+        ApiClient.getAlternateProviders(animeId, seasonId, episodeId)
+            .then(providers => {
+                SelectStreamPopup.open(downloadData, providers);
+        });
+
     }
 
     static open(downloadData, streamList) {
@@ -67,8 +72,6 @@ class SelectStreamPopup {
         popup.addNavbarButton({
             func: function () {
                 let data = SelectStreamPopup.downloadData;
-                console.log(data);
-                console.log(data.autoloaderData);
 
                 let hasFound = false;
                 let selectedStreamName = content.find('.stream').val();

@@ -456,6 +456,16 @@
                         color: white;
                     }
                     
+                    &.status-scanning {
+                        background-color: #ffcc00;
+                        color: black;
+                    }
+                    
+                    &.status-downloading {
+                        background-color: #007bff;
+                        color: white;
+                    }
+                    
                     &.status-error {
                         background-color: var(--error);
                         color: white;

@@ -14,22 +14,12 @@ class Aniworld{
         if(Aniworld.isResolving)
             return;
 
-        console.log("Resolve:", links, languageID);
-
         Aniworld.setAniworldStatusColor("WAIT");
         Aniworld.stateLabel.text("Processing...");
         
         Aniworld.isResolving = true;
         
-        const params = new URLSearchParams({
-            url: links,
-            language: languageID.toString()
-        });
-        
-        fetch(`/api/aniworld/resolve?${params}`, {
-            method: 'GET'
-        })
-        .then(response => response.json())
+        ApiClient.resolveAniworldUrl(links, languageID)
         .then(data => {
             if (data.error) {
                 Aniworld.stateLabel.text(data.error);

@@ -34,7 +34,7 @@
 
     .stat-card {
         background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
+        border-radius: 2px;
         padding: 15px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
@@ -44,7 +44,6 @@
 
         &:hover {
             background: rgba(255, 255, 255, 0.08);
-            transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
@@ -55,7 +54,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 8px;
+            border-radius: 2px;
             
             &:nth-child(1) { color: #007bff; background: rgba(0, 123, 255, 0.1); }
         }
@@ -100,7 +99,7 @@
         gap: 8px;
         padding: 12px 16px;
         border: none;
-        border-radius: 8px;
+        border-radius: 2px;
         cursor: pointer;
         font-size: 14px;
         font-weight: 500;
@@ -167,7 +166,7 @@
     .table-container {
         flex: 1;
         background: rgba(255, 255, 255, 0.03);
-        border-radius: 12px;
+        border-radius: 2px;
         border: 1px solid rgba(255, 255, 255, 0.1);
         overflow: auto; /* Enable scrolling for the table container */
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -314,7 +313,7 @@
             color: #ffffff;
             padding: 8px;
             margin: 0 2px;
-            border-radius: 6px;
+            border-radius: 2px;
             cursor: pointer;
             transition: all 0.2s ease;
             width: 32px;

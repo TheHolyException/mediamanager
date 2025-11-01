@@ -604,9 +604,7 @@ function getInputValue(inputElement){
     return value;
 }
 
-function getUrls(activeTab){
-    console.log("get urls of:", activeTab);
-
+function getUrls(activeTab) {
     let val = null;
     switch(activeTab){
         case "url":

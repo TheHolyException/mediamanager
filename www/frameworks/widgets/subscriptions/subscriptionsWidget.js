@@ -46,6 +46,8 @@ class SubscriptionsWidget extends BaseWidget {
                     <select class="status-filter">
                         <option value="all">All Status</option>
                         <option value="active">Active</option>
+                        <option value="scanning">Scanning</option>
+                        <option value="downloading">Downloading</option>
                         <option value="paused">Paused</option>
                         <option value="error">Errors</option>
                     </select>
@@ -206,9 +208,9 @@ class SubscriptionsWidget extends BaseWidget {
                 </div>
                 
                 <div class="form-actions">
-                    <button class="cancel-edit-btn">Cancel</button>
+                    <button class="cancel-edit-btn cancel-btn">Cancel</button>
                     <button class="save-edit-btn primary-btn">
-                        <i class="fa fddda-save"></i>
+                        <i class="fa fa-save"></i>
                         Save Changes
                     </button>
                 </div>
@@ -316,7 +318,6 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     showEditForm(widget, item) {
-        console.log('showEditForm called with item:', item);
         SubscriptionsWidget.currentEditItem = item;
         
         // Populate form with current values
@@ -324,14 +325,6 @@ class SubscriptionsWidget extends BaseWidget {
         widget.find('#edit-folder').val(item.directory || '');
         widget.find('#edit-language').val(item.languageId || 1);
         widget.find('#edit-excluded').val(item.excludedSeasons || '');
-        
-        console.log('Form populated with values:', {
-            url: item.url,
-            directory: item.directory,
-            languageId: item.languageId,
-            excludedSeasons: item.excludedSeasons
-        });
-        
         widget.find('.edit-subscription-form').slideDown(300);
         widget.find('#edit-folder').focus();
     }
@@ -378,39 +371,22 @@ class SubscriptionsWidget extends BaseWidget {
             autoStart: widget.find('#auto-start').prop('checked')
         };
 
-        fetch('/api/autoloader/subscriptions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        })
-        .then(response => {
-            if (response.ok) {
+        ApiClient.addSubscription(data)
+            .then(subscription => {
                 this.hideAddForm(widget);
                 this.showNotification('Subscription added successfully!', 'success');
-                return response.json();
-            } else {
-                return response.json().then(err => {
-                    throw new Error(err.error || 'Failed to add subscription');
-                });
-            }
-        })
-        .catch(error => {
-            console.error('Error adding subscription:', error);
-            this.showNotification('Failed to add subscription: ' + error.message, 'error');
-        });
+            })
+            .catch(error => {
+                console.error('Error adding subscription:', error);
+                this.showNotification('Failed to add subscription: ' + error.message, 'error');
+            });
     }
 
     saveEdit(widget) {
-        console.log('saveEdit called');
-        
         if (!SubscriptionsWidget.currentEditItem) {
             console.error('No currentEditItem found');
             return;
         }
-        
-        console.log('Current edit item:', SubscriptionsWidget.currentEditItem);
 
         let directory = widget.find('#edit-folder').val().trim();
         // Remove leading slashes to prevent them being converted to underscores
@@ -424,36 +400,16 @@ class SubscriptionsWidget extends BaseWidget {
             directory: directory,
             excludedSeasons: widget.find('#edit-excluded').val().trim()
         };
-        
-        console.log('Sending modification data:', data);
 
-        try {
-            fetch(`/api/autoloader/subscriptions/${SubscriptionsWidget.currentEditItem.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            })
-            .then(response => {
-                if (response.ok) {
-                    console.log('Request sent successfully');
-                    this.hideEditForm(widget);
-                    this.showNotification('Subscription updated successfully!', 'success');
-                    return response.json();
-                } else {
-                    return response.json().then(err => {
-                        throw new Error(err.error || 'Failed to update subscription');
-                    });
-                }
+        ApiClient.updateSubscription(SubscriptionsWidget.currentEditItem.id, data)
+            .then(subscription => {
+                this.hideEditForm(widget);
+                this.showNotification('Subscription updated successfully!', 'success');
             })
             .catch(error => {
                 console.error('Error updating subscription:', error);
                 this.showNotification('Failed to update subscription: ' + error.message, 'error');
             });
-        } catch (error) {
-            console.error('Error in saveEdit:', error);
-        }
     }
 
     addSubscriptionCard(item) {
@@ -475,7 +431,7 @@ class SubscriptionsWidget extends BaseWidget {
                 <div class="card-header">
                     <div class="title-section">
                         <h3 class="anime-title" title="${item.title}">${item.title}</h3>
-                        <span class="status-badge status-${status}">${status}</span>
+                        <span class="status-badge status-${status}">${item.status || status}</span>
                     </div>
                     <div class="card-actions">
                         <button class="action-btn scan-btn" title="Scan for new episodes">
@@ -556,28 +512,17 @@ class SubscriptionsWidget extends BaseWidget {
             scanBtn.prop('disabled', true);
             scanBtn.find('i').attr('class', 'fa fa-spinner fa-spin');
             
-            fetch(`/api/autoloader/subscriptions/${item.id}/scan`, {
-                method: 'POST'
-            })
-            .then(response => {
-                if (response.ok) {
+            ApiClient.scanSubscription(item.id)
+                .then(data => {
                     this.showNotification('Scanning for new episodes...', 'info');
-                    return response.json();
-                } else {
-                    return response.json().then(err => {
-                        throw new Error(err.error || 'Failed to scan');
-                    });
-                }
-            })
-            .then(data => {
-                if (data.unloadedEpisodes !== undefined) {
-                    this.showNotification(`Scan completed. Found ${data.unloadedEpisodes} unloaded episodes.`, 'success');
-                }
-            })
-            .catch(error => {
-                console.error('Error scanning subscription:', error);
-                this.showNotification('Failed to scan: ' + error.message, 'error');
-            });
+                    if (data.unloadedEpisodes !== undefined) {
+                        this.showNotification(`Scan completed. Found ${data.unloadedEpisodes} unloaded episodes.`, 'success');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error scanning subscription:', error);
+                    this.showNotification('Failed to scan: ' + error.message, 'error');
+                });
             
             // Reset button after 3 seconds
             setTimeout(() => {
@@ -587,29 +532,24 @@ class SubscriptionsWidget extends BaseWidget {
         });
 
         card.find('.download-btn').click(() => {
-            fetch(`/api/autoloader/subscriptions/${item.id}/download`, {
-                method: 'POST'
-            })
-            .then(response => {
-                if (response.ok) {
+            ApiClient.downloadSubscription(item.id)
+                .then(data => {
                     this.showNotification('Download started', 'success');
-                    return response.json();
-                } else {
-                    return response.json().then(err => {
-                        throw new Error(err.error || 'Failed to start download');
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error starting download:', error);
-                this.showNotification('Failed to start download: ' + error.message, 'error');
-            });
+                })
+                .catch(error => {
+                    console.error('Error starting download:', error);
+                    // Extract just the error message without the status code prefix
+                    let errorMessage = error.message;
+                    if (errorMessage.includes(': ')) {
+                        errorMessage = errorMessage.split(': ').slice(1).join(': ');
+                    }
+                    this.showNotification('Failed to start download: ' + errorMessage, 'error');
+                });
         });
 
         card.find('.pause-btn').click(() => {
             const pauseBtn = card.find('.pause-btn');
             const action = item.paused ? 'resume' : 'pause';
-            console.log('Pause button clicked. Current paused state:', item.paused, 'Action:', action);
             
             // Optimistically update the button icon
             const newIcon = item.paused ? 'fa-pause' : 'fa-play';
@@ -618,26 +558,21 @@ class SubscriptionsWidget extends BaseWidget {
             // Update the item's paused state locally for immediate feedback
             item.paused = !item.paused;
             
-            fetch(`/api/autoloader/subscriptions/${item.id}/${action}`, {
-                method: 'POST'
-            })
-            .then(response => {
-                if (response.ok) {
+            const apiCall = action === 'pause' ? 
+                ApiClient.pauseSubscription(item.id) : 
+                ApiClient.resumeSubscription(item.id);
+            
+            apiCall
+                .then(data => {
                     const actionText = action === 'pause' ? 'paused' : 'resumed';
                     this.showNotification(`Subscription ${actionText}`, 'info');
-                    return response.json();
-                } else {
-                    return response.json().then(err => {
-                        throw new Error(err.error || `Failed to ${action}`);
-                    });
-                }
-            })
-            .catch(error => {
-                console.error(`Error ${action}ing subscription:`, error);
-                this.showNotification(`Failed to ${action}: ` + error.message, 'error');
-                // Revert the local state change on error
-                item.paused = !item.paused;
-            });
+                })
+                .catch(error => {
+                    console.error(`Error ${action}ing subscription:`, error);
+                    this.showNotification(`Failed to ${action}: ` + error.message, 'error');
+                    // Revert the local state change on error
+                    item.paused = !item.paused;
+                });
         });
 
         card.find('.delete-btn').click(() => {
@@ -654,22 +589,14 @@ class SubscriptionsWidget extends BaseWidget {
 
     confirmDelete(item) {
         if (confirm(`Are you sure you want to unsubscribe from "${item.title}"?`)) {
-            fetch(`/api/autoloader/subscriptions/${item.id}`, {
-                method: 'DELETE'
-            })
-            .then(response => {
-                if (response.ok || response.status === 204) {
+            ApiClient.deleteSubscription(item.id)
+                .then(() => {
                     this.showNotification('Subscription removed', 'info');
-                } else {
-                    return response.json().then(err => {
-                        throw new Error(err.error || 'Failed to unsubscribe');
-                    });
-                }
-            })
-            .catch(error => {
-                console.error('Error unsubscribing:', error);
-                this.showNotification('Failed to unsubscribe: ' + error.message, 'error');
-            });
+                })
+                .catch(error => {
+                    console.error('Error unsubscribing:', error);
+                    this.showNotification('Failed to unsubscribe: ' + error.message, 'error');
+                });
         }
     }
 
@@ -720,6 +647,12 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     getSubscriptionStatus(item) {
+        // Use the status field from the backend if available, otherwise fall back to legacy logic
+        if (item.status) {
+            return item.status.toLowerCase();
+        }
+        
+        // Legacy logic for backward compatibility
         if (item.error) return 'error';
         if (item.paused) return 'paused';
         if (item.unloaded > 0) return 'pending';
@@ -765,8 +698,31 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     showNotification(message, type = 'info') {
-        // Use existing notification system or create a simple one
-        console.log(`${type.toUpperCase()}: ${message}`);
+        // Map notification types to yeti severity levels
+        const severityMap = {
+            'success': 'ok',
+            'info': 'info', 
+            'error': 'nok',
+            'warning': 'warn'
+        };
+        
+        // Check if yeti is available globally
+        if (typeof window.yeti !== 'undefined') {
+            window.yeti.show({
+                message: message,
+                severity: severityMap[type] || 'info',
+                time: 5000
+            });
+        } else if (typeof yeti !== 'undefined') {
+            yeti.show({
+                message: message,
+                severity: severityMap[type] || 'info',
+                time: 5000
+            });
+        } else {
+            // Fallback to console logging if yeti is not available
+            console.log(`${type.toUpperCase()}: ${message}`);
+        }
     }
 
     /**
@@ -777,19 +733,7 @@ class SubscriptionsWidget extends BaseWidget {
      * @returns {Promise} Promise that resolves to the providers data
      */
     getAlternateProviders(animeId, seasonId, episodeId) {
-        return fetch(`/api/autoloader/subscriptions/${animeId}/providers?seasonId=${seasonId}&episodeId=${episodeId}`)
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    return response.json().then(err => {
-                        throw new Error(err.error || 'Failed to get alternate providers');
-                    });
-                }
-            })
-            .then(data => {
-                return data.providers;
-            })
+        return ApiClient.getAlternateProviders(animeId, seasonId, episodeId)
             .catch(error => {
                 console.error('Error getting alternate providers:', error);
                 this.showNotification('Failed to get alternate providers: ' + error.message, 'error');
@@ -798,15 +742,7 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     requestData() {
-        // Use REST API instead of WebSocket
-        fetch('/api/autoloader/subscriptions')
-            .then(response => {
-                if (response.ok) {
-                    return response.json();
-                } else {
-                    throw new Error('Failed to fetch subscriptions');
-                }
-            })
+        ApiClient.getSubscriptions()
             .then(data => {
                 // Process the data
                 const widgets = $('[widget-name=\"SubscriptionsWidget\"]');

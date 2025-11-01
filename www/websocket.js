@@ -6,7 +6,6 @@ function connect() {
     setWebSocketStatusFeedback(1);
     ws.onopen = function () {
         sendPacket("syn", "default", {});
-        sendPacket('getData', 'autoloader');
         setWebSocketStatusFeedback(2);
     };
 

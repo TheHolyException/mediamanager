@@ -98,15 +98,6 @@ class ModalLightboxPopup {
             let navBar = $('<nav id="editor-buttons"></nav>');
 
             this.addNavbarButtons.forEach((item) => {
-                /*
-                {
-                    func: function() {
-                        console.log("closing");
-                    },
-                    closePopup: true,
-                    displayText: "Cancel"
-                }
-                */
                 let btn = $('<a></a>');
 
                 for (var key in item) {

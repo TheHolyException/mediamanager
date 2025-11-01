@@ -21,7 +21,6 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import io.javalin.openapi.*;
-import io.javalin.websocket.WsContext;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -115,370 +114,6 @@ public class AutoLoaderHandler extends Handler {
     }
 
     //region commands
-    /**
-     * Processes incoming WebSocket commands for the auto-loader.
-     * Routes commands to the appropriate handler method based on the command type.
-     *
-     * @param ctx The WebSocket connection that received the command
-     * @param command The command to execute (e.g., "getData", "subscribe", "unsubscribe")
-     * @param content JSON data associated with the command
-     * @throws WebSocketResponseException if the command is invalid or processing fails
-     */
-    @Override
-    public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {
-        try {
-            while (!initialized) {
-                synchronized (this) {
-                    this.wait(30000);
-                    if (!initialized) {
-                        throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("AutoLoader is not initialized yet"));
-                    }
-                }
-            }
-        } catch (InterruptedException ex) {
-            return;
-        }
-
-        switch (command) {
-            case "getData" -> cmdGetData(ctx);
-            case "subscribe" -> cmdSubscribe(content);
-            case "unsubscribe" -> cmdUnsubscribe(content);
-            case "modify" -> cmdModify(content);
-            case "runDownload" -> cmdRunDownload(content);
-            case "getAlternateProviders" -> cmdGetAlternateProviders(ctx, content);
-            case "pause" -> cmdPause(content);
-            case "resume" -> cmdResume(content);
-            case "scan" -> cmdScan(content);
-            default ->
-                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
-        }
-    }
-
-    /**
-     * Handles the 'getData' command to retrieve the current state of subscribed anime.
-     * Sends the list of all subscribed anime with their current status to the client.
-     *
-     * @param ctx The WebSocket connection to send the data to
-     */
-    private void cmdGetData(WsContext ctx) {
-        WebSocketUtils.sendAutoLoaderItem(ctx, subscribedAnimes);
-    }
-
-    /**
-     * Handles the 'subscribe' command to add a new anime to the subscription list.
-     * Validates the URL, resolves the anime title, and adds it to the database.
-     *
-     * @throws WebSocketResponseException if the URL is invalid or already subscribed
-     */
-    private void cmdSubscribe(JSONObjectContainer content) {
-        String url = content.get("url", String.class);
-        int languageId = content.get("languageId", Integer.class);
-        String directory = content.get("directory", null, String.class);
-        if (directory.isEmpty()) directory = null;
-
-        if (subscribedAnimes.stream().anyMatch(a -> a.getUrl().equals(url)))
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url + " this url is already subscribed!"));
-
-        log.debug("Adding subscriber " + url);
-        String title = AniworldHelper.getAnimeTitle(url);
-        log.debug("Resolved title: " + title);
-
-        if (title == null)
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to subscribe to " + url + " cannot resolve title!"));
-
-        List<Integer> excludedSeasonList = new ArrayList<>();
-        String excludedSeasonsString = content.get("excludedSeasons", String.class);
-        if (excludedSeasonsString != null && !excludedSeasonsString.isEmpty()) {
-            String[] excludedSeasons = content.get("excludedSeasons", String.class).split(",");
-            for (String excludedSeason : excludedSeasons)
-                excludedSeasonList.add(Integer.parseInt(excludedSeason));
-        }
-
-
-
-        Anime anime = new Anime(languageId, title, url, excludedSeasonList);
-        anime.setDirectoryPath(directory, true);
-        anime.loadMissingEpisodes();
-        anime.scanDirectoryForExistingEpisodes();
-        subscribedAnimes.add(anime);
-        anime.writeToDB(db);
-
-        db.getExecutorHandler().awaitGroup(-1);
-
-        // Inform everyone about the new item
-        WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
-        throw new WebSocketResponseException(WebSocketResponse.OK);
-    }
-
-    /**
-     * Handles the 'unsubscribe' command to remove an anime from the subscription list.
-     * Removes the specified anime from the database and notifies all connected clients.
-     *
-     * @param content JSON data containing the ID of the anime to unsubscribe from
-     * @throws WebSocketResponseException if the anime ID is invalid
-     */
-    @SuppressWarnings("unchecked")
-    private void cmdUnsubscribe(JSONObjectContainer content) {
-        int id = content.get("id", Integer.class);
-        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
-        if (optAnime.isPresent()) {
-            Anime anime = optAnime.get();
-            db.executeSafe("delete from anime where nKey = ?", id);
-            subscribedAnimes.remove(anime);
-            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
-
-            JSONObject payload = new JSONObject();
-            payload.put("id", id);
-            WebSocketUtils.sendPacket("del", TargetSystem.AUTOLOADER, payload, null);
-        } else {
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to unsubscribe from " + id + " this id does not exist!"));
-        }
-        throw new WebSocketResponseException(WebSocketResponse.OK);
-    }
-
-    /**
-     * Handles the 'modify' command to update an existing anime subscription.
-     * Updates the anime's properties like directory. Note: language and excluded seasons
-     * cannot be modified as they are immutable properties set during construction.
-     *
-     * @param content JSON data containing the ID and updated properties of the anime
-     * @throws WebSocketResponseException if the anime ID is invalid
-     */
-    private void cmdModify(JSONObjectContainer content) {
-        log.info("cmdModify called with content: {}", content.getRaw());
-        int id = content.get("id", Integer.class);
-        log.info("Looking for anime with ID: {}", id);
-        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
-        
-        if (optAnime.isEmpty()) {
-            log.error("Anime with ID {} not found in subscribedAnimes list", id);
-            log.info("Available anime IDs: {}", subscribedAnimes.stream().map(Anime::getId).toList());
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to modify subscription " + id + " - anime not found!"));
-        }
-        
-        log.info("Found anime: {}", optAnime.get().getTitle());
-        
-        Anime anime = optAnime.get();
-        boolean modified = false;
-        
-        // Update language ID if provided
-        if (content.getRaw().containsKey("languageId")) {
-            int newLanguageId = content.get("languageId", Integer.class);
-            if (anime.getLanguageId() != newLanguageId) {
-                anime.setLanguageId(newLanguageId, true);
-                modified = true;
-                log.info("Updated language ID for '{}' from {} to {}", anime.getTitle(), anime.getLanguageId(), newLanguageId);
-            }
-        }
-        
-        // Update excluded seasons if provided
-        if (content.getRaw().containsKey("excludedSeasons")) {
-            List<Integer> newExcludedSeasons = new ArrayList<>();
-            String excludedSeasonsString = content.get("excludedSeasons", String.class);
-            if (excludedSeasonsString != null && !excludedSeasonsString.isEmpty()) {
-                String[] excludedSeasons = excludedSeasonsString.split(",");
-                for (String excludedSeason : excludedSeasons) {
-                    try {
-                        newExcludedSeasons.add(Integer.parseInt(excludedSeason.trim()));
-                    } catch (NumberFormatException e) {
-                        log.warn("Invalid excluded season number: " + excludedSeason);
-                    }
-                }
-            }
-            
-            if (!anime.getExcludedSeasons().equals(newExcludedSeasons)) {
-                anime.setExcludedSeasons(newExcludedSeasons, true);
-                modified = true;
-                log.info("Updated excluded seasons for '{}' to: {}", anime.getTitle(), newExcludedSeasons);
-            }
-        }
-        
-        // Update directory if provided
-        if (content.getRaw().containsKey("directory")) {
-            String newDirectory = content.get("directory", null, String.class);
-            if (newDirectory != null && newDirectory.isEmpty()) newDirectory = null;
-            
-            String currentDirectory = anime.getDirectory() != null ? anime.getDirectory().getName() : null;
-            if ((currentDirectory == null && newDirectory != null) || 
-                (currentDirectory != null && !currentDirectory.equals(newDirectory))) {
-                anime.setDirectoryPath(newDirectory, true);
-                modified = true;
-            }
-        }
-        
-        if (modified) {
-            log.info("Changes detected, applying modifications for: {}", anime.getTitle());
-            // Rescan episodes after modifications
-            anime.loadMissingEpisodes();
-            anime.scanDirectoryForExistingEpisodes();
-            anime.writeToDB(db);
-            
-            // Notify all clients about the update
-            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
-            
-            log.info("Successfully modified subscription for: {}", anime.getTitle());
-        } else {
-            log.info("No changes detected for: {}", anime.getTitle());
-        }
-        
-        log.info("cmdModify completed successfully");
-        throw new WebSocketResponseException(WebSocketResponse.OK);
-    }
-
-    /**
-     * Handles the 'runDownload' command to manually trigger a download for a specific anime.
-     * Validates the episode information and adds it to the download queue.
-     *
-     * @param content JSON data containing the episode and download parameters
-     * @throws WebSocketResponseException if the episode information is invalid
-     */
-    private void cmdRunDownload(JSONObjectContainer content) {
-        if (!enabled)
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("AutoLoader is disabled!"));
-
-        int animeId = content.get("id", Integer.class);
-        Optional<Anime> optAnime = subscribedAnimes.stream().filter(a -> a.getId() == animeId).findFirst();
-        if (optAnime.isEmpty())
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
-
-        log.debug("Running download for: {}", optAnime.get().getTitle());
-        runDownload(optAnime.get());
-        throw new WebSocketResponseException(WebSocketResponse.OK);
-    }
-
-    /**
-     * Handles the 'getAlternateProviders' command to retrieve alternative streaming sources for an episode.
-     * Useful when the primary source is unavailable or has issues.
-     *
-     * @param ctx The WebSocket connection to send the provider list to
-     * @param content JSON data containing the episode information
-     */
-    @SuppressWarnings("unchecked")
-    private void cmdGetAlternateProviders(WsContext ctx, JSONObjectContainer content) {
-        Map<AniworldProvider, String> urls = getAlternativeProviders(content);
-
-        JSONObject payload = new JSONObject();
-        JSONArray array = new JSONArray();
-        for (Map.Entry<AniworldProvider, String> entry : urls.entrySet()) {
-            JSONObject object = new JSONObject();
-            object.put("name", entry.getKey().getDisplayName());
-            object.put("url", entry.getValue());
-            array.add(object);
-        }
-        payload.put("providers", array);
-        WebSocketUtils.sendPacket("getAlternateProvidersResponse", TargetSystem.AUTOLOADER, payload, ctx);
-    }
-
-    /**
-     * Handles the 'pause' command to pause an anime subscription.
-     * When paused, the anime will not be included in automatic scanning and downloads.
-     *
-     * @param content JSON data containing the ID of the anime to pause
-     * @throws WebSocketResponseException if the anime ID is invalid
-     */
-    private void cmdPause(JSONObjectContainer content) {
-        int id = content.get("id", Integer.class);
-        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
-        if (optAnime.isEmpty()) {
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + id + " not found!"));
-        }
-
-        Anime anime = optAnime.get();
-        if (!anime.isPaused()) {
-            anime.setPaused(true, true);
-            anime.writeToDB(db);
-            
-            log.info("Paused anime subscription: {}", anime.getTitle());
-            
-            // Notify all clients about the update
-            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
-        }
-        
-        throw new WebSocketResponseException(WebSocketResponse.OK);
-    }
-
-    /**
-     * Handles the 'resume' command to resume a paused anime subscription.
-     * Once resumed, the anime will be included in automatic scanning and downloads again.
-     *
-     * @param content JSON data containing the ID of the anime to resume
-     * @throws WebSocketResponseException if the anime ID is invalid
-     */
-    private void cmdResume(JSONObjectContainer content) {
-        int id = content.get("id", Integer.class);
-        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
-        if (optAnime.isEmpty()) {
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + id + " not found!"));
-        }
-
-        Anime anime = optAnime.get();
-        if (anime.isPaused()) {
-            anime.setPaused(false, true);
-            anime.writeToDB(db);
-            
-            log.info("Resumed anime subscription: {}", anime.getTitle());
-            
-            // Notify all clients about the update
-            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
-        }
-        
-        throw new WebSocketResponseException(WebSocketResponse.OK);
-    }
-
-    /**
-     * Handles the 'scan' command to manually scan for new episodes of a specific anime.
-     * Performs the same scanning logic as the automatic scanner but for a single anime.
-     *
-     * @param content JSON data containing the ID of the anime to scan
-     * @throws WebSocketResponseException if the anime ID is invalid
-     */
-    private void cmdScan(JSONObjectContainer content) {
-        int id = content.get("id", Integer.class);
-        Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == id).findFirst();
-        if (optAnime.isEmpty()) {
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + id + " not found!"));
-        }
-
-        Anime anime = optAnime.get();
-        
-        log.info("Manual scan requested for anime: {}", anime.getTitle());
-        
-        try {
-            // Check for language updates on existing episodes
-            for (Season season : anime.getSeasonList()) {
-                for (Episode episode : season.getEpisodeList()) {
-                    if (episode.getLanguageIds().contains(anime.getLanguageId()))
-                        continue;
-                    episode.activeScanLanguageIDs();
-                }
-            }
-
-            // Scan for new episodes that are not in our data structure
-            anime.loadMissingEpisodes();
-            
-            // Scan directory for existing downloaded episodes
-            anime.scanDirectoryForExistingEpisodes();
-
-            if (anime.isDeepDirty()) {
-                anime.writeToDB(db);
-            }
-            
-            // Update the last scan time
-            anime.updateLastUpdate();
-
-            log.info("Manual scan completed for anime: {} - Found {} unloaded episodes", 
-                    anime.getTitle(), anime.getUnloadedEpisodeCount(true));
-
-            // Notify all clients about the update
-            WebSocketUtils.sendAutoLoaderItem(null, subscribedAnimes);
-            
-        } catch (Exception ex) {
-            log.error("Error during manual scan for anime: {}", anime.getTitle(), ex);
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Scan failed: " + ex.getMessage()));
-        }
-        
-        throw new WebSocketResponseException(WebSocketResponse.OK);
-    }
 
     @OpenApi(
         summary = "Get all subscriptions",
@@ -535,52 +170,26 @@ public class AutoLoaderHandler extends Handler {
         }
 
         try {
-            JSONObjectContainer content = (JSONObjectContainer) JSONReader.readString(ctx.body());
-            
-            String url = content.get("url", String.class);
-            int languageId = content.get("languageId", Integer.class);
-            String directory = content.get("directory", null, String.class);
-            if (directory != null && directory.isEmpty()) directory = null;
-
-            if (subscribedAnimes.stream().anyMatch(a -> a.getUrl().equals(url))) {
-                ctx.status(HttpStatus.CONFLICT);
-                ctx.json(Map.of("error", "Already subscribed to " + url));
-                return;
-            }
-
-            log.debug("Adding subscriber " + url);
-            String title = AniworldHelper.getAnimeTitle(url);
-            log.debug("Resolved title: " + title);
-
-            if (title == null) {
+            Anime anime = Anime.createFromContent(ctx);
+            if (anime == null) {
                 ctx.status(HttpStatus.BAD_REQUEST);
-                ctx.json(Map.of("error", "Cannot resolve anime title from " + url));
+                ctx.json(Map.of("error", "Invalid request data"));
                 return;
             }
 
-            List<Integer> excludedSeasonList = new ArrayList<>();
-            String excludedSeasonsString = content.get("excludedSeasons", String.class);
-            if (excludedSeasonsString != null && !excludedSeasonsString.isEmpty()) {
-                String[] excludedSeasons = excludedSeasonsString.split(",");
-                for (String excludedSeason : excludedSeasons) {
-                    try {
-                        excludedSeasonList.add(Integer.parseInt(excludedSeason.trim()));
-                    } catch (NumberFormatException e) {
-                        ctx.status(HttpStatus.BAD_REQUEST);
-                        ctx.json(Map.of("error", "Invalid excluded season number: " + excludedSeason));
-                        return;
-                    }
-                }
+            if (subscribedAnimes.stream().anyMatch(a -> a.getUrl().equals(anime.getUrl()))) {
+                ctx.status(HttpStatus.CONFLICT);
+                ctx.json(Map.of("error", "Already subscribed to " + anime.getUrl()));
+                return;
             }
 
-            Anime anime = new Anime(languageId, title, url, excludedSeasonList);
-            anime.setDirectoryPath(directory, true);
-            anime.loadMissingEpisodes();
-            anime.scanDirectoryForExistingEpisodes();
             subscribedAnimes.add(anime);
             anime.writeToDB(db);
 
-            db.getExecutorHandler().awaitGroup(-1);
+            //db.getExecutorHandler().awaitGroup(-1);
+
+            anime.loadMissingEpisodes();
+            anime.scanDirectoryForExistingEpisodes();
 
             // Notify all WebSocket clients that subscriptions have changed
             notifyDataChanged("subscriptions");
@@ -780,7 +389,7 @@ public class AutoLoaderHandler extends Handler {
                 return;
             }
 
-            runDownload(optAnime.get());
+            optAnime.get().runDownload(db, defaultHandler);
             ctx.json(Map.of("message", "Download initiated for " + optAnime.get().getTitle()));
         } catch (NumberFormatException ex) {
             ctx.status(HttpStatus.BAD_REQUEST);
@@ -1005,6 +614,13 @@ public class AutoLoaderHandler extends Handler {
             Anime anime = optAnime.get();
             log.info("Manual scan requested for anime: {}", anime.getTitle());
             
+            // Set scanning state to true
+            anime.setScanning(true);
+            
+            // Notify clients that scanning has started
+            notifyDataChanged("subscriptions");
+
+
             // Check for language updates on existing episodes
             for (Season season : anime.getSeasonList()) {
                 for (Episode episode : season.getEpisodeList()) {
@@ -1016,21 +632,23 @@ public class AutoLoaderHandler extends Handler {
 
             // Scan for new episodes that are not in our data structure
             anime.loadMissingEpisodes();
-            
+
             // Scan directory for existing downloaded episodes
             anime.scanDirectoryForExistingEpisodes();
 
             if (anime.isDeepDirty()) {
                 anime.writeToDB(db);
             }
-            
+
             // Update the last scan time
             anime.updateLastUpdate();
 
             int unloadedCount = anime.getUnloadedEpisodeCount(true);
-            log.info("Manual scan completed for anime: {} - Found {} unloaded episodes", 
-                    anime.getTitle(), unloadedCount);
-            
+            log.info("Manual scan completed for anime: {} - Found {} unloaded episodes",
+                anime.getTitle(), unloadedCount);
+            // Set scanning state to false when done
+            anime.setScanning(false);
+
             // Notify all WebSocket clients that subscriptions have changed
             notifyDataChanged("subscriptions");
             
@@ -1099,6 +717,9 @@ public class AutoLoaderHandler extends Handler {
                         }
 
                         log.info("Scanning anime: " + anime.getTitle());
+                        
+                        // Set scanning state to true
+                        anime.setScanning(true);
 
                         // Checks the episodes that do not have the requested language
                         // for an update of the language
@@ -1115,14 +736,16 @@ public class AutoLoaderHandler extends Handler {
 
                         // Actually runs the download
                         if (autoLoad)
-                            runDownload(anime);
+                            anime.runDownload(db, defaultHandler);
 
                         if (anime.isDeepDirty())
                             anime.writeToDB(db);
 
-                        Utils.sleep(checkDelayMs);
-
                         anime.updateLastUpdate(); // Update the lastUpdate variable
+                        // Set scanning state to false when done
+                        anime.setScanning(false);
+
+                        Utils.sleep(checkDelayMs);
                     }
 
                     long sleepTime = checkIntervalMin*1000L*60L;
@@ -1139,50 +762,6 @@ public class AutoLoaderHandler extends Handler {
         });
         t.setName("AutoLoader");
         t.start();
-    }
-
-    /**
-     * Initiates downloads for all unloaded episodes of a specific anime.
-     * Creates download tasks for each missing episode and adds them to the download queue.
-     *
-     * @param anime The anime for which to download unloaded episodes
-     */
-    private void runDownload(Anime anime) {
-        for (Episode unloadedEpisode : anime.getUnloadedEpisodes()) {
-            unloadedEpisode.setDownloading(true);
-            try {
-                unloadedEpisode.loadVideoURL(anime.getLanguageId(), () -> {
-                    JSONObjectContainer data = new JSONObjectContainer();
-                    data.set("uuid", UUID.randomUUID().toString());
-                    data.set("state", "new");
-                    data.set("url", unloadedEpisode.getVideoUrl());
-                    data.set("target", "stream-animes/"+anime.getDirectory().getName());
-                    data.set("created", System.currentTimeMillis());
-
-                    JSONObjectContainer autoloaderData = new JSONObjectContainer();
-                    autoloaderData.set("animeId", anime.getId());
-                    autoloaderData.set("seasonId", unloadedEpisode.getSeason().getId());
-                    autoloaderData.set("episodeId", unloadedEpisode.getId());
-                    data.set("autoloaderData", autoloaderData.getRaw());
-
-                    JSONObjectContainer options = new JSONObjectContainer();
-                    options.set("useDirectMemory", "false");
-                    options.set("enableSessionRecovery", "false");
-                    options.set("enableSeasonAndEpisodeRenaming", "true");
-                    data.set("options", options.getRaw());
-
-                    log.debug("Scheduling download internally: {}", data);
-                    defaultHandler.scheduleDownloads(List.of(data));
-                });
-            } catch (Exception ex) {
-                log.error("", ex);
-                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Download failed: " + ex.getMessage()));
-            } finally {
-                unloadedEpisode.setDownloading(false);
-            }
-        }
-
-        anime.writeToDB(db);
     }
 
     /**

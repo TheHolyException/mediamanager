@@ -607,7 +607,6 @@ class StatisticsWidget extends BaseWidget {
             
             entries.forEach(entry => {
                 if (entry.isIntersecting && entry.target.matches('[widget-name="StatisticsWidget"]')) {
-                    console.log('Statistics widget became visible');
                     hasVisibleWidget = true;
                     
                     // Immediately fetch data when widget becomes visible, but only if charts are ready
@@ -623,7 +622,6 @@ class StatisticsWidget extends BaseWidget {
                             const updatedWidgetInstance = widget.data('widgetInstance');
                             if (updatedWidgetInstance && updatedWidgetInstance.memoryChart && typeof getSystemInfoAPI === 'function') {
                                 clearInterval(checkCharts);
-                                console.log('Charts ready, fetching initial data');
                                 getSystemInfoAPI();
                             }
                         }, 50);
@@ -649,7 +647,6 @@ class StatisticsWidget extends BaseWidget {
                 mutation.addedNodes.forEach(node => {
                     if (node.nodeType === Node.ELEMENT_NODE) {
                         if (node.matches && node.matches('[widget-name="StatisticsWidget"]')) {
-                            console.log('Statistics widget added to DOM');
                             this.intersectionObserver.observe(node);
                             shouldUpdate = true;
                         }
@@ -657,7 +654,6 @@ class StatisticsWidget extends BaseWidget {
                         const statsWidgets = node.querySelectorAll && node.querySelectorAll('[widget-name="StatisticsWidget"]');
                         if (statsWidgets && statsWidgets.length > 0) {
                             statsWidgets.forEach(widget => {
-                                console.log('Statistics widget found in added subtree');
                                 this.intersectionObserver.observe(widget);
                             });
                             shouldUpdate = true;
@@ -669,7 +665,6 @@ class StatisticsWidget extends BaseWidget {
                 mutation.removedNodes.forEach(node => {
                     if (node.nodeType === Node.ELEMENT_NODE) {
                         if (node.matches && node.matches('[widget-name="StatisticsWidget"]')) {
-                            console.log('Statistics widget removed from DOM');
                             this.intersectionObserver.unobserve(node);
                             shouldUpdate = true;
                         }
@@ -677,7 +672,6 @@ class StatisticsWidget extends BaseWidget {
                         const statsWidgets = node.querySelectorAll && node.querySelectorAll('[widget-name="StatisticsWidget"]');
                         if (statsWidgets && statsWidgets.length > 0) {
                             statsWidgets.forEach(widget => {
-                                console.log('Statistics widget found in removed subtree');
                                 this.intersectionObserver.unobserve(widget);
                             });
                             shouldUpdate = true;
@@ -735,8 +729,7 @@ class StatisticsWidget extends BaseWidget {
 
     static startPolling() {
         if (this.pollingInterval !== null) return;
-        
-        console.log('Starting system info polling - statistics widget is visible');
+
         this.isPollingActive = true;
         this.pollingInterval = setInterval(() => {
             if (typeof getSystemInfoAPI === 'function') {
@@ -747,8 +740,7 @@ class StatisticsWidget extends BaseWidget {
 
     static stopPolling() {
         if (this.pollingInterval === null) return;
-        
-        console.log('Stopping system info polling - no visible statistics widgets');
+
         this.isPollingActive = false;
         clearInterval(this.pollingInterval);
         this.pollingInterval = null;

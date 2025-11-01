@@ -1,9 +1,16 @@
 package de.theholyexception.mediamanager.models.aniworld;
 
+import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
+import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.holyapi.datastorage.sql.Result;
 import de.theholyexception.holyapi.datastorage.sql.Row;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
+import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.util.Utils;
+import de.theholyexception.mediamanager.util.WebSocketResponseException;
+import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import io.javalin.http.Context;
+import io.javalin.http.HttpStatus;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -33,6 +40,10 @@ public class Anime {
     private List<Integer> excludedSeasons;
     @Getter
     private boolean paused;
+    @Getter @Setter
+    private boolean scanning = false;
+    @Getter @Setter
+    private boolean downloading = false;
     @Getter
     private final List<Season> seasonList = new ArrayList<>();
     private Long lastUpdate = 0L;
@@ -63,6 +74,40 @@ public class Anime {
         }
 
         return result;
+    }
+
+    public static Anime createFromContent(Context httpContext) {
+        JSONObjectContainer content = (JSONObjectContainer) JSONReader.readString(httpContext.body());
+        String url = content.get("url", String.class);
+        int languageId = content.get("languageId", Integer.class);
+        String directory = content.get("directory", String.class);
+        if (directory != null && directory.isEmpty()) directory = null;
+
+        String title = AniworldHelper.getAnimeTitle(url);
+        if (title == null) {
+            httpContext.status(HttpStatus.BAD_REQUEST);
+            httpContext.json(Map.of("error", "Cannot resolve anime title from " + url));
+            return null;
+        }
+
+        List<Integer> excludedSeasonList = new ArrayList<>();
+        String excludedSeasonsString = content.get("excludedSeasons", String.class);
+        if (excludedSeasonsString != null && !excludedSeasonsString.isEmpty()) {
+            String[] excludedSeasons = excludedSeasonsString.split(",");
+            for (String excludedSeason : excludedSeasons) {
+                try {
+                    excludedSeasonList.add(Integer.parseInt(excludedSeason.trim()));
+                } catch (NumberFormatException e) {
+                    httpContext.status(HttpStatus.BAD_REQUEST);
+                    httpContext.json(Map.of("error", "Invalid excluded season number: " + excludedSeason));
+                    return null;
+                }
+            }
+        }
+
+        Anime anime = new Anime(languageId, title, url, excludedSeasonList);
+        anime.setDirectoryPath(directory, true);
+        return anime;
     }
 
 
@@ -146,6 +191,24 @@ public class Anime {
         this.paused = paused;
         if (markDirty) {
             this.isDirty = true;
+        }
+    }
+
+    /**
+     * Gets the current status string for display in the frontend.
+     * Returns appropriate status text based on current state.
+     * 
+     * @return Status string: "Scanning" (yellow), "Paused" (gray), or "Active" (green)
+     */
+    public String getStatusString() {
+        if (scanning) {
+            return "Scanning";
+        } else if (downloading) {
+            return "Downloading";
+        } else if (paused) {
+            return "Paused";
+        } else {
+            return "Active";
         }
     }
 
@@ -257,6 +320,46 @@ public class Anime {
         lastUpdate = System.currentTimeMillis();
     }
 
+    /**
+     * Initiates downloads for all unloaded episodes of a specific anime.
+     * Creates download tasks for each missing episode and adds them to the download queue.
+     */
+    public void runDownload(DataBaseInterface db, DefaultHandler defaultHandler) {
+        for (Episode unloadedEpisode : getUnloadedEpisodes()) {
+            unloadedEpisode.setDownloading(true);
+            try {
+                unloadedEpisode.loadVideoURL(getLanguageId(), () -> {
+                    JSONObjectContainer data = new JSONObjectContainer();
+                    data.set("uuid", UUID.randomUUID().toString());
+                    data.set("state", "new");
+                    data.set("url", unloadedEpisode.getVideoUrl());
+                    data.set("target", "stream-animes/"+getDirectory().getName());
+                    data.set("created", System.currentTimeMillis());
+
+                    JSONObjectContainer autoloaderData = new JSONObjectContainer();
+                    autoloaderData.set("animeId", getId());
+                    autoloaderData.set("seasonId", unloadedEpisode.getSeason().getId());
+                    autoloaderData.set("episodeId", unloadedEpisode.getId());
+                    data.set("autoloaderData", autoloaderData.getRaw());
+
+                    JSONObjectContainer options = new JSONObjectContainer();
+                    options.set("useDirectMemory", "false");
+                    options.set("enableSessionRecovery", "false");
+                    options.set("enableSeasonAndEpisodeRenaming", "true");
+                    data.set("options", options.getRaw());
+
+                    log.debug("Scheduling download internally: {}", data);
+                    defaultHandler.scheduleDownloads(List.of(data));
+                });
+            } catch (Exception ex) {
+                log.error("", ex);
+                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Download failed: " + ex.getMessage()));
+            } finally {
+                unloadedEpisode.setDownloading(false);
+            }
+        }
+        writeToDB(db);
+    }
 
     public boolean isDeepDirty() {
         if (isDirty) return true;
@@ -307,6 +410,7 @@ public class Anime {
         object.put("directory", relativePath);
         object.put("excludedSeasons", Utils.intergerListToString(excludedSeasons));
         object.put("paused", paused);
+        object.put("status", getStatusString());
         return new JSONObject(object);
     }
 
