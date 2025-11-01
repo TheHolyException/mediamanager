@@ -182,7 +182,7 @@ class DownloadsWidget extends BaseWidget {
                     let statusText = stateCol.find('.status-text');
                     
                     // Update status text
-                    statusText.text(item.state.split('\n')[0]);
+                    statusText.text(item.state);
                     
                     // Update status indicator symbols
                     statusIndicator.find('.error-symbol, .warning-symbol').remove();
@@ -209,6 +209,9 @@ class DownloadsWidget extends BaseWidget {
 
                     let resentStream = row.find('[action="resendOtherStream"]')
                     resentStream.css('display', item.autoloaderData != undefined && item.state.startsWith('Error') ? 'block' : 'none')
+
+                    let downloadLogBtn = row.find('[action="downloadLog"]');
+                    downloadLogBtn.toggleClass('force-hide', !(item.hadServerError || item.hadWarning));
                 }
 
                 DownloadsWidget.setStatusAndTooltip(row, item);
@@ -306,7 +309,18 @@ class DownloadsWidget extends BaseWidget {
                 SelectStreamPopup.request(data);
             });
 
-        toolbar.append(resentBtn, deleteBtn, resentWithOtherStreamBtn);
+        //Column - toolbar - download log
+        let downloadLogBtn = $('<button>')
+            .attr('action', 'downloadLog')
+            .attr('title', 'Download Log File')
+            .addClass('action-icon-btn log-btn')
+            .append($('<i>').addClass('fas fa-file-download'))
+            .toggleClass('force-hide', !(item.hadServerError || item.hadWarning))
+            .click(function () {
+                window.open('/api/download-log/' + item.uuid, '_blank');
+            });
+
+        toolbar.append(resentBtn, deleteBtn, resentWithOtherStreamBtn, downloadLogBtn);
 
         //Column - toolbar - resend with validationSkipping
         let resendSkipValidation = $('<button>')

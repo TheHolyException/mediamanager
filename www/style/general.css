@@ -110,10 +110,11 @@ body {
 .nav-container {
     position: relative;
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
     padding: 0.5rem;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    height: 60px;
 }
 
 /* Sticky Navigation for Stream View */
@@ -122,6 +123,7 @@ body:not(.grid-view) .modern-header {
     top: 0;
     z-index: 1000;
 }
+
 
 /* Make the entire navigation area sticky when in stream view */
 body:not(.grid-view) .modern-nav {
@@ -222,8 +224,8 @@ body:not(.grid-view) .nav-container {
 }
 
 .action-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: none;
+    border: none;
     border-radius: 8px;
     padding: 0.75rem;
     color: var(--darkerTextColor);
@@ -258,10 +260,10 @@ body:not(.grid-view) .nav-container {
     display: flex;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 25px;
+    border-radius: 4px;
     padding: 0.25rem;
     width: 180px;
-    height: 50px;
+    height: 40px;
 }
 
 .toggle-option {

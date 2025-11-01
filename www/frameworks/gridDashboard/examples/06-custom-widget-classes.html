@@ -772,9 +772,6 @@
                     title: 'Customer Survey',
                     content: `
                         <div style="padding: 15px;">
-                            <div class="survey-progress" style="background: #e1e5e9; height: 4px; border-radius: 2px; margin-bottom: 15px;">
-                                <div class="progress-bar" style="background: #4a90e2; height: 100%; width: 33%; border-radius: 2px; transition: width 0.3s ease;"></div>
-                            </div>
                             <div class="survey-step" data-step="1">
                                 <h4 style="margin-bottom: 10px;">How satisfied are you with our service?</h4>
                                 <div style="display: flex; gap: 5px; margin-bottom: 15px;">
@@ -834,39 +831,6 @@
                     nextBtn.addEventListener('click', () => {
                         this.nextStep();
                     });
-                }
-            }
-
-            nextStep() {
-                this.currentStep++;
-                
-                if (this.currentStep > this.totalSteps) {
-                    this.completeSurvey();
-                    return;
-                }
-                
-                // Update progress
-                const progressBar = this.element.querySelector('.progress-bar');
-                if (progressBar) {
-                    progressBar.style.width = `${(this.currentStep / this.totalSteps) * 100}%`;
-                }
-                
-                // Simulate completion for demo
-                setTimeout(() => this.completeSurvey(), 1000);
-            }
-
-            completeSurvey() {
-                const stepEl = this.element.querySelector('.survey-step');
-                const completionEl = this.element.querySelector('.survey-completion');
-                
-                if (stepEl) stepEl.style.display = 'none';
-                if (completionEl) completionEl.style.display = 'block';
-                
-                // Update progress to 100%
-                const progressBar = this.element.querySelector('.progress-bar');
-                if (progressBar) {
-                    progressBar.style.width = '100%';
-                    progressBar.style.background = '#28a745';
                 }
             }
 

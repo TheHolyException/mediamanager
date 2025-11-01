@@ -214,6 +214,7 @@ public class DefaultHandler extends Handler {
         app.post("/api/downloads", this::addDownloadsRequest);
         app.delete("/api/downloads/{uuid}", this::deleteDownloadRequest);
         app.delete("/api/downloads", this::deleteAllDownloadsRequest);
+        app.get("/api/download-log/{uuid}", this::downloadLogRequest);
         app.get("/api/targets", this::getTargets);
         app.get("/api/settings", this::getSettingsRequest);
         app.post("/api/settings", this::updateSettingsRequest);
@@ -356,6 +357,62 @@ public class DefaultHandler extends Handler {
             ctx.json(Map.of("error", "Invalid UUID format"));
         } catch (Exception ex) {
             log.error("Failed to delete download via REST API", ex);
+            ctx.status(500);
+            ctx.json(Map.of("error", "Internal server error: " + ex.getMessage()));
+        }
+    }
+
+    /**
+     * REST API endpoint to download the log file for a specific download task.
+     * Returns the log file content for downloads that had warnings or errors.
+     */
+    @OpenApi(
+        summary = "Download log file for a specific download task",
+        operationId = "downloadLog",
+        path = "/api/download-log/{uuid}",
+        tags = {"Downloader"},
+        methods = HttpMethod.GET,
+        pathParams = {
+            @OpenApiParam(name = "uuid", description = "The UUID of the download task", required = true)
+        },
+        responses = {
+            @OpenApiResponse(status = "200", description = "Log file downloaded successfully"),
+            @OpenApiResponse(status = "404", description = "Download task or log file not found"),
+            @OpenApiResponse(status = "400", description = "Invalid UUID format"),
+            @OpenApiResponse(status = "500", description = "Server error")
+        }
+    )
+    private void downloadLogRequest(Context ctx) {
+        try {
+            String uuidStr = ctx.pathParam("uuid");
+            UUID uuid = UUID.fromString(uuidStr);
+
+            DownloadTask downloadTask = urls.get(uuid);
+            if (downloadTask == null) {
+                ctx.status(404);
+                ctx.json(Map.of("error", "Download task not found"));
+                return;
+            }
+
+            File logFile = downloadTask.getLogFile();
+            if (logFile == null || !logFile.exists()) {
+                ctx.status(404);
+                ctx.json(Map.of("error", "Log file not found"));
+                return;
+            }
+
+            // Set headers for file download
+            ctx.header("Content-Disposition", "attachment; filename=\"" + logFile.getName() + "\"");
+            ctx.header("Content-Type", "text/plain");
+            
+            // Send the file
+            ctx.result(new String(java.nio.file.Files.readAllBytes(logFile.toPath())));
+
+        } catch (IllegalArgumentException ex) {
+            ctx.status(400);
+            ctx.json(Map.of("error", "Invalid UUID format"));
+        } catch (Exception ex) {
+            log.error("Failed to download log file via REST API", ex);
             ctx.status(500);
             ctx.json(Map.of("error", "Internal server error: " + ex.getMessage()));
         }

@@ -405,7 +405,7 @@
         
         .subscriptions-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 5%));
             gap: 20px;
             padding: 15px 0;
         }
@@ -415,7 +415,8 @@
         background-color: var(--darkBGColor2);
         border: 2px solid var(--darkBGColor3);
         border-radius: 2px;
-        padding: 20px;
+        padding: 13px;
+        margin: 5px;
         transition: all 0.3s ease;
         position: relative;
         
@@ -461,47 +462,8 @@
                     border-radius: 4px;
                     background-color: var(--darkBGColor1);
                 }
-                
-                .status-badge {
-                    font-size: 0.8em;
-                    padding: 4px 8px;
-                    border-radius: 12px;
-                    font-weight: 500;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    
-                    &.status-active {
-                        background-color: var(--success);
-                        color: white;
-                    }
-                    
-                    &.status-pending {
-                        background-color: var(--processing);
-                        color: white;
-                    }
-                    
-                    &.status-paused {
-                        background-color: var(--darkerTextColor);
-                        color: white;
-                    }
-                    
-                    &.status-scanning {
-                        background-color: #ffcc00;
-                        color: black;
-                    }
-                    
-                    &.status-downloading {
-                        background-color: #007bff;
-                        color: white;
-                    }
-                    
-                    &.status-error {
-                        background-color: var(--error);
-                        color: white;
-                    }
-                }
             }
-            
+
             .card-actions {
                 display: flex;
                 gap: 8px;
@@ -529,11 +491,66 @@
             }
         }
         
+        .card-footer {
+            border-top: 1px solid var(--darkBGColor3);
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .status-div {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            
+            .status-badge {
+                font-size: 0.8em;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-weight: 500;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                
+                &.status-active {
+                    background-color: var(--success);
+                    color: white;
+                }
+                
+                &.status-pending {
+                    background-color: var(--processing);
+                    color: white;
+                }
+                
+                &.status-paused {
+                    background-color: var(--darkerTextColor);
+                    color: white;
+                }
+                
+                &.status-scanning {
+                    background-color: #ffcc00;
+                    color: black;
+                }
+                
+                &.status-downloading {
+                    background-color: #007bff;
+                    color: white;
+                }
+                
+                &.status-error {
+                    background-color: var(--error);
+                    color: white;
+                }
+            }
+        }
+        
         .card-content {
             margin-bottom: 15px;
             
             .info-grid {
-                display: grid;
+                display: flex;
+                flex-wrap: wrap;
+                flex-direction: column;
                 grid-template-columns: 1fr 1fr;
                 gap: 12px;
                 margin-bottom: 15px;
@@ -598,30 +615,6 @@
                 }
             }
         }
-        
-        .card-footer {
-            .progress-section {
-                .progress-bar {
-                    height: 6px;
-                    background-color: var(--darkBGColor1);
-                    border-radius: 3px;
-                    overflow: hidden;
-                    margin-bottom: 8px;
-                    
-                    .progress-fill {
-                        height: 100%;
-                        background-color: var(--selectedBorderColor);
-                        transition: width 0.3s ease;
-                        border-radius: 3px;
-                    }
-                }
-                
-                .progress-text {
-                    font-size: 0.85em;
-                    color: var(--darkerTextColor);
-                }
-            }
-        }
     }
 
     @media (max-width: 768px) {
@@ -647,7 +640,7 @@
         }
         
         .subscription-card .card-header {
-            flex-direction: column;
+            flex-direction: row;
             gap: 15px;
             
             .card-actions {

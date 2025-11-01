@@ -380,6 +380,15 @@
                     background: rgba(23, 162, 184, 0.1) !important;
                 }
             }
+
+            &.log-btn {
+                border-color: #6c757d !important;
+                color: #6c757d !important;
+
+                &:hover {
+                    background: rgba(108, 117, 125, 0.1) !important;
+                }
+            }
         }
     }
 

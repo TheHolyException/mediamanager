@@ -221,16 +221,6 @@ class SubscriptionsWidget extends BaseWidget {
             </div>
 
             <div class="subscriptions-container scrollable-content">
-                <div class="empty-state" style="display: none;">
-                    <i class="fa fa-inbox"></i>
-                    <h3>No Subscriptions</h3>
-                    <p>Add your first anime subscription to get started</p>
-                    <button class="add-first-btn primary-btn">
-                        <i class="fa fa-plus"></i>
-                        Add Subscription
-                    </button>
-                </div>
-                
                 <div class="subscriptions-grid"></div>
             </div>
         </div>
@@ -245,7 +235,7 @@ class SubscriptionsWidget extends BaseWidget {
         const self = this;
 
         // Add subscription button
-        widget.find('.add-subscription-btn, .add-first-btn').click(function() {
+        widget.find('.add-subscription-btn').click(function() {
             self.showAddForm(widget);
         });
 
@@ -435,24 +425,6 @@ class SubscriptionsWidget extends BaseWidget {
                 <div class="card-header">
                     <div class="title-section">
                         <h3 class="anime-title" title="${item.title}">${item.title}</h3>
-                        <span class="status-badge status-${status}">${item.status || status}</span>
-                    </div>
-                    <div class="card-actions">
-                        <button class="action-btn scan-btn" title="Scan for new episodes">
-                            <i class="fa fa-rotate"></i>
-                        </button>
-                        <button class="action-btn download-btn" title="Download now">
-                            <i class="fa fa-download"></i>
-                        </button>
-                        <button class="action-btn pause-btn" title="Pause/Resume">
-                            <i class="fa ${status === 'paused' ? 'fa-play' : 'fa-pause'}"></i>
-                        </button>
-                        <button class="action-btn settings-btn" title="Settings">
-                            <i class="fa fa-cog"></i>
-                        </button>
-                        <button class="action-btn delete-btn" title="Unsubscribe">
-                            <i class="fa fa-trash"></i>
-                        </button>
                     </div>
                 </div>
                 
@@ -489,11 +461,25 @@ class SubscriptionsWidget extends BaseWidget {
                 </div>
                 
                 <div class="card-footer">
-                    <div class="progress-section">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${this.calculateProgress(item)}%"></div>
-                        </div>
-                        <span class="progress-text">${this.getProgressText(item)}</span>
+                    <div class="card-actions">
+                        <button class="action-btn scan-btn" title="Scan for new episodes">
+                            <i class="fa fa-rotate"></i>
+                        </button>
+                        <button class="action-btn download-btn" title="Download now">
+                            <i class="fa fa-download"></i>
+                        </button>
+                        <button class="action-btn pause-btn" title="Pause/Resume">
+                            <i class="fa ${status === 'paused' ? 'fa-play' : 'fa-pause'}"></i>
+                        </button>
+                        <button class="action-btn settings-btn" title="Settings">
+                            <i class="fa fa-cog"></i>
+                        </button>
+                        <button class="action-btn delete-btn" title="Unsubscribe">
+                            <i class="fa fa-trash"></i>
+                        </button>
+                    </div>
+                    <div class="status-div">
+                        <span class="status-badge status-${status}">${item.status || status}</span>
                     </div>
                 </div>
             </div>
@@ -687,9 +673,8 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     updateEmptyState(widget) {
-        const container = widget.find('.subscriptions-grid');
-        const visibleCards = container.find('.subscription-card:visible').length;
-        widget.find('.empty-state').toggle(visibleCards === 0);
+        // Empty state functionality removed
+        // The widget will show an empty grid when no subscriptions are available
     }
 
     updateStats(widget) {

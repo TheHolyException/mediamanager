@@ -41,6 +41,7 @@ import static de.theholyexception.mediamanager.webserver.WebSocketUtils.changeOb
 public class DownloadTask implements Comparable<DownloadTask> {
 
     private static final SimpleDateFormat LOG_FILE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+    private static final SimpleDateFormat LOG_DATE_FORMAT = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
     private static final String PACKET_KEY_STATE = "state";
     private static final AtomicInteger SORT_INDEX_COUNTER = new AtomicInteger(0);
     private static final File DEBUG_LOG_FOLDER = new File("./debug-logs");
@@ -165,6 +166,10 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
         createLogFile();
 
+        if (url.equalsIgnoreCase("warning")) {
+            writeLogLine(Level.WARNING, "Test Warning");
+        }
+
         if (url == null || url.isEmpty()) {
             writeLogLine(Level.SEVERE, "URL is null or empty, aborting download!");
             throw new IllegalArgumentException("URL is null or empty, aborting download!");
@@ -197,8 +202,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
     public void resolveTitle() {
         String title = downloader.resolveTitle();
-        changeObject(content, "title", title);
-        updateLogFile(title);
+        if (title == null) {
+            writeLogLine(Level.SEVERE, "Failed to resolve title!");
+        } else {
+            changeObject(content, "title", title);
+            updateLogFile(title);
+        }
     }
 
     public void start(int threads) {
@@ -231,7 +240,13 @@ public class DownloadTask implements Comparable<DownloadTask> {
         isRunning = true;
 
         writeLogLine(Level.INFO, "Download is started");
-        File outputFile = downloader.start();
+        File outputFile = null;
+        try {
+            outputFile = downloader.start();
+        } catch (Exception ex) {
+            isFailed = true;
+            writeLogLine(Level.INFO, "Download failed");
+        }
 
         if (downloader.isCanceled()) {
             writeLogLine(Level.INFO, "Download is canceled");
@@ -245,7 +260,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             long delay = errorCount*errorCount*600L*1000L;
             if (delay < 86400000) {
                 retryTimestamp = System.currentTimeMillis() + delay;
-                changeObject(content, PACKET_KEY_STATE, "Retry scheduled for:[\uD83C\uDDE9\uD83C\uDDEA]" + new SimpleDateFormat("HH:mm:ss").format(new Date(retryTimestamp)));
+                changeObject(content, PACKET_KEY_STATE, "Retry scheduled for:\n" + new SimpleDateFormat("HH:mm:ss").format(new Date(retryTimestamp)));
             } else {
                 retryTimestamp = -1;
                 errorCount = 0;
@@ -395,14 +410,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
             @Override
             public void onInfo(String s) {
-                if (log.isDebugEnabled())
-                    log.debug(s);
+                writeLogLine(Level.INFO, "onInfo() \t " + s);
             }
 
             @Override
             public void onWarn(String s) {
                 writeLogLine(Level.WARNING, "onWarn() \t " + s);
-                log.warn(s);
             }
 
             @Override
@@ -432,9 +445,6 @@ public class DownloadTask implements Comparable<DownloadTask> {
             public void onException(Throwable error) {
                 update();
                 writeLogLine(Level.SEVERE, "onException() \t " + Utils.stackTraceToString(error));
-                if (log.isDebugEnabled()) {
-                    log.debug("Download failed!", error);
-                }
                 if (isRunning && !isDeleted) {
                     isFailed = true;
                     changeObject(content, PACKET_KEY_STATE, "Error: " + error.getMessage());
@@ -534,6 +544,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
         logFile = new File(DOWNLOADS_LOG_FOLDER, LOG_FILE_DATE_FORMAT.format(new Date())+"-"+Utils.escape(url)+".log");
         try {
             logFileFOS = new BufferedOutputStream(new FileOutputStream(logFile));
+
         } catch (IOException ex) {
             log.error("Failed to create download log file", ex);
         }
@@ -597,8 +608,10 @@ public class DownloadTask implements Comparable<DownloadTask> {
                 String logMessage = LOG_FILE_DATE_FORMAT.format(new Date());
                 logMessage += " " + level.toString();
                 logMessage += " \t" + message;
+                logMessage += "\n";
 
                 logFileFOS.write(logMessage.getBytes());
+                logFileFOS.flush();
             } catch (IOException ex) {
                 log.error("Failed to write log file", ex);
             }

@@ -30,16 +30,6 @@ class SettingsWidget extends BaseWidget {
                 defaultValue: 10,
                 description: 'Maximum number of simultaneous downloads',
                 icon: 'fas fa-stream'
-            },
-            {
-                key: 'RETRY_MINUTES',
-                label: 'Retry Minutes',
-                type: 'number',
-                min: 1,
-                max: 1440,
-                defaultValue: 0,
-                description: 'Minutes to wait before retrying failed downloads',
-                icon: 'fas fa-redo'
             }
         ];
     }
