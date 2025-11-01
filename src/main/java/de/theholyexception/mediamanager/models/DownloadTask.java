@@ -258,7 +258,6 @@ public class DownloadTask implements Comparable<DownloadTask> {
             writeLogLine(Level.WARNING, "Download has failed");
             errorCount ++;
             long delay = calculateRetryDelay();
-            log.info(delay + "");
             long maxDelayMs = getMaxRetryDelayMs();
             
             if (delay < maxDelayMs) {
@@ -470,7 +469,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
             if (etaSeconds > 0 && etaSeconds < 86400) { // Cap at 24 hours
                 String etaText = formatETA(etaSeconds);
-                progressText += "[\uD83C\uDDE9\uD83C\uDDEA](ETA: " + etaText + ")";
+                progressText += "\n(ETA: " + etaText + ")";
             }
         }
         return progressText;

@@ -94,7 +94,7 @@
                 width: 100%;
                 padding: 10px 15px 10px 40px;
                 border: 2px solid var(--darkBGColor3);
-                border-radius: 25px;
+                border-radius: 6px;
                 background-color: var(--darkBGColor1);
                 color: var(--textColor);
                 font-size: 0.95em;
@@ -416,9 +416,10 @@
         border: 2px solid var(--darkBGColor3);
         border-radius: 2px;
         padding: 13px;
-        margin: 5px;
         transition: all 0.3s ease;
         position: relative;
+        display: flex;
+        flex-direction: column;
         
         &:hover {
             border-color: var(--selectedBorderColor);
@@ -497,6 +498,7 @@
             flex-direction: row;
             justify-content: space-between;
             align-items: center;
+            margin-top: auto;
         }
         
         .status-div {

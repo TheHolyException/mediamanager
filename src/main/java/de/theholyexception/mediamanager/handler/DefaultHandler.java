@@ -240,7 +240,7 @@ public class DefaultHandler extends Handler {
         app.post("/api/downloads", this::addDownloadsRequest);
         app.delete("/api/downloads/{uuid}", this::deleteDownloadRequest);
         app.delete("/api/downloads", this::deleteAllDownloadsRequest);
-        app.get("/api/download-log/{uuid}", this::downloadLogRequest);
+        app.get("/api/view-log/{uuid}", this::viewLogRequest);
         app.get("/api/targets", this::getTargets);
         app.get("/api/settings", this::getSettingsRequest);
         app.post("/api/settings", this::updateSettingsRequest);
@@ -389,26 +389,26 @@ public class DefaultHandler extends Handler {
     }
 
     /**
-     * REST API endpoint to download the log file for a specific download task.
-     * Returns the log file content for downloads that had warnings or errors.
+     * REST API endpoint to view the log file content for a specific download task.
+     * Returns the log file content as plain text for viewing in a new tab.
      */
     @OpenApi(
-        summary = "Download log file for a specific download task",
-        operationId = "downloadLog",
-        path = "/api/download-log/{uuid}",
+        summary = "View log file content for a specific download task",
+        operationId = "viewLog",
+        path = "/api/view-log/{uuid}",
         tags = {"Downloader"},
         methods = HttpMethod.GET,
         pathParams = {
             @OpenApiParam(name = "uuid", description = "The UUID of the download task", required = true)
         },
         responses = {
-            @OpenApiResponse(status = "200", description = "Log file downloaded successfully"),
+            @OpenApiResponse(status = "200", description = "Log file content displayed successfully"),
             @OpenApiResponse(status = "404", description = "Download task or log file not found"),
             @OpenApiResponse(status = "400", description = "Invalid UUID format"),
             @OpenApiResponse(status = "500", description = "Server error")
         }
     )
-    private void downloadLogRequest(Context ctx) {
+    private void viewLogRequest(Context ctx) {
         try {
             String uuidStr = ctx.pathParam("uuid");
             UUID uuid = UUID.fromString(uuidStr);
@@ -427,18 +427,17 @@ public class DefaultHandler extends Handler {
                 return;
             }
 
-            // Set headers for file download
-            ctx.header("Content-Disposition", "attachment; filename=\"" + logFile.getName() + "\"");
-            ctx.header("Content-Type", "text/plain");
+            // Set headers for viewing content in browser (not download)
+            ctx.header("Content-Type", "text/plain; charset=utf-8");
             
-            // Send the file
+            // Send the file content for viewing
             ctx.result(new String(java.nio.file.Files.readAllBytes(logFile.toPath())));
 
         } catch (IllegalArgumentException ex) {
             ctx.status(400);
             ctx.json(Map.of("error", "Invalid UUID format"));
         } catch (Exception ex) {
-            log.error("Failed to download log file via REST API", ex);
+            log.error("Failed to view log file via REST API", ex);
             ctx.status(500);
             ctx.json(Map.of("error", "Internal server error: " + ex.getMessage()));
         }

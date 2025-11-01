@@ -292,7 +292,7 @@ body:not(.grid-view) .nav-container {
     width: calc(50% - 0.25rem);
     height: calc(100% - 0.5rem);
     background: linear-gradient(135deg, var(--selectedBorderColor), var(--hover-color));
-    border-radius: 20px;
+    border-radius: 2px;
     transition: transform 0.3s ease;
     z-index: 1;
     box-shadow: 0 2px 8px rgba(8, 145, 178, 0.3);
@@ -561,10 +561,6 @@ body.grid-view:not(.grid-editing) .nav-container {
 
 .edit-save-btn:hover {
     background: rgba(255, 255, 255, 0.15);
-}
-
-.main-container {
-    padding: 50px;
 }
 
 .dashboard {

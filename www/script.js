@@ -258,7 +258,7 @@ function initUI() {
 }
 
 function setupGridDashboard(){
-    dashboard = new GridDashboard('.dashboard', 20, 20, {
+    dashboard = new GridDashboard('.dashboard', 40, 40, {
         //useCSSAuto: true,
         gap: 10,
         editMode: false,

@@ -50,7 +50,7 @@
     padding: 1rem 1.5rem;
     background: linear-gradient(135deg, var(--darkBGColor2) 0%, var(--darkBGColor3) 100%);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px 12px 0 0;
+    border-radius: 2px;
     margin: -10px -10px 0 -10px;
     position: sticky;
     top: 0;

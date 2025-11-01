@@ -309,15 +309,15 @@ class DownloadsWidget extends BaseWidget {
                 SelectStreamPopup.request(data);
             });
 
-        //Column - toolbar - download log
+        //Column - toolbar - view log
         let downloadLogBtn = $('<button>')
             .attr('action', 'downloadLog')
-            .attr('title', 'Download Log File')
+            .attr('title', 'Open Log')
             .addClass('action-icon-btn log-btn')
-            .append($('<i>').addClass('fas fa-file-download'))
+            .append($('<i>').addClass('fas fa-file-text'))
             .toggleClass('force-hide', !(item.hadServerError || item.hadWarning))
             .click(function () {
-                window.open('/api/download-log/' + item.uuid, '_blank');
+                window.open('/api/view-log/' + item.uuid, '_blank');
             });
 
         toolbar.append(resentBtn, deleteBtn, resentWithOtherStreamBtn, downloadLogBtn);

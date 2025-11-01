@@ -15,8 +15,8 @@ class GridDashboard {
         this.initialWidth = width;
         this.initialHeight = height;
         this.options = {
-            cellWidth: 100, // Cell width in pixels, or "auto" for responsive
-            cellHeight: 100, // Cell height in pixels, or "auto" for responsive  
+            cellWidth: 2, // Cell width in pixels, or "auto" for responsive
+            cellHeight: 2, // Cell height in pixels, or "auto" for responsive
             gap: 10,
             autoResize: true,
             enableDragDrop: true,

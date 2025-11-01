@@ -100,7 +100,7 @@ public class ProxyHandler {
 	 */
 	private static boolean checkTorNetwork(Proxy proxy) {
 		try {
-			HTTPResult result = SmartHTTP.request(new HTTPRequestOptions("https://check.torproject.org/api/ip").setProxy(proxy).setTimeout(50));
+			HTTPResult result = SmartHTTP.request(new HTTPRequestOptions("https://check.torproject.org/api/ip").setProxy(proxy));
 			JSONObject torNetworkStatus = (JSONObject) new JSONParser().parse(new String(result.getData()));
 			if (torNetworkStatus == null) return false;
 			if (!torNetworkStatus.containsKey("IsTor")) return false;
