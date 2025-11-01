@@ -5,8 +5,16 @@
     font-family: sans-serif;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
     background-color: var(--darkBGColor1);
+}
+
+.main-container {
+    height: calc(100vh - 70px);
 }
 
 /* Modern Header Styles */
@@ -341,6 +349,10 @@ body:not(.grid-view) .nav-container {
         padding: 0 1rem;
     }
     
+    body:not(.grid-view) .main-container {
+        height: calc(100vh - 60px);
+    }
+    
     body:not(.grid-view) .header-brand,
     body:not(.grid-view) .header-actions {
         min-width: 150px;
@@ -377,6 +389,11 @@ body:not(.grid-view) .nav-container {
         flex-wrap: wrap;
         height: auto;
         padding: 1rem;
+    }
+    
+    body:not(.grid-view) .main-container {
+        height: auto;
+        min-height: calc(100vh - 120px);
     }
     
     body:not(.grid-view) .header-brand {
@@ -564,7 +581,7 @@ body.grid-view:not(.grid-editing) .nav-container {
 }
 
 .dashboard {
-    height: calc(100vh - 170px)!important;
+    height: 100%!important;
 }
 
 .force-hide {
