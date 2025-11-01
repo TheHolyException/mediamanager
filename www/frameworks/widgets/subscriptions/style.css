@@ -15,6 +15,35 @@
             display: flex;
             gap: 20px;
             font-size: 0.9em;
+            align-items: center;
+            
+            .autoloader-status-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 4px 12px;
+                background-color: rgba(255, 152, 0, 0.1);
+                border: 1px solid rgba(255, 152, 0, 0.3);
+                border-radius: 4px;
+                color: #ff9800;
+                font-size: 0.85em;
+                font-weight: 500;
+                transition: all 0.3s ease;
+                
+                i {
+                    color: #ff9800;
+                    font-size: 0.9em;
+                }
+                
+                span {
+                    white-space: nowrap;
+                }
+                
+                &:hover {
+                    background-color: rgba(255, 152, 0, 0.15);
+                    border-color: rgba(255, 152, 0, 0.4);
+                }
+            }
             
             .stat-item {
                 display: flex;
@@ -623,6 +652,26 @@
             
             .card-actions {
                 align-self: flex-end;
+            }
+        }
+        
+        .widget-header {
+            .widget-stats {
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+                
+                .autoloader-status-info {
+                    align-self: stretch;
+                    justify-content: center;
+                    padding: 6px 12px;
+                    font-size: 0.9em;
+                }
+                
+                .stat-item {
+                    align-self: stretch;
+                    justify-content: center;
+                }
             }
         }
     }

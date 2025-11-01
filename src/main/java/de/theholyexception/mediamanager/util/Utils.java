@@ -2,10 +2,7 @@ package de.theholyexception.mediamanager.util;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -92,6 +89,12 @@ public class Utils {
             }
         }
         if (!dir.delete()) log.warn("Failed to delete dir " + dir.getAbsolutePath());
+    }
+
+    public static String stackTraceToString(Throwable t) {
+        StringWriter sw = new StringWriter();
+        t.printStackTrace(new PrintWriter(sw));
+        return sw.getBuffer().toString();
     }
 
 }

@@ -663,7 +663,7 @@ function getUrls(activeTab) {
     let val = null;
     switch(activeTab){
         case "url":
-            val = $('.url-tab .url').val();
+            val = $('.url-tab .url').val().trim();
             $('.url-tab .url').val("");
             return val;
         case "aniworld":

@@ -178,7 +178,19 @@ class DownloadsWidget extends BaseWidget {
                 }
                 else {
                     let stateCol = row.find('[col="state"]');
-                    stateCol.text(item.state.split('\n')[0]);
+                    let statusIndicator = stateCol.find('.status-indicator');
+                    let statusText = stateCol.find('.status-text');
+                    
+                    // Update status text
+                    statusText.text(item.state.split('\n')[0]);
+                    
+                    // Update status indicator symbols
+                    statusIndicator.find('.error-symbol, .warning-symbol').remove();
+                    if (item.hadServerError) {
+                        statusIndicator.append($('<i>').addClass('fas fa-exclamation-circle error-symbol').attr('title', 'Download had errors'));
+                    } else if (item.hadWarning) {
+                        statusIndicator.append($('<i>').addClass('fas fa-exclamation-triangle warning-symbol').attr('title', 'Download had warnings'));
+                    }
 
                     let targetCol = row.find('[col="target"]');
                     targetCol.text(dirPath + subPath);
@@ -315,13 +327,22 @@ class DownloadsWidget extends BaseWidget {
         //===============================================================================
         //==============================Column - State===============================
         let statusText = item.state.split('\n')[0];
+        let statusIndicator = $('<div>').addClass('status-indicator');
+        
+        // Add warning/error symbols
+        if (item.hadServerError) {
+            statusIndicator.append($('<i>').addClass('fas fa-exclamation-circle error-symbol').attr('title', 'Download had errors'));
+        } else if (item.hadWarning) {
+            statusIndicator.append($('<i>').addClass('fas fa-exclamation-triangle warning-symbol').attr('title', 'Download had warnings'));
+        }
+        
         let state = $('<td>')
             .attr('col', 'state')
             .addClass('status-cell')
             .click(() => navigator.clipboard.writeText(item.state))
             .append(
                 $('<div>').addClass('status-content').append(
-                    $('<div>').addClass('status-indicator'),
+                    statusIndicator,
                     $('<span>').addClass('status-text').text(statusText)
                 )
             );
@@ -382,6 +403,10 @@ class DownloadsWidget extends BaseWidget {
 
         if (statusMessage.includes("Completed")) {
             return 'success'
+        }
+
+        if (statusMessage.includes("Retry scheduled for")) {
+            return 'retry'
         }
     }
 

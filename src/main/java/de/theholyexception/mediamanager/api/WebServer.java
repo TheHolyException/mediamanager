@@ -10,7 +10,7 @@ import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.handler.Handler;
 import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.WebSocketResponseException;
+import de.theholyexception.mediamanager.util.WebResponseException;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import io.javalin.Javalin;
@@ -65,8 +65,8 @@ public class WebServer implements DIInitializer {
 		int webserverPort = Math.toIntExact(config.getLong("webserver.port", () -> 8080));
 		String webRoot = config.getString("webserver.webroot", () -> "./www");
 
-		app = Javalin.create(config -> {
-				config.registerPlugin(new OpenApiPlugin(pluginConfig -> {
+		app = Javalin.create(cfg -> {
+				cfg.registerPlugin(new OpenApiPlugin(pluginConfig -> {
 					pluginConfig.withDefinitionConfiguration((version, definition) -> {
 						definition.withInfo(info -> {
 							info.setTitle("MediaManager API");
@@ -75,14 +75,14 @@ public class WebServer implements DIInitializer {
 						});
 					});
 				}));
-				config.staticFiles.add(staticFiles -> {
+				cfg.staticFiles.add(staticFiles -> {
 					staticFiles.hostedPath = "/";
 					staticFiles.directory = webRoot;
 					staticFiles.location = Location.EXTERNAL;
 				});
-				config.showJavalinBanner = false;
+				cfg.showJavalinBanner = false;
 
-				config.registerPlugin(new SwaggerPlugin());
+				cfg.registerPlugin(new SwaggerPlugin());
 
 			})
 			.start(webserverHost, webserverPort);
@@ -123,8 +123,8 @@ public class WebServer implements DIInitializer {
 		executorHandler.putTask(new ExecutorTask(() -> {
 			WebSocketResponse response = null;
 			try {
-				handler.handleCommand(ctx, cmd, content);
-			} catch (WebSocketResponseException ex) {
+				handler.handleWebSocketPacket(ctx, cmd, content);
+			} catch (WebResponseException ex) {
 				response = ex.getResponse();
 			} catch (Exception ex) {
 				log.error("Failed to process command", ex);

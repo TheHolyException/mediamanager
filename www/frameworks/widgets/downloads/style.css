@@ -279,6 +279,11 @@
                     border-left: 4px solid #ffc107;
                 }
 
+                &.retry {
+                    background: rgba(0, 255, 255, 0.1);
+                    border-left: 4px solid #019b9b;
+                }
+
                 td {
                     padding: 12px;
                     vertical-align: middle;
@@ -385,11 +390,8 @@
             gap: 10px;
 
             .status-indicator {
-                width: 8px;
-                height: 8px;
-                border-radius: 50%;
-                background: #6c757d;
-                flex-shrink: 0;
+                width: 20px;
+                height: 20px;
             }
 
             .status-text {
@@ -451,10 +453,6 @@
     }
 
     /* Status indicators for different states */
-    tr.failed .status-indicator { background: #dc3545; }
-    tr.success .status-indicator { background: #28a745; }
-    tr.downlading .status-indicator { background: #007bff; animation: pulse 2s infinite; }
-    tr.committed .status-indicator { background: #ffc107; }
 
     @keyframes pulse {
         0% { opacity: 1; }
@@ -521,6 +519,34 @@
 
             .stat-value {
                 font-size: 20px;
+            }
+        }
+    }
+
+    /* Warning and error symbols */
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        
+        .warning-symbol {
+            color: #ffc107;
+            font-size: 14px;
+        }
+        
+        .error-symbol {
+            color: #dc3545;
+            font-size: 14px;
+        }
+        
+        .warning-symbol,
+        .error-symbol {
+            cursor: help;
+            transition: all 0.2s ease;
+            
+            &:hover {
+                transform: scale(1.1);
+                opacity: 0.8;
             }
         }
     }

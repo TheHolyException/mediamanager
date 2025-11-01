@@ -40,7 +40,7 @@ public abstract class Handler {
      * @param command The command to process
      * @param content Additional command parameters and data
      */
-    public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {}
+    public void handleWebSocketPacket(WsContext ctx, String command, JSONObjectContainer content) {}
 
     /**
      * Loads and initializes configurations specific to this handler.

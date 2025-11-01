@@ -16,6 +16,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.tomlj.TomlParseResult;
 
+import java.nio.channels.ClosedChannelException;
 import java.util.*;
 
 @Slf4j
@@ -172,7 +173,15 @@ public class WebSocketUtils {
         packet.put("targetSystem", targetSystem.toString());
         packet.put("content", content);
 		if (ctx != null) // Broadcast when target websocket is null
-			ctx.send(packet.toJSONString());
+			try {
+                ctx.send(packet.toJSONString());
+            } catch (Exception ex) {
+                if (ex instanceof ClosedChannelException) {
+                    // Ignore
+                } else {
+                    log.error("Failed to send packet", ex);
+                }
+            }
 		else {
 			WebServer server = MediaManager.getInstance().getDependencyInjector().resolve(WebServer.class);
 			for (var ctx2 : server.getActiveConnections()) {

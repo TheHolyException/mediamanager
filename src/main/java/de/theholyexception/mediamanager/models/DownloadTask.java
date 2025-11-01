@@ -8,8 +8,10 @@ import de.theholyexception.mediamanager.handler.AutoLoaderHandler;
 import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
-import de.theholyexception.mediamanager.util.*;
-import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import de.theholyexception.mediamanager.util.MP4Utils;
+import de.theholyexception.mediamanager.util.ProxyHandler;
+import de.theholyexception.mediamanager.util.Utils;
+import de.theholyexception.mediamanager.util.ValidatorResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,23 +23,28 @@ import org.jetbrains.annotations.NotNull;
 import org.json.simple.JSONObject;
 import org.tomlj.TomlParseResult;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.changeObject;
 
 @Slf4j
 public class DownloadTask implements Comparable<DownloadTask> {
 
+    private static final SimpleDateFormat LOG_FILE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
     private static final String PACKET_KEY_STATE = "state";
     private static final AtomicInteger SORT_INDEX_COUNTER = new AtomicInteger(0);
     private static final File DEBUG_LOG_FOLDER = new File("./debug-logs");
+    private static final File DOWNLOADS_LOG_FOLDER;
 
     private static DefaultHandler defaultHandler;
     private static AutoLoaderHandler autoLoaderHandler;
@@ -61,9 +68,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private static boolean enableDebugFileLogging = false;
 
     static {
-        if (!DEBUG_LOG_FOLDER.exists() && !DEBUG_LOG_FOLDER.mkdirs()) {
+        if (!DEBUG_LOG_FOLDER.exists() && !DEBUG_LOG_FOLDER.mkdirs())
             throw new IllegalStateException("Failed to create debug log folder");
-        }
+
+        DOWNLOADS_LOG_FOLDER = new File(DEBUG_LOG_FOLDER, "downloads");
+        if (!DOWNLOADS_LOG_FOLDER.exists() && !DOWNLOADS_LOG_FOLDER.mkdirs())
+            throw new IllegalStateException("Failed to create download log file");
     }
 
     public static void initialize(TomlParseResult config) {
@@ -131,6 +141,17 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private final JSONObjectContainer autoloaderData;
     private boolean skipValidation = false;
     private Target target;
+    private final DownloadStatusUpdateEvent downloadStatusUpdateEvent;
+    @Getter
+    private int errorCount;
+    @Getter
+    private long retryTimestamp;
+
+    @Getter
+    private File logFile;
+    private BufferedOutputStream logFileFOS;
+    private boolean hadServerError = false;
+    private boolean hadWarning = false;
 
     public DownloadTask(JSONObjectContainer content) {
         if (!initialized)
@@ -142,10 +163,14 @@ public class DownloadTask implements Comparable<DownloadTask> {
         uuid = UUID.fromString(content.get("uuid", String.class));
         lastUpdate = System.currentTimeMillis();
 
-        if (url == null || url.isEmpty())
-            throw new IllegalArgumentException("URL is null or empty");
+        createLogFile();
 
-        WebSocketUtils.changeObject(content, PACKET_KEY_STATE, "Committed", "sortIndex", sortIndex);
+        if (url == null || url.isEmpty()) {
+            writeLogLine(Level.SEVERE, "URL is null or empty, aborting download!");
+            throw new IllegalArgumentException("URL is null or empty, aborting download!");
+        }
+
+        WebSocketUtils.changeObject(content, PACKET_KEY_STATE, "Committed", "sortIndex", sortIndex, "hadServerError", false, "hadWarning", false);
 
         autoloaderData = content.getObjectContainer("autoloaderData");
         JSONObject options = content.getObjectContainer("options").getRaw();
@@ -155,27 +180,32 @@ public class DownloadTask implements Comparable<DownloadTask> {
         skipValidation = Boolean.parseBoolean((String)options.get("skipValidation"));
 
         File downloadTempFolder = new File(outputTempFolder, UUID.randomUUID().toString());
-        if (!downloadTempFolder.mkdirs() || !downloadTempFolder.exists())
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create temp folder"));
+        if (!downloadTempFolder.mkdirs() || !downloadTempFolder.exists()) {
+            writeLogLine(Level.SEVERE, "Failed to create temp folder, aborting download!");
+            throw new IllegalStateException("Failed to create temp folder, aborting download!");
+        }
 
+        downloadStatusUpdateEvent = createDownloadStatusUpdateEvent();
         downloader = DownloaderSelector.selectDownloader(url, downloadTempFolder,
-            createDownloadStatusUpdateEvent(), options);
+            downloadStatusUpdateEvent, options);
 
-        resolveTarget();
+        if (!resolveTarget()) {
+            writeLogLine(Level.SEVERE, "Failed to resolve target, aborting download!");
+            throw new IllegalStateException("Failed to resolve target, aborting download!");
+        }
     }
 
     public void resolveTitle() {
         String title = downloader.resolveTitle();
         changeObject(content, "title", title);
+        updateLogFile(title);
     }
 
     public void start(int threads) {
         titleResolveHandler.putTask(() -> {
             if (isDeleted)
                 return;
-            String title = downloader.resolveTitle();
-            if (title != null)
-                changeObject(content, "title", title);
+            resolveTitle();
         });
 
         downloadExecutorTask = new ExecutorTask(() -> download(threads));
@@ -188,25 +218,41 @@ public class DownloadTask implements Comparable<DownloadTask> {
         downloader.setProxy(ProxyHandler.getNextProxy());
         File outputFolder = resolveOutputFolder();
 
+        if (outputFolder == null) {
+            downloadStatusUpdateEvent.onError("Failed to resolve output folder");
+            return;
+        }
+
         if (isDeleted) {
-            // TODO Debug logging -> DELETED
+            writeLogLine(Level.INFO, "Download is deleted -> ABORT");
             return;
         }
 
         isRunning = true;
 
-        // TODO Debug logging -> STARTED
+        writeLogLine(Level.INFO, "Download is started");
         File outputFile = downloader.start();
 
         if (downloader.isCanceled()) {
-            // TODO Debug logging -> CANCELED
+            writeLogLine(Level.INFO, "Download is canceled");
             isRunning = false;
             return;
         }
 
         if (isFailed) {
-            // TODO Debug logging -> FAILED
+            writeLogLine(Level.WARNING, "Download has failed");
+            errorCount ++;
+            long delay = errorCount*errorCount*600L*1000L;
+            if (delay < 86400000) {
+                retryTimestamp = System.currentTimeMillis() + delay;
+                changeObject(content, PACKET_KEY_STATE, "Retry scheduled for:[\uD83C\uDDE9\uD83C\uDDEA]" + new SimpleDateFormat("HH:mm:ss").format(new Date(retryTimestamp)));
+            } else {
+                retryTimestamp = -1;
+                errorCount = 0;
+                changeObject(content, PACKET_KEY_STATE, "Download failed, automatic retry limit reached!");
+            }
             isRunning = false;
+            writeLogLine(Level.WARNING, "Download failed for " + this);
             log.warn("Download failed for {}", this);
             return;
         }
@@ -214,18 +260,29 @@ public class DownloadTask implements Comparable<DownloadTask> {
         if (!validate(outputFile))
             return;
 
+        onDownloadCompleted(outputFolder, outputFile);
+    }
+
+    private void onDownloadCompleted(File outputFolder, File outputFile) {
         setState("Completed");
-        // TODO Debug logging -> DONE
+        writeLogLine(Level.INFO, "Download is done");
 
         File targetFile = new File(outputFolder, outputFile.getName());
-        log.debug("Moving file from " + outputFile.getAbsolutePath() + " to " + targetFile);
+        writeLogLine(Level.INFO, "Moving file from " + outputFile.getAbsolutePath() + " to " + targetFile);
         try {
             Files.move(outputFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
         } catch (IOException ex) {
-            log.error("Failed to move video file", ex);
+            writeLogLine(Level.SEVERE, "Failed to move video file");
         }
-        // TODO Debug logging -> MOVED
+        writeLogLine(Level.INFO, "File moved to target destination");
         handleAutoloader();
+
+        if (hadServerError) {
+            log.error("\t");
+			log.error("One or multiple errors occurred for the download with the url {}", url);
+			log.error("Check the download log file for more information {}", logFile.getAbsolutePath());
+            log.error("\t");
+        }
     }
 
     private boolean validate(File outputFile) {
@@ -233,9 +290,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
             ValidatorResponse response = validateVideoFile(outputFile);
             if (response != ValidatorResponse.VALID) {
                 validationError = true;
-                log.warn("Validation Error: {}", response.getDescription());
+                writeLogLine(Level.WARNING, "Validation Error: " + response.getDescription());
                 setState("Validation Error: " + response.getDescription());
-                // TODO Debug logging -> VALIDATION ERROR
                 return false;
             }
         } catch (IOException ex) {
@@ -345,11 +401,13 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
             @Override
             public void onWarn(String s) {
+                writeLogLine(Level.WARNING, "onWarn() \t " + s);
                 log.warn(s);
             }
 
             @Override
             public void onError(String s) {
+                writeLogLine(Level.SEVERE, "onError() \t " + s);
                 if (isRunning && !isDeleted) {
                     String line = s.split("\n")[0];
                     if (line.length() > 50)
@@ -373,6 +431,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             @Override
             public void onException(Throwable error) {
                 update();
+                writeLogLine(Level.SEVERE, "onException() \t " + Utils.stackTraceToString(error));
                 if (log.isDebugEnabled()) {
                     log.debug("Download failed!", error);
                 }
@@ -429,27 +488,22 @@ public class DownloadTask implements Comparable<DownloadTask> {
         update();
     }
 
-    /**
-     * Resolves and validates the output folder for a download based on the provided content.
-     * Creates the directory structure if it doesn't exist.
-     *
-     * @return The resolved output folder as a File object
-     * @throws WebSocketResponseException if the target path is invalid or inaccessible
-     */
     private File resolveOutputFolder() {
         String targetPath = content.get("target", String.class);
 
-        if (target == null || target.path() == null)
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid Target " + content.get("target", String.class)));
+        if (target == null || target.path() == null) {
+            downloadStatusUpdateEvent.onError("Invalid Target " + content.get("target", String.class));
+            return null;
+        }
 
         String subDirectory = targetPath.replace(targetPath.split("/")[0] + "/", "");
         if (target.subFolders() && subDirectory.isEmpty()) {
             String aniworldUrl = content.get("aniworld-url", String.class);
             if (aniworldUrl != null && !aniworldUrl.isEmpty()) {
                 subDirectory = AniworldHelper.getAnimeTitle(aniworldUrl);
-                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Subdirectory not specified, using " + subDirectory + " instead"));
+                downloadStatusUpdateEvent.onInfo("Subdirectory not specified, using " + subDirectory + " instead");
             } else
-                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Subdirectory not specified"));
+                downloadStatusUpdateEvent.onError("Subdirectory not specified");
         }
 
         File outputFolder;
@@ -460,22 +514,97 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
 		log.debug("Output Folder: {}", outputFolder.getAbsolutePath());
         if (!outputFolder.exists() && !outputFolder.mkdirs()) {
-			log.error("Failed to create output folder {}", outputFolder.getAbsolutePath());
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Failed to create output folder " + outputFolder.getAbsolutePath()));
+            downloadStatusUpdateEvent.onError("Failed to create output folder " + outputFolder.getAbsolutePath());
+            return null;
         }
         return outputFolder;
     }
 
-    public void resolveTarget() {
+    public boolean resolveTarget() {
         String targetPath = content.get("target", String.class);
 		log.debug("Resolving target: {}", targetPath.split("/")[0]);
         target = defaultHandler.getTargets().get(targetPath.split("/")[0]);
-        if (target == null) {
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid Target " + content.get("target", String.class)));
-        }
+        if (target == null)
+            return false;
 		log.debug("Target resolved!: {}", target);
+        return true;
     }
-    
+
+    private void createLogFile() {
+        logFile = new File(DOWNLOADS_LOG_FOLDER, LOG_FILE_DATE_FORMAT.format(new Date())+"-"+Utils.escape(url)+".log");
+        try {
+            logFileFOS = new BufferedOutputStream(new FileOutputStream(logFile));
+        } catch (IOException ex) {
+            log.error("Failed to create download log file", ex);
+        }
+    }
+
+    /**
+     * Updates the download log file with the specified title.
+     * The log file is created in the './logs/downloads' directory.
+     * The log file name is in the format 'yyyy-MM-dd-HH-mm-ss-<title>-<url>.log'.
+     * @param title The title to use in the log file name
+     */
+    private void updateLogFile(String title) {
+        if (logFile == null || logFileFOS == null)
+            throw new IllegalStateException("Log file is not initialized");
+
+        synchronized (this) {
+            try {
+                logFileFOS.flush();
+                logFileFOS.close();
+
+                String formatedTime = LOG_FILE_DATE_FORMAT.format(new Date());
+                String formatedUrl = Utils.escape(url.split("e/")[1]).replace("_","");
+                String filename = String.format("%s-%s-%s.log", formatedTime, formatedUrl, title);
+
+                File newFile = new File(DOWNLOADS_LOG_FOLDER, filename);
+
+				log.debug("Updating log file -> {}", newFile.getAbsolutePath());
+
+                Files.move(logFile.toPath(), newFile.toPath());
+                logFile = newFile;
+                logFileFOS = new BufferedOutputStream(new FileOutputStream(logFile));
+            } catch (IOException ex) {
+                log.error("Failed to update download log file", ex);
+            }
+        }
+    }
+
+    private void writeLogLine(Level level, String message)  {
+        if (logFile == null || logFileFOS == null)
+            throw new IllegalStateException("Log file is not initialized");
+
+        boolean statusChanged = false;
+        
+        if (!hadServerError && level == Level.SEVERE) {
+            hadServerError = true;
+            statusChanged = true;
+        }
+
+        if (!hadWarning && level == Level.WARNING) {
+            hadWarning = true;
+            statusChanged = true;
+        }
+
+        // Update WebSocket content if status changed
+        if (statusChanged) {
+            WebSocketUtils.changeObject(content, "hadServerError", hadServerError, "hadWarning", hadWarning);
+        }
+
+        synchronized (this) {
+            try {
+                String logMessage = LOG_FILE_DATE_FORMAT.format(new Date());
+                logMessage += " " + level.toString();
+                logMessage += " \t" + message;
+
+                logFileFOS.write(logMessage.getBytes());
+            } catch (IOException ex) {
+                log.error("Failed to write log file", ex);
+            }
+        }
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -494,5 +623,14 @@ public class DownloadTask implements Comparable<DownloadTask> {
         Long l1 = (long) sortIndex;
         Long l2 = (long) o.sortIndex;
         return l1.compareTo(l2);
+    }
+
+    @Override
+    public String toString() {
+        return "DownloadTask{" +
+            "url='" + url + '\'' +
+            ", uuid=" + uuid +
+            ", target=" + target +
+            '}';
     }
 }

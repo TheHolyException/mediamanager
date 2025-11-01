@@ -14,6 +14,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import javax.validation.constraints.Null;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.*;
@@ -115,7 +116,7 @@ public class AniworldHelper {
         return result;
     }
 
-    public static String getAnimeTitle(String url) {
+    public static @Null String getAnimeTitle(String url) {
         statistics.computeIfAbsent("Title Requests", k -> new AtomicInteger(0)).incrementAndGet();
         try {
             Connection con = Jsoup.connect(url);

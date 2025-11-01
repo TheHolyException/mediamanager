@@ -14,7 +14,7 @@ import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.AniworldProvider;
 import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.util.Utils;
-import de.theholyexception.mediamanager.util.WebSocketResponseException;
+import de.theholyexception.mediamanager.util.WebResponseException;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import io.javalin.Javalin;
@@ -113,7 +113,7 @@ public class AutoLoaderHandler extends Handler {
         t.start();
     }
 
-    //region commands
+    //region REST API
 
     @OpenApi(
         summary = "Get all subscriptions",
@@ -363,19 +363,13 @@ public class AutoLoaderHandler extends Handler {
         responses = {
             @OpenApiResponse(status = "200", description = "Download initiated"),
             @OpenApiResponse(status = "404", description = "Subscription not found"),
-            @OpenApiResponse(status = "503", description = "AutoLoader disabled or not initialized")
+            @OpenApiResponse(status = "503", description = "AutoLoader not initialized")
         }
     )
     private void runDownload(Context ctx) {
         if (!initialized) {
             ctx.status(HttpStatus.SERVICE_UNAVAILABLE);
             ctx.json(Map.of("error", "AutoLoader is not initialized yet"));
-            return;
-        }
-
-        if (!enabled) {
-            ctx.status(HttpStatus.SERVICE_UNAVAILABLE);
-            ctx.json(Map.of("error", "AutoLoader is disabled"));
             return;
         }
 
@@ -581,6 +575,24 @@ public class AutoLoaderHandler extends Handler {
     }
 
     @OpenApi(
+        summary = "Get autoloader status",
+        description = "Returns the current status of the autoloader (enabled/disabled and initialization state)",
+        operationId = "getAutoloaderStatus",
+        path = "/api/autoloader/status",
+        tags = {"AutoLoader"},
+        methods = HttpMethod.GET,
+        responses = {
+            @OpenApiResponse(status = "200", description = "Autoloader status information")
+        }
+    )
+    private void getAutoloaderStatus(Context ctx) {
+        JSONObject status = new JSONObject();
+        status.put("enabled", enabled);
+        status.put("initialized", initialized);
+        ctx.json(status);
+    }
+
+    @OpenApi(
         summary = "Scan subscription",
         description = "Manually scans for new episodes of a specific anime subscription",
         operationId = "scanSubscription",
@@ -667,6 +679,22 @@ public class AutoLoaderHandler extends Handler {
         }
     }
 
+    @Override
+    public void registerAPI(Javalin app) {
+        app.get("/api/autoloader/status", this::getAutoloaderStatus);
+        app.get("/api/autoloader/subscriptions", this::getSubscriptions);
+        app.post("/api/autoloader/subscriptions", this::subscribe);
+        app.put("/api/autoloader/subscriptions/{id}", this::modifySubscription);
+        app.delete("/api/autoloader/subscriptions/{id}", this::unsubscribe);
+        app.post("/api/autoloader/subscriptions/{id}/download", this::runDownload);
+        app.get("/api/autoloader/subscriptions/{id}/providers", this::getAlternateProviders);
+        app.post("/api/autoloader/subscriptions/{id}/pause", this::pauseSubscription);
+        app.post("/api/autoloader/subscriptions/{id}/resume", this::resumeSubscription);
+        app.post("/api/autoloader/subscriptions/{id}/scan", this::scanSubscription);
+    }
+
+    //endregion REST API
+
     /**
      * Notifies all WebSocket clients that subscription data has changed.
      * This can be used to notify clients when any data has been updated via REST API
@@ -680,24 +708,6 @@ public class AutoLoaderHandler extends Handler {
         notification.put("timestamp", System.currentTimeMillis());
         WebSocketUtils.sendPacket("data-changed", TargetSystem.AUTOLOADER, notification, null);
     }
-    //endregion
-
-    //region REST API
-    @Override
-    public void registerAPI(Javalin app) {
-        app.get("/api/autoloader/subscriptions", this::getSubscriptions);
-        app.post("/api/autoloader/subscriptions", this::subscribe);
-        app.put("/api/autoloader/subscriptions/{id}", this::modifySubscription);
-        app.delete("/api/autoloader/subscriptions/{id}", this::unsubscribe);
-        app.post("/api/autoloader/subscriptions/{id}/download", this::runDownload);
-        app.get("/api/autoloader/subscriptions/{id}/providers", this::getAlternateProviders);
-        app.post("/api/autoloader/subscriptions/{id}/pause", this::pauseSubscription);
-        app.post("/api/autoloader/subscriptions/{id}/resume", this::resumeSubscription);
-        app.post("/api/autoloader/subscriptions/{id}/scan", this::scanSubscription);
-    }
-    //endregion
-
-
 
     /**
      * Starts the background thread that periodically checks for new episodes.
@@ -779,7 +789,7 @@ public class AutoLoaderHandler extends Handler {
      *
      * @param autoloaderData JSON data containing anime, season, and episode identifiers
      * @return The matching Episode object
-     * @throws WebSocketResponseException if the episode is not found
+     * @throws WebResponseException if the episode is not found
      */
     public Episode getEpisodeFromAutoloaderData(JSONObjectContainer autoloaderData) {
         int animeId = autoloaderData.get("animeId", Integer.class);
@@ -796,20 +806,20 @@ public class AutoLoaderHandler extends Handler {
      * @param seasonId The ID of the season
      * @param episodeId The ID of the episode
      * @return The matching Episode object
-     * @throws WebSocketResponseException if any component of the path is not found
+     * @throws WebResponseException if any component of the path is not found
      */
     public Episode getEpisodeByPath(int animeId, int seasonId, int episodeId) {
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == animeId).findFirst();
         if (optAnime.isEmpty())
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
+            throw new WebResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
 
         Optional<Season> optSeason = optAnime.get().getSeasonList().stream().filter(season -> season.getId() == seasonId).findFirst();
         if (optSeason.isEmpty())
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Season with id " + seasonId + " not found!"));
+            throw new WebResponseException(WebSocketResponse.ERROR.setMessage("Season with id " + seasonId + " not found!"));
 
         Optional<Episode> optEpisode = optSeason.get().getEpisodeList().stream().filter(ep -> ep.getId() == episodeId).findFirst();
         if (optEpisode.isEmpty())
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Episode with id " + episodeId + " not found!"));
+            throw new WebResponseException(WebSocketResponse.ERROR.setMessage("Episode with id " + episodeId + " not found!"));
 
         return optEpisode.get();
     }
@@ -819,7 +829,7 @@ public class AutoLoaderHandler extends Handler {
      *
      * @param autoloaderData JSON data containing the episode information
      * @return A map of provider names to their respective URLs
-     * @throws WebSocketResponseException if the anime or episode is not found
+     * @throws WebResponseException if the anime or episode is not found
      */
     public Map<AniworldProvider, String> getAlternativeProviders(JSONObjectContainer autoloaderData) {
         int animeId = autoloaderData.get("animeId", Integer.class);
@@ -828,11 +838,11 @@ public class AutoLoaderHandler extends Handler {
 
         Optional<Anime> optAnime = subscribedAnimes.stream().filter(anime -> anime.getId() == animeId).findFirst();
         if (optAnime.isEmpty())
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
+            throw new WebResponseException(WebSocketResponse.ERROR.setMessage("Anime with id " + animeId + " not found!"));
 
         Episode episode = getEpisodeByPath(animeId, seasonId, episodeId);
         if (episode.getVideoUrl() == null)
-            throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Episode has no video url!"));
+            throw new WebResponseException(WebSocketResponse.ERROR.setMessage("Episode has no video url!"));
 
         AniworldProvider provider = AniworldProvider.getProvider(episode.getVideoUrl());
 
@@ -844,5 +854,6 @@ public class AutoLoaderHandler extends Handler {
         }
         return urls;
     }
+    //endregion OpenAPI
 
 }

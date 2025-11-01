@@ -22,6 +22,10 @@ class SubscriptionsWidget extends BaseWidget {
                     <h1 class="widget-handle">Subscriptions</h1>
                 </div>
                 <div class="widget-stats">
+                    <div class="autoloader-status-info" style="display: none;">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <span>Autoloader Disabled</span>
+                    </div>
                     <span class="stat-item">
                         <i class="fa fa-play-circle"></i>
                         <span class="active-count">0</span> Active
@@ -742,6 +746,9 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     requestData() {
+        // Check autoloader status first
+        this.checkAutoloaderStatus();
+        
         ApiClient.getSubscriptions()
             .then(data => {
                 // Process the data
@@ -759,6 +766,42 @@ class SubscriptionsWidget extends BaseWidget {
                 console.error('Error fetching subscriptions:', error);
                 this.showNotification('Failed to load subscriptions: ' + error.message, 'error');
             });
+    }
+
+    checkAutoloaderStatus() {
+        fetch('/api/autoloader/status')
+            .then(response => {
+                if (!response.ok) {
+                    // If API fails, show the info box (assume disabled)
+                    this.updateAutoloaderStatusInfo(false);
+                    return;
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data) {
+                    this.updateAutoloaderStatusInfo(data.enabled);
+                }
+            })
+            .catch(error => {
+                console.warn('Error checking autoloader status:', error);
+                // On error, show the info box (safer to assume disabled)
+                this.updateAutoloaderStatusInfo(false);
+            });
+    }
+
+    updateAutoloaderStatusInfo(enabled) {
+        const widgets = $('[widget-name="SubscriptionsWidget"]');
+        widgets.each((index, widgetElement) => {
+            const widget = $(widgetElement);
+            const statusInfo = widget.find('.autoloader-status-info');
+            
+            if (enabled) {
+                statusInfo.hide();
+            } else {
+                statusInfo.show();
+            }
+        });
     }
 
     static onWSResponse(cmd, content) {

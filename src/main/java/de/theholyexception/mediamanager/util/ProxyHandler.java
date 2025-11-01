@@ -43,6 +43,8 @@ public class ProxyHandler {
 	 * @throws IllegalArgumentException if the configuration is invalid
 	 */
 	public static void initialize(TomlParseResult config) {
+		if (!config.getBoolean("proxy.enabled", () -> false))
+			return;
 		TomlArray array = config.getArray("proxies");
 		if (array == null) {
 			log.error("No proxies found in config");
@@ -98,7 +100,7 @@ public class ProxyHandler {
 	 */
 	private static boolean checkTorNetwork(Proxy proxy) {
 		try {
-			HTTPResult result = SmartHTTP.request(new HTTPRequestOptions("https://check.torproject.org/api/ip").setProxy(proxy));
+			HTTPResult result = SmartHTTP.request(new HTTPRequestOptions("https://check.torproject.org/api/ip").setProxy(proxy).setTimeout(50));
 			JSONObject torNetworkStatus = (JSONObject) new JSONParser().parse(new String(result.getData()));
 			if (torNetworkStatus == null) return false;
 			if (!torNetworkStatus.containsKey("IsTor")) return false;

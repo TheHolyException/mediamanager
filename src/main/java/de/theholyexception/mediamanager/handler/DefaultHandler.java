@@ -10,7 +10,7 @@ import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.InitializationException;
 import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.WebSocketResponseException;
+import de.theholyexception.mediamanager.util.WebResponseException;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
@@ -52,9 +52,6 @@ public class DefaultHandler extends Handler {
     
     /** Setting for number of VOE download threads */
     private SettingProperty<Integer> spThreads;
-    
-    /** Setting for retry delay in minutes */
-    private SettingProperty<Integer> spRetryMinutes;
 
     private TimerTask retryTask;
 
@@ -64,6 +61,27 @@ public class DefaultHandler extends Handler {
      */
     public DefaultHandler() {
         super(TargetSystem.DEFAULT);
+    }
+
+    @Override
+    public void initialize() {
+        retryTask = new TimerTask() {
+            @Override
+            public void run() {
+                for (DownloadTask downloadTask : urls.values()) {
+                    if (!downloadTask.isFailed())
+                        continue;
+                    if (downloadTask.getErrorCount() <= 0)
+                        continue;
+
+                    if (downloadTask.getRetryTimestamp() < System.currentTimeMillis()) {
+                        log.info("Rescheduling download for {}", downloadTask.getUrl());
+                        scheduleDownload(downloadTask.getContent());
+                    }
+                }
+            }
+        };
+        new Timer().schedule(retryTask, 30000, 30000);
     }
 
     /**
@@ -78,30 +96,6 @@ public class DefaultHandler extends Handler {
         spDownloadThreads = Settings.getSettingProperty("PARALLEL_DOWNLOADS", 1, systemSettings);
 
         spThreads = Settings.getSettingProperty("THREADS", 1, systemSettings);
-
-        spRetryMinutes = Settings.getSettingProperty("RETRY_MINUTES", 0, systemSettings);
-        spRetryMinutes.addSubscriber(value -> {
-            if (retryTask != null)
-                retryTask.cancel();
-            if (value != 0) {
-                log.info("Enabling retry timer");
-                retryTask = new TimerTask() {
-                    @Override
-                    public void run() {
-                        urls.forEach((uuid, downloadTask) -> {
-                            if (downloadTask.getContent().get("state", String.class).toLowerCase().startsWith("error")
-                                && System.currentTimeMillis()- downloadTask.getLastUpdate() < value*60_000) {
-                                log.info("Rescheduling download for {}", downloadTask.getUrl());
-                                scheduleDownload(downloadTask.getContent());
-                            }
-                        });
-                    }
-                };
-                new Timer().schedule(retryTask, value*60_000, value*60_000);
-            } else {
-                log.info("Disabled retry timer");
-            }
-        });
 
         FFmpeg.setFFmpegPath(config.getString("general.ffmpeg"));
 
@@ -140,16 +134,16 @@ public class DefaultHandler extends Handler {
      * @param ctx The WebSocket connection that received the command
      * @param command The command to execute (e.g., "syn", "put", "del")
      * @param content JSON data associated with the command
-     * @throws WebSocketResponseException if the command is invalid, processing fails or just a feedback for the client
+     * @throws WebResponseException if the command is invalid, processing fails or just a feedback for the client
      */
     @Override
-    public void handleCommand(WsContext ctx, String command, JSONObjectContainer content) {
+    public void handleWebSocketPacket(WsContext ctx, String command, JSONObjectContainer content) {
         switch (command) {
             case "syn" -> cmdSyncData(ctx);
             // WebSocket ping
             case "ping" -> sendPacket("pong", TargetSystem.DEFAULT, content.getRaw(), ctx);
             default ->
-                throw new WebSocketResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
+                throw new WebResponseException(WebSocketResponse.ERROR.setMessage("Invalid command " + command));
         }
     }
 
@@ -170,11 +164,10 @@ public class DefaultHandler extends Handler {
     }
 
 
-    private DownloadTask scheduleDownload(JSONObjectContainer content) {
+    private void scheduleDownload(JSONObjectContainer content) {
         DownloadTask downloadTask = new DownloadTask(content);
         urls.put(UUID.fromString(content.get("uuid", String.class)), downloadTask);
         downloadTask.start(spThreads.getValue());
-        return downloadTask;
     }
 
     /**
@@ -208,15 +201,10 @@ public class DefaultHandler extends Handler {
      * 
      * @param downloadItems List of download items to schedule
      */
-    public DownloadTask scheduleDownloads(List<JSONObjectContainer> downloadItems) {
+    public void scheduleDownloads(List<JSONObjectContainer> downloadItems) {
         for (JSONObjectContainer item : downloadItems) {
-            try {
-                return scheduleDownload(item);
-            } catch (WebSocketResponseException ex) {
-                log.warn("Failed to schedule internal download: {}", ex.getMessage());
-            }
+            scheduleDownload(item);
         }
-        return null;
     }
 
     //region OpenAPI
@@ -296,14 +284,7 @@ public class DefaultHandler extends Handler {
             
             for (Object data : requestData.getArrayContainer("list").getRaw()) {
                 JSONObjectContainer item = (JSONObjectContainer) JSONReader.readString(data.toString());
-                try {
-                    scheduleDownload(item); // Pass null for WebSocket context since this is REST
-                } catch (WebSocketResponseException ex) {
-                    // For REST API, return error response instead of WebSocket message
-                    ctx.status(400);
-                    ctx.json(Map.of("error", ex.getResponse()));
-                    return;
-                }
+                scheduleDownload(item);
             }
             
             // Return success response
@@ -482,11 +463,6 @@ public class DefaultHandler extends Handler {
             parallelSetting.put("val", spDownloadThreads.getValue());
             settings.add(parallelSetting);
             
-            JSONObject retrySetting = new JSONObject();
-            retrySetting.put("key", "RETRY_MINUTES");
-            retrySetting.put("val", spRetryMinutes.getValue());
-            settings.add(retrySetting);
-            
             ctx.status(200);
             ctx.json(Map.of("settings", settings));
             
@@ -525,7 +501,6 @@ public class DefaultHandler extends Handler {
                     switch (key) {
                         case "THREADS" -> spThreads.setValue(Integer.parseInt(val));
                         case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
-                        case "RETRY_MINUTES" -> spRetryMinutes.setValue(Integer.parseInt(val));
                         default -> errors.add("Invalid setting: " + key);
                     }
                     log.info("Changed setting {} to: {}", key, val);
