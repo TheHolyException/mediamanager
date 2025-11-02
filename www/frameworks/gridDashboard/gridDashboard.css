@@ -21,7 +21,8 @@
 
 .grid-dashboard {
     user-select: none;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden !important;
 }
 
 .grid-widget {
@@ -100,7 +101,8 @@
 .grid-widget-content {
     padding: 16px;
     height: calc(100% - 49px);
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden !important;
     box-sizing: border-box;
     word-wrap: break-word;
     word-break: break-word;

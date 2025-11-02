@@ -381,6 +381,7 @@
     .subscriptions-container {
         height: calc(100% - 200px); /* Subtract header and toolbar height */
         overflow-y: auto;
+        overflow-x: hidden !important;
     }
     
         .empty-state {

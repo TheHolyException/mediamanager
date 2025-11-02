@@ -8,6 +8,7 @@
         padding-top: 15px;
         height: calc(100% - 80px); /* Subtract header height */
         overflow-y: auto;
+        overflow-x: hidden !important;
     }
     
     

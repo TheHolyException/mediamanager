@@ -117,12 +117,14 @@
         gap: 20px;
         height: calc(100% - 80px); /* Subtract header height */
         overflow-y: auto;
+        overflow-x: hidden !important;
         justify-content: space-between;
         align-content: flex-start;
     }
 
     .scrollable-content {
         overflow-y: auto;
+        overflow-x: hidden !important;
         flex: 1;
         min-height: 0;
     }

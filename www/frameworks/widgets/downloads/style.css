@@ -170,7 +170,8 @@
         background: rgba(255, 255, 255, 0.03);
         border-radius: 2px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        overflow: auto; /* Enable scrolling for the table container */
+        overflow-y: auto; /* Enable vertical scrolling for the table container */
+        overflow-x: hidden !important; /* Hide horizontal scrollbar */
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
         min-height: 0; /* Allow container to shrink below content size */
         position: relative;
@@ -476,7 +477,8 @@
         }
         
         .table-container {
-            overflow: auto; /* Ensure scrolling works on mobile */
+            overflow-y: auto; /* Ensure vertical scrolling works on mobile */
+            overflow-x: hidden !important; /* Hide horizontal scrollbar on mobile */
         }
 
         .queue-stats {
