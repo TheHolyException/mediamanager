@@ -56,6 +56,7 @@
     top: 0;
     z-index: 10;
     backdrop-filter: blur(10px);
+    max-height: 55px;
 }
 
 .widget-title {

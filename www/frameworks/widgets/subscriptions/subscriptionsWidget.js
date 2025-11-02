@@ -438,7 +438,7 @@ class SubscriptionsWidget extends BaseWidget {
                         <div class="info-item">
                             <i class="fa fa-download"></i>
                             <span class="label">Unloaded:</span>
-                            <span class="value episodes-count">${item.unloaded || 0} episodes</span>
+                            <span class="value episodes-count">${item.unloaded || 0}</span>
                         </div>
                         <div class="info-item">
                             <i class="fa fa-clock"></i>
