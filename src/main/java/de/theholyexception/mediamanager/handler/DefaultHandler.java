@@ -197,7 +197,7 @@ public class DefaultHandler extends Handler {
     }
 
     private void scheduleDownload(JSONObjectContainer content) {
-        UUID uuid = UUID.fromString(content.get("uuid", String.class);
+        UUID uuid = UUID.fromString(content.get("uuid", String.class));
         DownloadTask downloadTask;
         if (urls.containsKey(uuid)) {
             downloadTask = urls.get(uuid);
