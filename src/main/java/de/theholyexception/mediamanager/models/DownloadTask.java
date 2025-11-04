@@ -519,7 +519,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
         if (target.subFolders() && subDirectory.isEmpty()) {
             String aniworldUrl = content.get("aniworld-url", String.class);
             if (aniworldUrl != null && !aniworldUrl.isEmpty()) {
-                subDirectory = AniworldHelper.getAnimeTitle(aniworldUrl);
+                subDirectory = AniworldHelper.getSubdirectoryFromURL(aniworldUrl);
                 downloadStatusUpdateEvent.onInfo("Subdirectory not specified, using " + subDirectory + " instead");
             } else
                 downloadStatusUpdateEvent.onError("Subdirectory not specified");

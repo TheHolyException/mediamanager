@@ -196,7 +196,7 @@ public class DefaultHandler extends Handler {
         sendSettings(ctx);
     }
 
-    private void scheduleDownload(JSONObjectContainer content) {
+    public void scheduleDownload(JSONObjectContainer content) {
         UUID uuid = UUID.fromString(content.get("uuid", String.class));
         DownloadTask downloadTask;
         if (urls.containsKey(uuid)) {
@@ -231,18 +231,6 @@ public class DefaultHandler extends Handler {
         removed.add(toDelete);
         toDelete.setDeleted(true);
         return null;
-    }
-
-    /**
-     * Internal method for other handlers to schedule downloads directly.
-     * This bypasses WebSocket/REST API layers for internal Java-to-Java communication.
-     * 
-     * @param downloadItems List of download items to schedule
-     */
-    public void scheduleDownloads(List<JSONObjectContainer> downloadItems) {
-        for (JSONObjectContainer item : downloadItems) {
-            scheduleDownload(item);
-        }
     }
 
     //region OpenAPI

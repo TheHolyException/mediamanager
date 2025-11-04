@@ -82,6 +82,8 @@ public class Anime {
         int languageId = content.get("languageId", Integer.class);
         String directory = content.get("directory", String.class);
         if (directory != null && directory.isEmpty()) directory = null;
+        if (directory == null)
+            directory = AniworldHelper.getSubdirectoryFromURL(url);
 
         String title = AniworldHelper.getAnimeTitle(url);
         if (title == null) {
@@ -349,7 +351,7 @@ public class Anime {
                     data.set("options", options.getRaw());
 
                     log.debug("Scheduling download internally: {}", data);
-                    defaultHandler.scheduleDownloads(List.of(data));
+                    defaultHandler.scheduleDownload(data);
                 });
             } catch (Exception ex) {
                 log.error("", ex);

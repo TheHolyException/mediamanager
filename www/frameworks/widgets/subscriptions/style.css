@@ -206,7 +206,7 @@
                 gap: 10px;
             }
             
-            .close-form-btn {
+            .close-form-btn, .close-edit-form-btn {
                 background: none;
                 border: none;
                 color: var(--darkerTextColor);

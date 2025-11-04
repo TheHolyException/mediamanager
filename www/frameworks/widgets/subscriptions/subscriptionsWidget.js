@@ -89,16 +89,7 @@ class SubscriptionsWidget extends BaseWidget {
                         <input type="text" id="sub-url" placeholder="https://aniworld.to/anime/..." required>
                         <div class="input-hint">Enter the full URL to the anime series</div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="sub-folder">
-                            <i class="fa fa-folder"></i>
-                            Download Folder
-                        </label>
-                        <input type="text" id="sub-folder" placeholder="Anime/Series Name">
-                        <div class="input-hint">Leave empty to auto-detect from title</div>
-                    </div>
-                    
+
                     <div class="form-group">
                         <label for="sub-language">
                             <i class="fa fa-language"></i>
@@ -111,6 +102,28 @@ class SubscriptionsWidget extends BaseWidget {
                             <option value="4">English (Sub)</option>
                             <option value="5">Japanese (Sub)</option>
                         </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sub-target-folder">
+                            <i class="fa fa-hdd"></i>
+                            Target Folder
+                        </label>
+                        <select id="sub-target-folder" class="targetfolder">
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sub-subfolder">
+                            <i class="fa fa-folder"></i>
+                            Subfolder
+                        </label>
+                        <div class="custom-dropdown">
+                            <input type="text" id="sub-subfolder" placeholder="Anime/Series Name" list="sub-subfolder-list" style="width: 100%;">
+                            <datalist id="sub-subfolder-list">
+                            </datalist>
+                        </div>
+                        <div class="input-hint">Leave empty to auto-detect from title, or select from existing folders</div>
                     </div>
                     
                     <div class="form-group">
@@ -176,16 +189,7 @@ class SubscriptionsWidget extends BaseWidget {
                         <input type="text" id="edit-url" readonly disabled>
                         <div class="input-hint">URL cannot be changed after subscription</div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-folder">
-                            <i class="fa fa-folder"></i>
-                            Download Folder
-                        </label>
-                        <input type="text" id="edit-folder" placeholder="Anime/Series Name">
-                        <div class="input-hint">Leave empty to auto-detect from title</div>
-                    </div>
-                    
+
                     <div class="form-group">
                         <label for="edit-language">
                             <i class="fa fa-language"></i>
@@ -199,6 +203,28 @@ class SubscriptionsWidget extends BaseWidget {
                             <option value="5">Japanese (Sub)</option>
                         </select>
                         <div class="input-hint">Changing language will affect future downloads</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-target-folder">
+                            <i class="fa fa-hdd"></i>
+                            Target Folder
+                        </label>
+                        <select id="edit-target-folder" class="targetfolder">
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-subfolder">
+                            <i class="fa fa-folder"></i>
+                            Subfolder
+                        </label>
+                        <div class="custom-dropdown">
+                            <input type="text" id="edit-subfolder" placeholder="Anime/Series Name" list="edit-subfolder-list" style="width: 100%;">
+                            <datalist id="edit-subfolder-list">
+                            </datalist>
+                        </div>
+                        <div class="input-hint">Leave empty to auto-detect from title, or select from existing folders</div>
                     </div>
                     
                     <div class="form-group">
@@ -227,6 +253,7 @@ class SubscriptionsWidget extends BaseWidget {
         `);
 
         this.bindEvents(widget);
+        this.populateTargetFolders(widget);
         this.requestData();
         return widget.get(0);
     }
@@ -299,9 +326,23 @@ class SubscriptionsWidget extends BaseWidget {
         widget.find('#sub-url').on('input', function() {
             self.validateForm(widget);
         });
+
+        // Target folder change handlers
+        widget.find('#sub-target-folder').on('change', function() {
+            const selection = $(this).val();
+            widget.find('#sub-subfolder').val('');
+            self.fetchSubfolders(selection, widget.find('#sub-subfolder-list'));
+        });
+        
+        widget.find('#edit-target-folder').on('change', function() {
+            const selection = $(this).val();
+            widget.find('#edit-subfolder').val('');
+            self.fetchSubfolders(selection, widget.find('#edit-subfolder-list'));
+        });
     }
 
     showAddForm(widget) {
+        this.populateTargetFolders(widget);
         widget.find('.add-subscription-form').slideDown(300);
         widget.find('#sub-url').focus();
     }
@@ -314,13 +355,43 @@ class SubscriptionsWidget extends BaseWidget {
     showEditForm(widget, item) {
         SubscriptionsWidget.currentEditItem = item;
         
+        this.populateTargetFolders(widget);
+        
+        // Parse the directory path to separate target folder and subfolder
+        const directory = item.directory || '';
+        let targetFolder = '';
+        let subfolder = '';
+        
+        if (directory) {
+            // Find the target folder that matches the beginning of the directory
+            for (let folder of targetFolders) {
+                if (directory.startsWith(folder.displayName + '/') || directory === folder.displayName) {
+                    targetFolder = folder.identifier;
+                    subfolder = directory.substring(folder.displayName.length + 1);
+                    break;
+                }
+            }
+            // If no match found, treat the whole thing as a subfolder
+            if (!targetFolder && targetFolders.length > 0) {
+                targetFolder = targetFolders[0].identifier;
+                subfolder = directory;
+            }
+        }
+        
         // Populate form with current values
         widget.find('#edit-url').val(item.url);
-        widget.find('#edit-folder').val(item.directory || '');
+        widget.find('#edit-target-folder').val(targetFolder);
+        widget.find('#edit-subfolder').val(subfolder);
         widget.find('#edit-language').val(item.languageId || 1);
         widget.find('#edit-excluded').val(item.excludedSeasons || '');
+        
+        // Fetch subfolders for the selected target folder
+        if (targetFolder) {
+            this.fetchSubfolders(targetFolder, widget.find('#edit-subfolder-list'));
+        }
+        
         widget.find('.edit-subscription-form').slideDown(300);
-        widget.find('#edit-folder').focus();
+        widget.find('#edit-subfolder').focus();
     }
 
     hideEditForm(widget) {
@@ -329,8 +400,9 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     clearForm(widget) {
-        widget.find('#sub-url, #sub-folder, #sub-excluded').val('');
+        widget.find('#sub-url, #sub-subfolder, #sub-excluded').val('');
         widget.find('#sub-language').val('1');
+        widget.find('#sub-target-folder').prop('selectedIndex', 0);
         widget.find('input[name="quality"][value="720p"]').prop('checked', true);
         widget.find('#auto-start').prop('checked', false);
     }
@@ -347,13 +419,91 @@ class SubscriptionsWidget extends BaseWidget {
         widget.find('.clear-search').toggle(hasSearch);
     }
 
+    populateTargetFolders(widget) {
+        // Populate target folders in both forms
+        const addTargetSelect = widget.find('#sub-target-folder');
+        const editTargetSelect = widget.find('#edit-target-folder');
+        
+        // Clear existing options
+        addTargetSelect.empty();
+        editTargetSelect.empty();
+        
+        // Add options from global targetFolders
+        for (let folder of targetFolders) {
+            const option = $('<option>').text(folder.displayName).attr('value', folder.identifier);
+            addTargetSelect.append(option.clone());
+            editTargetSelect.append(option.clone());
+        }
+    }
+
+    fetchSubfolders(targetPath, $datalistElement) {
+        if (!targetPath) return;
+        
+        // Clear existing options
+        $datalistElement.empty();
+        
+        // Find the target folder display name
+        let targetFolderName = '';
+        for (let folder of targetFolders) {
+            if (folder.identifier === targetPath) {
+                targetFolderName = folder.displayName;
+                break;
+            }
+        }
+        
+        if (!targetFolderName) return;
+        
+        // Make REST API call using the display name (which is what the backend expects)
+        $.ajax({
+            url: `/api/subfolders/${encodeURIComponent(targetPath)}`,
+            method: 'GET',
+            success: function(subfolders) {
+                // Check if subfolders is an array and has items
+                if (Array.isArray(subfolders) && subfolders.length > 0) {
+                    // Add each subfolder as an option to the datalist
+                    for (let folder of subfolders) {
+                        let option = $('<option>');
+                        option.attr('value', folder);
+                        $datalistElement.append(option);
+                    }
+                }
+                // If no subfolders or not an array, just leave the datalist empty
+            },
+            error: function(xhr, status, error) {
+                console.warn('Failed to fetch subfolders:', error);
+                
+                // Only show error popup for actual errors (not 204 No Content)
+                if (xhr.status !== 204) {
+                    console.error('Error fetching subfolders for target:', targetPath, error);
+                }
+            }
+        });
+    }
+
     saveSubscription(widget) {
         if (!this.validateForm(widget)) return;
 
-        let directory = widget.find('#sub-folder').val().trim();
-        // Remove leading slashes to prevent them being converted to underscores
-        if (directory.startsWith('/') || directory.startsWith('\\')) {
-            directory = directory.substring(1);
+        const targetFolderSelect = widget.find('#sub-target-folder').val();
+        const subfolder = widget.find('#sub-subfolder').val().trim();
+        
+        // Find the target folder display name
+        let targetFolderName = '';
+        for (let folder of targetFolders) {
+            if (folder.identifier === targetFolderSelect) {
+                targetFolderName = folder.displayName;
+                break;
+            }
+        }
+        
+        // Construct the full directory path
+        let directory = targetFolderName;
+        if (subfolder) {
+            // Remove leading slashes to prevent them being converted to underscores
+            let cleanSubfolder = subfolder;
+            if (cleanSubfolder.startsWith('/') || cleanSubfolder.startsWith('\\')) {
+                cleanSubfolder = cleanSubfolder.substring(1);
+            }
+            directory = directory + '/' + cleanSubfolder;
         }
         
         const data = {
@@ -382,10 +532,27 @@ class SubscriptionsWidget extends BaseWidget {
             return;
         }
 
-        let directory = widget.find('#edit-folder').val().trim();
-        // Remove leading slashes to prevent them being converted to underscores
-        if (directory.startsWith('/') || directory.startsWith('\\')) {
-            directory = directory.substring(1);
+        const targetFolderSelect = widget.find('#edit-target-folder').val();
+        const subfolder = widget.find('#edit-subfolder').val().trim();
+        
+        // Find the target folder display name
+        let targetFolderName = '';
+        for (let folder of targetFolders) {
+            if (folder.identifier === targetFolderSelect) {
+                targetFolderName = folder.displayName;
+                break;
+            }
+        }
+        
+        // Construct the full directory path
+        let directory = targetFolderName;
+        if (subfolder) {
+            // Remove leading slashes to prevent them being converted to underscores
+            let cleanSubfolder = subfolder;
+            if (cleanSubfolder.startsWith('/') || cleanSubfolder.startsWith('\\')) {
+                cleanSubfolder = cleanSubfolder.substring(1);
+            }
+            directory = directory + '/' + cleanSubfolder;
         }
         
         const data = {

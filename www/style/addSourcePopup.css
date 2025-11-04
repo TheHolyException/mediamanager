@@ -1,0 +1,434 @@
+/* Add Source Popup Styles */
+.add-source-popup {
+    background: linear-gradient(135deg, rgba(20, 25, 35, 0.95), rgba(25, 30, 40, 0.95));
+    backdrop-filter: blur(20px);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    min-width: min(600px, 95vw);
+    max-width: min(800px, 95vw);
+}
+
+.add-source-popup .add-download-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.add-source-popup .add-download-header h2 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.add-source-popup .add-download-header .header-icon {
+    font-size: 28px;
+    color: #007bff;
+    background: rgba(0, 123, 255, 0.1);
+    padding: 12px;
+    border-radius: 3px;
+}
+
+.add-source-popup .src-input-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.add-source-popup .tab-section {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+}
+
+.add-source-popup .tab-bar {
+    display: flex;
+    background: rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.add-source-popup .tab-btn {
+    flex: 1;
+    padding: 16px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+    border: none;
+    background: none;
+    position: relative;
+}
+
+.add-source-popup .tab-btn:hover {
+    color: rgba(255, 255, 255, 0.8);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.add-source-popup .tab-btn.active {
+    color: #ffffff;
+    background: rgba(0, 123, 255, 0.1);
+    border-bottom: 3px solid #007bff;
+}
+
+.add-source-popup .tab-content {
+    padding: 24px;
+}
+
+.add-source-popup .tab {
+    display: none;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.add-source-popup .tab.active {
+    display: flex;
+}
+
+.add-source-popup .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.add-source-popup .form-group label {
+    font-weight: 500;
+    color: #ffffff;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.add-source-popup .form-group label i {
+    color: rgba(255, 255, 255, 0.7);
+    width: 16px;
+}
+
+.add-source-popup .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.add-source-popup .form-group input,
+.add-source-popup .form-group select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    padding: 12px 16px;
+    color: #ffffff;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    width: 100%;
+}
+
+.add-source-popup .form-group select {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23ffffff" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    padding-right: 40px;
+}
+
+.add-source-popup .form-group select option {
+    background: #1a1a1a;
+    color: #ffffff;
+    border: none;
+}
+
+.add-source-popup .form-group input:focus,
+.add-source-popup .form-group select:focus {
+    outline: none;
+    border-color: #007bff;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.add-source-popup .form-group input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.add-source-popup .input-hint {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-top: 4px;
+}
+
+.add-source-popup .action-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.add-source-popup .action-btn {
+    padding: 10px 16px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.add-source-popup .action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.add-source-popup .action-btn.primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    border-color: #007bff;
+}
+
+.add-source-popup .action-btn.secondary {
+    background: linear-gradient(135deg, #6c757d, #545b62);
+    border-color: #6c757d;
+}
+
+.add-source-popup .resolve-info {
+    background: rgba(40, 167, 69, 0.1);
+    border: 1px solid rgba(40, 167, 69, 0.3);
+    border-radius: 3px;
+    padding: 12px 16px;
+    color: #28a745;
+    font-size: 14px;
+    margin-top: 12px;
+}
+
+.add-source-popup .resolve-info:empty {
+    display: none;
+}
+
+.add-source-popup .settings-section {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 20px;
+}
+
+.add-source-popup .settings-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.add-source-popup .settings-section h3 i {
+    color: #ffc107;
+}
+
+.add-source-popup .settings-group {
+    margin-bottom: 20px;
+}
+
+.add-source-popup .settings-group:last-child {
+    margin-bottom: 0;
+}
+
+.add-source-popup .settings-group h4 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.9);
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.add-source-popup .setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    gap: 16px;
+}
+
+.add-source-popup .setting-item label {
+    flex: 1;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 14px;
+}
+
+.add-source-popup .setting-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: #007bff;
+}
+
+.add-source-popup .target-section {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 20px;
+}
+
+.add-source-popup .target-section h3 {
+    margin: 0 0 16px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.add-source-popup .target-section h3 i {
+    color: #17a2b8;
+}
+
+.add-source-popup .target-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.add-source-popup .custom-dropdown {
+    position: relative;
+}
+
+.add-source-popup .dropdown-input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    padding: 12px 16px;
+    color: #ffffff;
+    font-size: 14px;
+    width: 100%;
+    cursor: text;
+}
+
+.add-source-popup .dropdown-input:focus {
+    outline: none;
+    border-color: #007bff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.add-source-popup .targetfolder {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    padding: 12px 16px;
+    font-size: 14px;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23ffffff" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    padding-right: 40px;
+    transition: all 0.3s ease;
+}
+
+.add-source-popup .targetfolder:focus {
+    outline: none;
+    border-color: #007bff;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.add-source-popup .targetfolder option {
+    background: #1a1a1a;
+    color: #ffffff;
+    border: none;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .add-source-popup .target-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .add-source-popup .add-download-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        text-align: left;
+    }
+    
+    .add-source-popup .add-download-header h2 {
+        font-size: 20px;
+    }
+    
+    .add-source-popup .tab-bar {
+        flex-direction: column;
+    }
+    
+    .add-source-popup .tab-btn {
+        padding: 12px 16px;
+        font-size: 16px;
+    }
+    
+    .add-source-popup .form-group input,
+    .add-source-popup .form-group select {
+        padding: 14px 16px;
+        font-size: 16px;
+    }
+    
+    .add-source-popup .action-buttons {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .add-source-popup .action-btn {
+        padding: 12px 16px;
+        font-size: 16px;
+        width: 100%;
+    }
+    
+    .add-source-popup .settings-section,
+    .add-source-popup .target-section {
+        padding: 16px;
+    }
+}
+
+@media (max-width: 480px) {
+    .add-source-popup .add-download-header .header-icon {
+        font-size: 24px;
+        padding: 8px;
+    }
+    
+    .add-source-popup .add-download-header h2 {
+        font-size: 18px;
+    }
+    
+    .add-source-popup .tab-btn {
+        padding: 10px 12px;
+        font-size: 14px;
+    }
+    
+    .add-source-popup .form-group input,
+    .add-source-popup .form-group select {
+        padding: 12px 14px;
+        font-size: 16px;
+    }
+    
+    .add-source-popup .settings-section,
+    .add-source-popup .target-section {
+        padding: 12px;
+    }
+    
+    .add-source-popup .settings-section h3,
+    .add-source-popup .target-section h3 {
+        font-size: 16px;
+    }
+}
