@@ -124,7 +124,7 @@ class DownloadsWidget extends BaseWidget {
         });
 
         widgetContent.find('.retry-all-btn').click(function () {
-            widgetContent.find('.failed [action="resend"]').click();
+            widgetContent.find('.failed [action="resend"], .retry [action="resend"]').click();
         });
 
         widgetContent.find('.delete-all-btn').click(function () {
