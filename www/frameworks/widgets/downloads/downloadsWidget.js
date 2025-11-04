@@ -64,6 +64,10 @@ class DownloadsWidget extends BaseWidget {
                             <i class="fa-solid fa-rotate-right"></i>
                             <span>Retry Failed</span>
                         </button>
+                        <button class="action-btn retry-validationerror-btn">
+                            <i class="fa-solid fa-rotate-right"></i>
+                            <span>Retry all with validation error</span>
+                        </button>
                         <button class="action-btn delete-all-btn">
                             <i class="fa fa-trash"></i>
                             <span>Clear All</span>
@@ -125,6 +129,10 @@ class DownloadsWidget extends BaseWidget {
 
         widgetContent.find('.retry-all-btn').click(function () {
             widgetContent.find('.failed [action="resend"], .retry [action="resend"]').click();
+        });
+
+        widgetContent.find('.retry-validationerror-btn').click(function () {
+            widgetContent.find('.validation [action="resendSkipValidation"]').click();
         });
 
         widgetContent.find('.delete-all-btn').click(function () {

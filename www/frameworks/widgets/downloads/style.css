@@ -156,6 +156,16 @@
         }
     }
 
+    .retry-validationerror-btn {
+        background: linear-gradient(135deg, #ffc107, #e0a800);
+        border-color: #ffc107;
+        color: #000;
+
+        &:hover {
+            background: linear-gradient(135deg, #e0a800, #ffc107);
+        }
+    }
+
     .delete-all-btn, .delete-completed-btn {
         background: linear-gradient(135deg, #dc3545, #c82333);
         border-color: #dc3545;
