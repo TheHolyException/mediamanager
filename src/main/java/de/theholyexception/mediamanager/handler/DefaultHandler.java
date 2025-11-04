@@ -74,7 +74,13 @@ public class DefaultHandler extends Handler {
         retryTask = new TimerTask() {
             @Override
             public void run() {
+                List<String> processedUrls = new ArrayList<>();
                 for (DownloadTask downloadTask : urls.values()) {
+                    if (processedUrls.contains(downloadTask.getUrl())) {
+						log.warn("Found duplicated retry schedule: {}, disabling retry.", downloadTask.getUrl());
+                        downloadTask.disableRetry();
+                        continue;
+                    }
                     if (!downloadTask.isFailed())
                         continue;
                     if (downloadTask.getErrorCount() <= 0)
@@ -82,12 +88,13 @@ public class DefaultHandler extends Handler {
 
                     if (downloadTask.getRetryTimestamp() < System.currentTimeMillis()) {
                         log.info("Rescheduling download for {}", downloadTask.getUrl());
-                        scheduleDownload(downloadTask.getContent());
+                        processedUrls.add(downloadTask.getUrl());
+                        downloadTask.start(spThreads.getValue());
                     }
                 }
             }
         };
-        new Timer().schedule(retryTask, 30000, 30000);
+        new Timer("Retry Scheduler").schedule(retryTask, 30000, 30000);
     }
 
     /**
@@ -189,10 +196,15 @@ public class DefaultHandler extends Handler {
         sendSettings(ctx);
     }
 
-
     private void scheduleDownload(JSONObjectContainer content) {
-        DownloadTask downloadTask = new DownloadTask(content);
-        urls.put(UUID.fromString(content.get("uuid", String.class)), downloadTask);
+        UUID uuid = UUID.fromString(content.get("uuid", String.class);
+        DownloadTask downloadTask;
+        if (urls.containsKey(uuid)) {
+            downloadTask = urls.get(uuid);
+        } else {
+            downloadTask = new DownloadTask(content);
+            urls.put(uuid, downloadTask);
+        }
         downloadTask.start(spThreads.getValue());
     }
 

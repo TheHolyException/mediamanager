@@ -211,6 +211,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     public void start(int threads) {
+        errorCount = 0;
+        retryTimestamp = 0;
         titleResolveHandler.putTask(() -> {
             if (isDeleted)
                 return;
@@ -266,7 +268,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             } else {
                 retryTimestamp = -1;
                 errorCount = 0;
-                changeObject(content, PACKET_KEY_STATE, "Download failed, automatic retry limit reached!");
+                changeObject(content, PACKET_KEY_STATE, "Error: Download failed, automatic retry limit reached!");
             }
             isRunning = false;
             writeLogLine(Level.WARNING, "Download failed for " + this);
@@ -278,6 +280,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
             return;
 
         onDownloadCompleted(outputFolder, outputFile);
+    }
+
+    public void disableRetry() {
+        retryTimestamp = -1;
+        errorCount = Integer.MAX_VALUE;
+        changeObject(content, PACKET_KEY_STATE, "Error: retry disabled");
     }
 
     private void onDownloadCompleted(File outputFolder, File outputFile) {
