@@ -211,7 +211,6 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     public void start(int threads) {
-        errorCount = 0;
         retryTimestamp = 0;
         titleResolveHandler.putTask(() -> {
             if (isDeleted)
