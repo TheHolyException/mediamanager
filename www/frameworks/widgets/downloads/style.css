@@ -291,8 +291,8 @@
                 }
 
                 &.retry {
-                    background: rgba(0, 255, 255, 0.1);
-                    border-left: 4px solid #019b9b;
+                    background: rgba(84, 0, 178, 0.1);
+                    border-left: 4px solid #400287;
                 }
 
                 td {
