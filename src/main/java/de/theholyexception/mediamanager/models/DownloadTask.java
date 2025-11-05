@@ -19,14 +19,12 @@ import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.downloaders.DownloadStatusUpdateEvent;
 import me.kaigermany.downloaders.Downloader;
 import me.kaigermany.downloaders.DownloaderSelector;
+import me.kaigermany.ultimateutils.StaticUtils;
 import org.jetbrains.annotations.NotNull;
 import org.json.simple.JSONObject;
 import org.tomlj.TomlParseResult;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
@@ -211,6 +209,10 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     public void start(int threads) {
+        if (isRunning) {
+            log.error("Download already running!");
+            return;
+        }
         retryTimestamp = 0;
         titleResolveHandler.putTask(() -> {
             if (isDeleted)
@@ -224,6 +226,9 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     public void download(int threads) {
+        if (isRunning) {
+            throw new IllegalStateException("Task is already running");
+        }
         downloader.setNumThreads(threads);
         downloader.setProxy(ProxyHandler.getNextProxy());
         File outputFolder = resolveOutputFolder();
@@ -441,6 +446,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
             @Override
             public void onLogFile(String fileName, byte[] bytes) {
+                writeLogLine(Level.INFO, "onLogFile("+fileName+") \t" + new String(bytes));
                 if (enableDebugFileLogging) {
                     try (FileOutputStream fos = new FileOutputStream(new File(DEBUG_LOG_FOLDER, fileName))) {
                         fos.write(bytes);
@@ -573,6 +579,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             try {
                 logFileFOS.flush();
                 logFileFOS.close();
+                byte[] data = StaticUtils.loadBytes(logFile);
 
                 String formatedTime = LOG_FILE_DATE_FORMAT.format(new Date());
                 String formatedUrl = Utils.escape(url.split("e/")[1]).replace("_","");
@@ -582,9 +589,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
 				log.debug("Updating log file -> {}", newFile.getAbsolutePath());
 
-                Files.move(logFile.toPath(), newFile.toPath());
+                Files.delete(logFile.toPath());
+
                 logFile = newFile;
                 logFileFOS = new BufferedOutputStream(new FileOutputStream(logFile));
+                logFileFOS.write(data);
+                logFileFOS.flush();
             } catch (IOException ex) {
                 log.error("Failed to update download log file", ex);
             }

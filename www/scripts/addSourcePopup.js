@@ -396,7 +396,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             DownloadsWidget.addNewElement(
                 getUrls($('.tab-btn.active').attr('tab-name')), 
                 getSettings($('.settings-section').find('[config]')),
-                $('.targetfolder').val(),
+                $('#addSourceTargetFolder').val(),
                 $('.subfolder.download').val()
             );
         },
@@ -410,7 +410,7 @@ window.openAddSourcePopup = function openAddSourcePopup() {
             DownloadsWidget.addNewElement(
                 getUrls($('.tab-btn.active').attr('tab-name')), 
                 getSettings($('.settings-section').find('[config]')),
-                $('.targetfolder').val(),
+                $('#addSourceTargetFolder').val(),
                 $('.subfolder.download').val()
             );
             
@@ -531,7 +531,7 @@ function createModernSourceInput() {
                             <i class="fas fa-hdd"></i>
                             Target Folder
                         </label>
-                        <select class="targetfolder">
+                        <select id="addSourceTargetFolder" class="targetfolder">
                         </select>
                     </div>
                     <div class="form-group">
@@ -579,7 +579,7 @@ function createModernSourceInput() {
 
     // Populate target folders
     for(let folder of targetFolders){
-        content.find('.targetfolder').append(
+        content.find('#addSourceTargetFolder').append(
             $('<option>').text(folder.displayName).attr("value", folder.identifier)
         );
     }
@@ -587,7 +587,7 @@ function createModernSourceInput() {
     // Restore saved target folder selection from session storage
     const savedTargetFolder = sessionStorage.getItem('addDownloadDialog_targetFolder');
     if (savedTargetFolder) {
-        const targetFolderSelect = content.find('.targetfolder');
+        const targetFolderSelect = content.find('#addSourceTargetFolder');
         targetFolderSelect.val(savedTargetFolder);
         // Trigger the selection event to load subfolders with correct context
         if (targetFolderSelect.length > 0) {
@@ -601,7 +601,7 @@ function createModernSourceInput() {
     }
 
     // Add event handler for target folder selection
-    content.find('.targetfolder').on('change', function() {
+    content.find('#addSourceTargetFolder').on('change', function() {
         const selection = $(this).val();
         
         // Save selection to session storage
@@ -691,7 +691,7 @@ function getUrls(activeTab) {
 }
 
 function onTargetSelection() {
-    let selection = $('.targetfolder').get(0).value;
+    let selection = $('#addSourceTargetFolder').get(0).value;
     
     // Save selection to session storage
     sessionStorage.setItem('addDownloadDialog_targetFolder', selection);
