@@ -486,30 +486,10 @@ class SubscriptionsWidget extends BaseWidget {
         const targetFolderSelect = widget.find('#sub-target-folder').val();
         const subfolder = widget.find('#sub-subfolder').val().trim();
         
-        // Find the target folder display name
-        let targetFolderName = '';
-        for (let folder of targetFolders) {
-            if (folder.identifier === targetFolderSelect) {
-                targetFolderName = folder.displayName;
-                break;
-            }
-        }
-        
-        // Construct the full directory path
-        let directory = targetFolderName;
-        if (subfolder) {
-            // Remove leading slashes to prevent them being converted to underscores
-            let cleanSubfolder = subfolder;
-            if (cleanSubfolder.startsWith('/') || cleanSubfolder.startsWith('\\')) {
-                cleanSubfolder = cleanSubfolder.substring(1);
-            }
-            directory = directory + '/' + cleanSubfolder;
-        }
-        
         const data = {
             url: widget.find('#sub-url').val().trim(),
             languageId: parseInt(widget.find('#sub-language').val()),
-            directory: directory,
+            directory: subfolder,
             excludedSeasons: widget.find('#sub-excluded').val().trim(),
             quality: widget.find('input[name="quality"]:checked').val(),
             autoStart: widget.find('#auto-start').prop('checked')
@@ -532,33 +512,12 @@ class SubscriptionsWidget extends BaseWidget {
             return;
         }
 
-        const targetFolderSelect = widget.find('#edit-target-folder').val();
         const subfolder = widget.find('#edit-subfolder').val().trim();
-        
-        // Find the target folder display name
-        let targetFolderName = '';
-        for (let folder of targetFolders) {
-            if (folder.identifier === targetFolderSelect) {
-                targetFolderName = folder.displayName;
-                break;
-            }
-        }
-        
-        // Construct the full directory path
-        let directory = targetFolderName;
-        if (subfolder) {
-            // Remove leading slashes to prevent them being converted to underscores
-            let cleanSubfolder = subfolder;
-            if (cleanSubfolder.startsWith('/') || cleanSubfolder.startsWith('\\')) {
-                cleanSubfolder = cleanSubfolder.substring(1);
-            }
-            directory = directory + '/' + cleanSubfolder;
-        }
         
         const data = {
             id: SubscriptionsWidget.currentEditItem.id,
             languageId: parseInt(widget.find('#edit-language').val()),
-            directory: directory,
+            directory: subfolder,
             excludedSeasons: widget.find('#edit-excluded').val().trim()
         };
 
