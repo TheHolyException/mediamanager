@@ -82,10 +82,6 @@ class DownloadsWidget extends BaseWidget {
                     <table class="queue-table">
                         <thead>
                             <tr>
-                                <th col="actions">
-                                    <i class="fas fa-cog"></i>
-                                    <span>Actions</span>
-                                </th>
                                 <th col="state">
                                     <i class="fas fa-info-circle"></i>
                                     <span>Status</span>
@@ -128,11 +124,28 @@ class DownloadsWidget extends BaseWidget {
         });
 
         widgetContent.find('.retry-all-btn').click(function () {
-            widgetContent.find('.failed [action="resend"], .retry [action="resend"]').click();
+            // Retry all failed and retry items
+            for (let [uuid, data] of DownloadsWidget.indexes) {
+                if (data.state.includes('Error') || data.state.includes('Retry scheduled')) {
+                    if (!(data.state === "new" || data.state.includes("Downloading"))) {
+                        data.state = "new";
+                        addDownloadsAPI([data]);
+                    }
+                }
+            }
         });
 
         widgetContent.find('.retry-validationerror-btn').click(function () {
-            widgetContent.find('.validation [action="resendSkipValidation"]').click();
+            // Retry all validation error items
+            for (let [uuid, data] of DownloadsWidget.indexes) {
+                if (data.state.startsWith('Validation Error:')) {
+                    if (!(data.state === "new" || data.state.includes("Downloading"))) {
+                        data.state = "new";
+                        data.options.skipValidation = "true";
+                        addDownloadsAPI([data]);
+                    }
+                }
+            }
         });
 
         widgetContent.find('.delete-all-btn').click(function () {
@@ -140,10 +153,70 @@ class DownloadsWidget extends BaseWidget {
         });
 
         widgetContent.find('.delete-completed-btn').click(function () {
-            widgetContent.find('.success [action="delete"]').click();
+            // Delete all completed items
+            const completedItems = [];
+            for (let [uuid, data] of DownloadsWidget.indexes) {
+                if (data.state.includes('Completed')) {
+                    if (data.state != "new") {
+                        deleteDownloadAPI(uuid);
+                    }
+                    completedItems.push(uuid);
+                }
+            }
+            
+            completedItems.forEach(uuid => {
+                DownloadsWidget.indexes.delete(uuid);
+                $(`[uuid="${uuid}"]`).remove();
+            });
+            
+            DownloadsWidget.updateStatistics();
         });
 
         sendPacket("syn", "default");
+        
+        // Create context menu container
+        const contextMenu = $(`
+            <div class="download-context-menu" style="display: none;">
+                <div class="context-menu-item" data-action="retry">
+                    <i class="fa fa-rotate-right"></i>
+                    <span>Retry Download</span>
+                </div>
+                <div class="context-menu-item" data-action="retrySkipValidation">
+                    <i class="fa-solid fa-forward"></i>
+                    <span>Retry (Skip Validation)</span>
+                </div>
+                <div class="context-menu-item" data-action="retryOtherStream">
+                    <i class="fa-solid fa-code-branch"></i>
+                    <span>Retry with Other Stream</span>
+                </div>
+                <div class="context-menu-item" data-action="viewLog">
+                    <i class="fas fa-file-text"></i>
+                    <span>View Log</span>
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" data-action="copyUrl">
+                    <i class="fas fa-copy"></i>
+                    <span>Copy URL</span>
+                </div>
+                <div class="context-menu-item" data-action="copyTarget">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Copy Target Path</span>
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item danger" data-action="delete">
+                    <i class="fa fa-trash"></i>
+                    <span>Delete</span>
+                </div>
+            </div>
+        `);
+        
+        $('body').append(contextMenu);
+        
+        // Hide context menu when clicking elsewhere
+        $(document).on('click', function() {
+            $('.download-context-menu').hide();
+        });
+        
         return widgetContent.get(0);
     }
 
@@ -156,6 +229,142 @@ class DownloadsWidget extends BaseWidget {
         }
 
         addDownloadsAPI(commitPacket);
+    }
+    
+    static showContextMenu(event, uuid) {
+        const contextMenu = $('.download-context-menu');
+        const data = DownloadsWidget.indexes.get(uuid);
+        
+        if (!data) return;
+        
+        // Reset all items to enabled state first
+        contextMenu.find('.context-menu-item').removeClass('disabled');
+        
+        // Update menu item states based on download state
+        const retryItem = contextMenu.find('[data-action="retry"]');
+        const retrySkipValidationItem = contextMenu.find('[data-action="retrySkipValidation"]');
+        const retryOtherStreamItem = contextMenu.find('[data-action="retryOtherStream"]');
+        const viewLogItem = contextMenu.find('[data-action="viewLog"]');
+        
+        // Disable retry option if not retryable
+        const canRetry = !(data.state === "new" || data.state.includes("Downloading"));
+        if (!canRetry) {
+            retryItem.addClass('disabled');
+        }
+        
+        // Disable retry with skip validation if not a validation error
+        if (!data.state.startsWith('Validation Error:')) {
+            retrySkipValidationItem.addClass('disabled');
+        }
+        
+        // Disable retry with other stream if not applicable
+        if (!(data.autoloaderData != undefined && data.state.startsWith('Error'))) {
+            retryOtherStreamItem.addClass('disabled');
+        }
+        
+        // Disable view log if no log available
+        if (!(data.hadServerError || data.hadWarning)) {
+            viewLogItem.addClass('disabled');
+        }
+        
+        // Remove previous click handlers
+        contextMenu.off('click', '.context-menu-item');
+        
+        // Add click handlers
+        contextMenu.on('click', '.context-menu-item', function(e) {
+            e.stopPropagation();
+            
+            // Don't do anything if the item is disabled
+            if ($(this).hasClass('disabled')) {
+                return;
+            }
+            
+            const action = $(this).data('action');
+            
+            switch(action) {
+                case 'retry':
+                    if (canRetry) {
+                        data.state = "new";
+                        addDownloadsAPI([data]);
+                    }
+                    break;
+                case 'retrySkipValidation':
+                    if (canRetry) {
+                        data.state = "new";
+                        data.options.skipValidation = "true";
+                        addDownloadsAPI([data]);
+                    }
+                    break;
+                case 'retryOtherStream':
+                    SelectStreamPopup.request(data);
+                    break;
+                case 'viewLog':
+                    window.open('/api/view-log/' + uuid, '_blank');
+                    break;
+                case 'copyUrl':
+                    navigator.clipboard.writeText(data.url).then(() => {
+                        // You could add a toast notification here if desired
+                        console.log('URL copied to clipboard');
+                    }).catch(err => {
+                        console.error('Failed to copy URL: ', err);
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = data.url;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                    });
+                    break;
+                case 'copyTarget':
+                    const targetPath = data.target + (data.target.endsWith('/') ? '' : '/') + (data.title || '?');
+                    navigator.clipboard.writeText(targetPath).then(() => {
+                        console.log('Target path copied to clipboard');
+                    }).catch(err => {
+                        console.error('Failed to copy target path: ', err);
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = targetPath;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                    });
+                    break;
+                case 'delete':
+                    if (data.state != "new") {
+                        deleteDownloadAPI(uuid);
+                    }
+                    DownloadsWidget.indexes.delete(uuid);
+                    $(`[uuid="${uuid}"]`).remove();
+                    DownloadsWidget.updateStatistics();
+                    break;
+            }
+            
+            contextMenu.hide();
+        });
+        
+        // Position and show menu
+        const menuWidth = 200;
+        const menuHeight = 180;
+        const windowWidth = $(window).width();
+        const windowHeight = $(window).height();
+        
+        let x = event.pageX;
+        let y = event.pageY;
+        
+        // Adjust position if menu would go off screen
+        if (x + menuWidth > windowWidth) {
+            x = windowWidth - menuWidth - 10;
+        }
+        if (y + menuHeight > windowHeight) {
+            y = windowHeight - menuHeight - 10;
+        }
+        
+        contextMenu.css({
+            left: x + 'px',
+            top: y + 'px'
+        }).show();
     }
 
     static addDownloaderItem(item) {
@@ -202,24 +411,6 @@ class DownloadsWidget extends BaseWidget {
 
                     let targetCol = row.find('[col="target"]');
                     targetCol.text(dirPath + subPath);
-
-                    let btnResent = row.find('[action="resend"]');
-                    btnResent.css('display', 'block'); // Always visible
-                    // Update disabled state based on current item state
-                    if (item.state === "new" || item.state.includes("Downloading")) {
-                        btnResent.addClass('disabled');
-                    } else {
-                        btnResent.removeClass('disabled');
-                    }
-
-                    let btnResentWOValidation = row.find('[action="resendSkipValidation"]');
-                    btnResentWOValidation.toggleClass('force-hide', !(item.state.startsWith('Validation Error')))
-
-                    let resentStream = row.find('[action="resendOtherStream"]')
-                    resentStream.css('display', item.autoloaderData != undefined && item.state.startsWith('Error') ? 'block' : 'none')
-
-                    let downloadLogBtn = row.find('[action="downloadLog"]');
-                    downloadLogBtn.toggleClass('force-hide', !(item.hadServerError || item.hadWarning));
                 }
 
                 DownloadsWidget.setStatusAndTooltip(row, item);
@@ -258,94 +449,12 @@ class DownloadsWidget extends BaseWidget {
     static createNewRow(item) {
         //Row
         let row = $('<tr>')
-            .attr('uuid', item.uuid);
-
-        //==============================Column - toolbar===============================
-        //Column - toolbar
-        let toolbar = $('<td>')
-            .addClass('toolbar')
-            .css('display', 'flex')
-            .css('justify-content', 'center')
-            .css('align-items', 'center')
-            .attr('col', 'actions');
-
-        //Column - toolbar - delete
-        let deleteBtn = $('<button>')
-            .attr('action', 'delete')
-            .attr('title', 'Delete from List')
-            .addClass('action-icon-btn delete-btn')
-            .append($('<i>').addClass('fa fa-trash'))
-            .click(function () {
-                let data = DownloadsWidget.indexes.get(item.uuid);
-                if (data.state != "new") {
-                    deleteDownloadAPI(item.uuid);
-                }
-                DownloadsWidget.indexes.delete(item.uuid);
-                $(this).closest('tr').remove();
-                DownloadsWidget.updateStatistics();
+            .attr('uuid', item.uuid)
+            .css('cursor', 'context-menu')
+            .on('contextmenu', function(e) {
+                e.preventDefault();
+                DownloadsWidget.showContextMenu(e, item.uuid);
             });
-
-        //Column - toolbar - resend
-        let resentBtn = $('<button>')
-            .attr('action', 'resend')
-            .attr('title', 'Restart Download')
-            .addClass('action-icon-btn retry-btn')
-            .append($('<i>').addClass('fa fa-rotate-right'))
-            .css('display', 'block') // Always visible
-            .click(function () {
-                let data = DownloadsWidget.indexes.get(item.uuid);
-                // Don't allow retry if disabled or for certain states
-                if ($(this).hasClass('disabled') || data.state === "new" || data.state.includes("Downloading")) return;
-                data.state = "new";
-                addDownloadsAPI([data]);
-            });
-
-        // Set initial disabled state based on item state
-        if (item.state === "new" || item.state.includes("Downloading")) {
-            resentBtn.addClass('disabled');
-        }
-
-        //Column - toolbar - resend with other stream
-        let resentWithOtherStreamBtn = $('<button>')
-            .attr('action', 'resendOtherStream')
-            .attr('title', 'Restart Download with other Stream')
-            .addClass('action-icon-btn stream-btn')
-            .append($('<i>').addClass('fa-solid fa-code-branch'))
-            .toggleClass('force-hide', !(item.autoloaderData != undefined && item.state.startsWith('Error')))
-            .click(function () {
-                let data = DownloadsWidget.indexes.get(item.uuid);
-                SelectStreamPopup.request(data);
-            });
-
-        //Column - toolbar - view log
-        let downloadLogBtn = $('<button>')
-            .attr('action', 'downloadLog')
-            .attr('title', 'Open Log')
-            .addClass('action-icon-btn log-btn')
-            .append($('<i>').addClass('fas fa-file-text'))
-            .toggleClass('force-hide', !(item.hadServerError || item.hadWarning))
-            .click(function () {
-                window.open('/api/view-log/' + item.uuid, '_blank');
-            });
-
-        toolbar.append(resentBtn, deleteBtn, resentWithOtherStreamBtn, downloadLogBtn);
-
-        //Column - toolbar - resend with validationSkipping
-        let resendSkipValidation = $('<button>')
-            .attr('action', 'resendSkipValidation')
-            .attr('title', 'Restart Download with Validation Skipping')
-            .addClass('action-icon-btn stream-btn')
-            .append($('<i>').addClass('fa-solid fa-forward'))
-            .toggleClass('force-hide', !(item.state.startsWith('Validation Error:')))
-            .click(function () {
-                let data = DownloadsWidget.indexes.get(item.uuid);
-                // Don't allow retry if disabled or for certain states
-                if ($(this).hasClass('disabled') || data.state === "new" || data.state.includes("Downloading")) return;
-                data.state = "new";
-                data.options.skipValidation = "true";
-                addDownloadsAPI([data]);
-            });
-        toolbar.append(resentBtn, deleteBtn, resendSkipValidation);
         //===============================================================================
         //==============================Column - State===============================
         let statusText = item.state.split('\n')[0];
@@ -402,7 +511,7 @@ class DownloadsWidget extends BaseWidget {
                 )
             );
         //===============================================================================
-        row.append(toolbar, state, url, target);
+        row.append(state, url, target);
         return row;
     }
 
