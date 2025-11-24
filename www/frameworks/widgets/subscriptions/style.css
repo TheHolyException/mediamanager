@@ -675,3 +675,113 @@
         }
     }
 }
+
+/* Context Menu Styles */
+.subscription-context-menu {
+    position: fixed;
+    background: rgba(40, 44, 52, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(10px);
+    min-width: 200px;
+    z-index: 999999;
+    padding: 8px 0;
+    font-size: 14px;
+}
+
+.subscription-context-menu .context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.subscription-context-menu .context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.subscription-context-menu .context-menu-item.danger {
+    color: #dc3545;
+}
+
+.subscription-context-menu .context-menu-item.danger:hover {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+.subscription-context-menu .context-menu-item.disabled {
+    color: rgba(255, 255, 255, 0.3) !important;
+    cursor: not-allowed !important;
+}
+
+.subscription-context-menu .context-menu-item.disabled:hover {
+    background: none !important;
+    color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.subscription-context-menu .context-menu-item.disabled.danger {
+    color: rgba(220, 53, 69, 0.3) !important;
+}
+
+.subscription-context-menu .context-menu-item.disabled.danger:hover {
+    background: none !important;
+    color: rgba(220, 53, 69, 0.3) !important;
+}
+
+.subscription-context-menu .context-menu-item.disabled i {
+    opacity: 0.3 !important;
+}
+
+.subscription-context-menu .context-menu-item i {
+    width: 16px;
+    font-size: 14px;
+    text-align: center;
+}
+
+/* Icon colors for different actions */
+.subscription-context-menu .context-menu-item[data-action="scan"] i {
+    color: #ffc107;
+}
+
+.subscription-context-menu .context-menu-item[data-action="download"] i {
+    color: #28a745;
+}
+
+.subscription-context-menu .context-menu-item[data-action="pause"] i {
+    color: #17a2b8;
+}
+
+.subscription-context-menu .context-menu-item[data-action="resume"] i {
+    color: #28a745;
+}
+
+.subscription-context-menu .context-menu-item[data-action="settings"] i {
+    color: #6c757d;
+}
+
+.subscription-context-menu .context-menu-item[data-action="copyUrl"] i {
+    color: #007bff;
+}
+
+.subscription-context-menu .context-menu-item[data-action="copyFolder"] i {
+    color: #6f42c1;
+}
+
+.subscription-context-menu .context-menu-item[data-action="delete"] i {
+    color: #dc3545;
+}
+
+.subscription-context-menu .context-menu-item span {
+    font-weight: 400;
+}
+
+.subscription-context-menu .context-menu-separator {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 4px 0;
+}

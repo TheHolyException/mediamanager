@@ -1,4 +1,6 @@
 class SubscriptionsWidget extends BaseWidget {
+    static instanceContextMenus = new Map();
+
     constructor(options = {}) {
         super({
             type: 'subscriptions',
@@ -11,11 +13,21 @@ class SubscriptionsWidget extends BaseWidget {
         this.filterStatus = 'all';
         this.sortBy = 'title';
         this.sortOrder = 'asc';
+        this.instanceId = 'subscriptions-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    }
+
+    onDestroy() {
+        // Clean up context menu when widget is destroyed
+        const contextMenu = SubscriptionsWidget.instanceContextMenus.get(this.instanceId);
+        if (contextMenu) {
+            contextMenu.remove();
+            SubscriptionsWidget.instanceContextMenus.delete(this.instanceId);
+        }
     }
 
     createContent() {
         let widget = $(`
-        <div class="widget subscriptions-widget scrollbar-on-hover custom-scrollbar" widget-name="SubscriptionsWidget">
+        <div class="widget subscriptions-widget scrollbar-on-hover custom-scrollbar" widget-name="SubscriptionsWidget" widget-id="${this.instanceId}">
             <div class="widget-header">
                 <div class="widget-title">
                     <i class="fas fa-bell"></i>
@@ -251,6 +263,56 @@ class SubscriptionsWidget extends BaseWidget {
             </div>
         </div>
         `);
+
+        // Create context menu container
+        const contextMenu = $(`
+            <div class="subscription-context-menu subscription-context-menu-${this.instanceId}" style="display: none;">
+                <div class="context-menu-item" data-action="scan">
+                    <i class="fa fa-rotate"></i>
+                    <span>Scan for Episodes</span>
+                </div>
+                <div class="context-menu-item" data-action="download">
+                    <i class="fa fa-download"></i>
+                    <span>Download Now</span>
+                </div>
+                <div class="context-menu-item" data-action="pause">
+                    <i class="fa fa-pause"></i>
+                    <span>Pause</span>
+                </div>
+                <div class="context-menu-item" data-action="resume">
+                    <i class="fa fa-play"></i>
+                    <span>Resume</span>
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item" data-action="settings">
+                    <i class="fa fa-cog"></i>
+                    <span>Settings</span>
+                </div>
+                <div class="context-menu-item" data-action="copyUrl">
+                    <i class="fas fa-copy"></i>
+                    <span>Copy URL</span>
+                </div>
+                <div class="context-menu-item" data-action="copyFolder">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Copy Folder Path</span>
+                </div>
+                <div class="context-menu-separator"></div>
+                <div class="context-menu-item danger" data-action="delete">
+                    <i class="fa fa-trash"></i>
+                    <span>Unsubscribe</span>
+                </div>
+            </div>
+        `);
+        
+        $('body').append(contextMenu);
+        
+        // Store reference to context menu for this instance
+        SubscriptionsWidget.instanceContextMenus.set(this.instanceId, contextMenu);
+        
+        // Hide context menu when clicking elsewhere
+        $(document).on('click', function() {
+            $('.subscription-context-menu').hide();
+        });
 
         this.bindEvents(widget);
         this.populateTargetFolders(widget);
@@ -587,23 +649,6 @@ class SubscriptionsWidget extends BaseWidget {
                 </div>
                 
                 <div class="card-footer">
-                    <div class="card-actions">
-                        <button class="action-btn scan-btn" title="Scan for new episodes">
-                            <i class="fa fa-rotate"></i>
-                        </button>
-                        <button class="action-btn download-btn" title="Download now">
-                            <i class="fa fa-download"></i>
-                        </button>
-                        <button class="action-btn pause-btn" title="Pause/Resume">
-                            <i class="fa ${status === 'paused' ? 'fa-play' : 'fa-pause'}"></i>
-                        </button>
-                        <button class="action-btn settings-btn" title="Settings">
-                            <i class="fa fa-cog"></i>
-                        </button>
-                        <button class="action-btn delete-btn" title="Unsubscribe">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
                     <div class="status-div">
                         <span class="status-badge status-${status}">${item.status || status}</span>
                     </div>
@@ -611,96 +656,201 @@ class SubscriptionsWidget extends BaseWidget {
             </div>
         `);
 
-        // Bind card events
-        this.bindCardEvents(card, item);
+        // Add right-click context menu to the card
+        card.css('cursor', 'context-menu')
+            .on('contextmenu', (e) => {
+                e.preventDefault();
+                const widgetElement = card.closest('[widget-name="SubscriptionsWidget"]');
+                const widgetId = widgetElement.attr('widget-id');
+                this.showContextMenu(e, item, widgetId);
+            });
         
         container.append(card);
         this.updateEmptyState(widget);
         this.updateStats(widget);
     }
 
-    bindCardEvents(card, item) {
-        card.find('.scan-btn').click(() => {
-            const scanBtn = card.find('.scan-btn');
-            const originalIcon = scanBtn.find('i').attr('class');
+    showContextMenu(event, item, widgetId) {
+        // Find the specific context menu for this widget instance
+        const contextMenu = widgetId ? 
+            $(`.subscription-context-menu-${widgetId}`) : 
+            $('.subscription-context-menu').first();
+        
+        if (contextMenu.length === 0) {
+            return;
+        }
+        
+        // Update menu item states based on subscription status
+        const pauseItem = contextMenu.find('[data-action="pause"]');
+        const resumeItem = contextMenu.find('[data-action="resume"]');
+        
+        // Show/hide pause/resume based on current state
+        if (item.paused) {
+            pauseItem.hide();
+            resumeItem.show();
+        } else {
+            pauseItem.show();
+            resumeItem.hide();
+        }
+        
+        // Remove previous click handlers
+        contextMenu.off('click', '.context-menu-item');
+        
+        // Add click handlers
+        contextMenu.on('click', '.context-menu-item', (e) => {
+            e.stopPropagation();
             
-            // Show loading state
-            scanBtn.prop('disabled', true);
-            scanBtn.find('i').attr('class', 'fa fa-spinner fa-spin');
+            const action = $(e.currentTarget).data('action');
             
-            ApiClient.scanSubscription(item.id)
-                .then(data => {
-                    this.showNotification('Scanning for new episodes...', 'info');
-                    if (data.unloadedEpisodes !== undefined) {
-                        this.showNotification(`Scan completed. Found ${data.unloadedEpisodes} unloaded episodes.`, 'success');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error scanning subscription:', error);
-                    this.showNotification('Failed to scan: ' + error.message, 'error');
-                });
+            switch(action) {
+                case 'scan':
+                    this.scanSubscription(item);
+                    break;
+                case 'download':
+                    this.downloadSubscription(item);
+                    break;
+                case 'pause':
+                    this.pauseSubscription(item);
+                    break;
+                case 'resume':
+                    this.resumeSubscription(item);
+                    break;
+                case 'settings':
+                    this.showSettingsForItem(item);
+                    break;
+                case 'copyUrl':
+                    navigator.clipboard.writeText(item.url).then(() => {
+                        this.showNotification('URL copied to clipboard', 'success');
+                    }).catch(err => {
+                        console.error('Failed to copy URL: ', err);
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = item.url;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        this.showNotification('URL copied to clipboard', 'success');
+                    });
+                    break;
+                case 'copyFolder':
+                    const folderPath = item.directory || 'Auto';
+                    navigator.clipboard.writeText(folderPath).then(() => {
+                        this.showNotification('Folder path copied to clipboard', 'success');
+                    }).catch(err => {
+                        console.error('Failed to copy folder path: ', err);
+                        // Fallback for older browsers
+                        const textArea = document.createElement('textarea');
+                        textArea.value = folderPath;
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(textArea);
+                        this.showNotification('Folder path copied to clipboard', 'success');
+                    });
+                    break;
+                case 'delete':
+                    this.confirmDelete(item);
+                    break;
+            }
             
-            // Reset button after 3 seconds
-            setTimeout(() => {
-                scanBtn.prop('disabled', false);
-                scanBtn.find('i').attr('class', originalIcon);
-            }, 3000);
+            contextMenu.hide();
         });
+        
+        // Position and show menu
+        const menuWidth = 200;
+        const menuHeight = 180;
+        const windowWidth = $(window).width();
+        const windowHeight = $(window).height();
+        
+        let x = event.pageX;
+        let y = event.pageY;
+        
+        // Adjust position if menu would go off screen
+        if (x + menuWidth > windowWidth) {
+            x = windowWidth - menuWidth - 10;
+        }
+        if (y + menuHeight > windowHeight) {
+            y = windowHeight - menuHeight - 10;
+        }
+        
+        // Hide all other context menus first
+        $('.subscription-context-menu').hide();
+        
+        // Force all the necessary styles with ultra-high z-index
+        contextMenu[0].style.cssText = `
+            position: fixed !important;
+            left: ${x}px !important;
+            top: ${y}px !important;
+            display: block !important;
+            z-index: 999999 !important;
+            background: rgba(40, 44, 52, 0.98) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 4px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+            min-width: 200px !important;
+            padding: 8px 0 !important;
+            font-size: 14px !important;
+        `;
+    }
 
-        card.find('.download-btn').click(() => {
-            ApiClient.downloadSubscription(item.id)
-                .then(data => {
-                    this.showNotification('Download started', 'success');
-                })
-                .catch(error => {
-                    console.error('Error starting download:', error);
-                    // Extract just the error message without the status code prefix
-                    let errorMessage = error.message;
-                    if (errorMessage.includes(': ')) {
-                        errorMessage = errorMessage.split(': ').slice(1).join(': ');
-                    }
-                    this.showNotification('Failed to start download: ' + errorMessage, 'error');
-                });
-        });
+    scanSubscription(item) {
+        ApiClient.scanSubscription(item.id)
+            .then(data => {
+                this.showNotification('Scanning for new episodes...', 'info');
+                if (data.unloadedEpisodes !== undefined) {
+                    this.showNotification(`Scan completed. Found ${data.unloadedEpisodes} unloaded episodes.`, 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error scanning subscription:', error);
+                this.showNotification('Failed to scan: ' + error.message, 'error');
+            });
+    }
 
-        card.find('.pause-btn').click(() => {
-            const pauseBtn = card.find('.pause-btn');
-            const action = item.paused ? 'resume' : 'pause';
-            
-            // Optimistically update the button icon
-            const newIcon = item.paused ? 'fa-pause' : 'fa-play';
-            pauseBtn.find('i').attr('class', `fa ${newIcon}`);
-            
-            // Update the item's paused state locally for immediate feedback
-            item.paused = !item.paused;
-            
-            const apiCall = action === 'pause' ? 
-                ApiClient.pauseSubscription(item.id) : 
-                ApiClient.resumeSubscription(item.id);
-            
-            apiCall
-                .then(data => {
-                    const actionText = action === 'pause' ? 'paused' : 'resumed';
-                    this.showNotification(`Subscription ${actionText}`, 'info');
-                })
-                .catch(error => {
-                    console.error(`Error ${action}ing subscription:`, error);
-                    this.showNotification(`Failed to ${action}: ` + error.message, 'error');
-                    // Revert the local state change on error
-                    item.paused = !item.paused;
-                });
-        });
+    downloadSubscription(item) {
+        ApiClient.downloadSubscription(item.id)
+            .then(data => {
+                this.showNotification('Download started', 'success');
+            })
+            .catch(error => {
+                console.error('Error starting download:', error);
+                // Extract just the error message without the status code prefix
+                let errorMessage = error.message;
+                if (errorMessage.includes(': ')) {
+                    errorMessage = errorMessage.split(': ').slice(1).join(': ');
+                }
+                this.showNotification('Failed to start download: ' + errorMessage, 'error');
+            });
+    }
 
-        card.find('.delete-btn').click(() => {
-            this.confirmDelete(item);
-        });
+    pauseSubscription(item) {
+        ApiClient.pauseSubscription(item.id)
+            .then(data => {
+                this.showNotification('Subscription paused', 'info');
+                item.paused = true;
+            })
+            .catch(error => {
+                console.error('Error pausing subscription:', error);
+                this.showNotification('Failed to pause: ' + error.message, 'error');
+            });
+    }
 
-        card.find('.settings-btn').click(() => {
-            const widget = $('[widget-name="SubscriptionsWidget"]');
-            // Create a temporary instance to call the method, or call it statically
-            const instance = new SubscriptionsWidget();
-            instance.showEditForm(widget, item);
-        });
+    resumeSubscription(item) {
+        ApiClient.resumeSubscription(item.id)
+            .then(data => {
+                this.showNotification('Subscription resumed', 'info');
+                item.paused = false;
+            })
+            .catch(error => {
+                console.error('Error resuming subscription:', error);
+                this.showNotification('Failed to resume: ' + error.message, 'error');
+            });
+    }
+
+    showSettingsForItem(item) {
+        const widget = $('[widget-name="SubscriptionsWidget"]');
+        this.showEditForm(widget, item);
     }
 
     confirmDelete(item) {
