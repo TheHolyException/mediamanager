@@ -10,6 +10,11 @@ class DownloadsWidget extends BaseWidget {
         });
     }
 
+    onInit() {
+        // Request initial data when widget is initialized
+        sendPacket("syn", "default");
+    }
+
     createContent() {
         let widgetContent = $(`
         <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="DownloadsWidget">
@@ -171,8 +176,6 @@ class DownloadsWidget extends BaseWidget {
             
             DownloadsWidget.updateStatistics();
         });
-
-        sendPacket("syn", "default");
         
         // Create context menu container
         const contextMenu = $(`
@@ -262,10 +265,6 @@ class DownloadsWidget extends BaseWidget {
             retryOtherStreamItem.addClass('disabled');
         }
         
-        // Disable view log if no log available
-        if (!(data.hadServerError || data.hadWarning)) {
-            viewLogItem.addClass('disabled');
-        }
         
         // Remove previous click handlers
         contextMenu.off('click', '.context-menu-item');
@@ -385,41 +384,58 @@ class DownloadsWidget extends BaseWidget {
             if (!subPath)
                 subPath = '?';
 
-            for (let t of tableBodies) {
-                let tableBody = $(t);
-                row = tableBody.find('[uuid="' + item.uuid + '"]');
+            // Cache DOM queries for better performance
+            const tableBodyElements = document.querySelectorAll('.queue-body');
+            
+            for (const tableBodyElement of tableBodyElements) {
+                let existingRow = tableBodyElement.querySelector(`[uuid="${item.uuid}"]`);
 
-                if (row.length == 0) {
-                    row = DownloadsWidget.createNewRow(item);
-                    tableBody.append(row);
-                }
-                else {
-                    let stateCol = row.find('[col="state"]');
-                    let statusIndicator = stateCol.find('.status-indicator');
-                    let statusText = stateCol.find('.status-text');
-                    
-                    // Update status text
-                    statusText.text(item.state);
-                    
-                    // Update status indicator symbols
-                    statusIndicator.find('.error-symbol, .warning-symbol').remove();
-                    if (item.hadServerError) {
-                        statusIndicator.append($('<i>').addClass('fas fa-exclamation-circle error-symbol').attr('title', 'Download had errors'));
-                    } else if (item.hadWarning) {
-                        statusIndicator.append($('<i>').addClass('fas fa-exclamation-triangle warning-symbol').attr('title', 'Download had warnings'));
-                    }
-
-                    let targetCol = row.find('[col="target"]');
-                    targetCol.text(dirPath + subPath);
+                if (!existingRow) {
+                    const newRowJQuery = DownloadsWidget.createNewRow(item);
+                    const newRow = newRowJQuery.get(0); // Convert jQuery object to native DOM element
+                    tableBodyElement.appendChild(newRow);
+                    existingRow = newRow;
+                } else {
+                    DownloadsWidget.updateExistingRow(existingRow, item, dirPath + subPath);
                 }
 
-                DownloadsWidget.setStatusAndTooltip(row, item);
+                DownloadsWidget.setStatusAndTooltip($(existingRow), item);
             }
         }
 
 
         DownloadsWidget.indexes.set(item.uuid, item);
         DownloadsWidget.updateStatistics();
+    }
+
+    static updateExistingRow(row, item, targetPath) {
+        const statusColumn = row.querySelector('[col="state"]');
+        const statusIndicator = statusColumn.querySelector('.status-indicator');
+        const statusText = statusColumn.querySelector('.status-text');
+        
+        // Update status text
+        statusText.textContent = item.state;
+        
+        // Update status indicator symbols
+        const existingSymbols = statusIndicator.querySelectorAll('.error-symbol, .warning-symbol');
+        existingSymbols.forEach(symbol => symbol.remove());
+        
+        if (item.hadServerError) {
+            const errorIcon = DOMUtils.createElement('i', {
+                className: 'fas fa-exclamation-circle error-symbol',
+                title: 'Download had errors'
+            });
+            statusIndicator.appendChild(errorIcon);
+        } else if (item.hadWarning) {
+            const warningIcon = DOMUtils.createElement('i', {
+                className: 'fas fa-exclamation-triangle warning-symbol',
+                title: 'Download had warnings'
+            });
+            statusIndicator.appendChild(warningIcon);
+        }
+
+        const targetColumn = row.querySelector('[col="target"]');
+        targetColumn.textContent = targetPath;
     }
 
     static updateStatistics() {
@@ -550,7 +566,7 @@ class DownloadsWidget extends BaseWidget {
 
         for (let urlElement of urlArray) {
             let obj = {
-                uuid: DownloadsWidget.uuidv4(),
+                uuid: crypto.randomUUID(),
                 state: "new",
                 created: new Date().getTime(),
                 url: urlElement,
@@ -561,14 +577,6 @@ class DownloadsWidget extends BaseWidget {
         }
     }
 
-    static uuidv4() {
-        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'
-            .replace(/[xy]/g, function (c) {
-                const r = Math.random() * 16 | 0,
-                    v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-    }
 
     static onWSResponse(cmd, content) {
         switch (cmd) {

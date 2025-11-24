@@ -1,4 +1,5 @@
 class StatisticsWidget extends BaseWidget {
+    static activeInstances = new Set();
     constructor(options = {}) {
         super({
             type: 'statistics',
@@ -83,26 +84,10 @@ class StatisticsWidget extends BaseWidget {
         </div>
         `);
 
-        // Initialize charts after DOM is ready
-        const self = this;
-        setTimeout(() => {
-            if (typeof Chart !== 'undefined') {
-                self.initCharts();
-                window.statisticsWidgetInstance = self;
-            } else {
-                // Wait for Chart.js to load
-                const checkChart = setInterval(() => {
-                    if (typeof Chart !== 'undefined') {
-                        clearInterval(checkChart);
-                        self.initCharts();
-                        window.statisticsWidgetInstance = self;
-                    }
-                }, 100);
-            }
-        }, 100);
+        this.setTimeout(() => this.init(), 100);
         
         // Store widget instance for updates
-        widget.data('widgetInstance', self);
+        widget.data('widgetInstance', this);
 
         // Initialize visibility monitoring when widget is created
         StatisticsWidget.initializeVisibilityMonitoring();
@@ -110,7 +95,23 @@ class StatisticsWidget extends BaseWidget {
         return widget.get(0);
     }
 
-    destroy() {
+    onInit() {
+        if (typeof Chart !== 'undefined') {
+            this.initCharts();
+            StatisticsWidget.activeInstances.add(this);
+        } else {
+            // Wait for Chart.js to load
+            const checkChart = this.setInterval(() => {
+                if (typeof Chart !== 'undefined') {
+                    this.clearInterval(checkChart);
+                    this.initCharts();
+                    StatisticsWidget.activeInstances.add(this);
+                }
+            }, 100);
+        }
+    }
+
+    onDestroy() {
         if (this.memoryChart) {
             this.memoryChart.destroy();
             this.memoryChart = null;
@@ -123,12 +124,7 @@ class StatisticsWidget extends BaseWidget {
             this.threadChart.destroy();
             this.threadChart = null;
         }
-        // Clear global reference
-        if (window.statisticsWidgetInstance === this) {
-            window.statisticsWidgetInstance = null;
-        }
-        
-        super.destroy();
+        StatisticsWidget.activeInstances.delete(this);
     }
 
     initCharts() {
@@ -454,19 +450,11 @@ class StatisticsWidget extends BaseWidget {
     }
 
     static updateStatistics(responseData) {
-        // Find all statistics widgets currently in the DOM
-        const statisticsWidgets = $('[widget-name="StatisticsWidget"]');
-        if (statisticsWidgets.length === 0) return;
-
-        // Update charts for all visible statistics widgets
-        statisticsWidgets.each(function() {
-            const widget = $(this);
-            const widgetInstance = widget.data('widgetInstance');
-            
-            // Update memory historical chart
-            if (responseData.memoryHistory && widgetInstance && widgetInstance.memoryChart) {
+        // Update all active statistics widget instances
+        StatisticsWidget.activeInstances.forEach(instance => {
+            if (instance.memoryChart && responseData.memoryHistory) {
                 const memoryData = responseData.memoryHistory;
-                const chart = widgetInstance.memoryChart;
+                const chart = instance.memoryChart;
                 
                 // Clear existing data
                 chart.data.labels = [];
@@ -482,32 +470,22 @@ class StatisticsWidget extends BaseWidget {
                 
                 chart.update('none');
             }
-        });
-
-        // Update download and thread charts for all widgets
-        statisticsWidgets.each(function() {
-            const widget = $(this);
-            const widgetInstance = widget.data('widgetInstance');
             
             // Update download historical chart
-            if (responseData.downloadHistory && widgetInstance && widgetInstance.systemChart) {
+            if (instance.systemChart && responseData.downloadHistory) {
                 const downloadData = responseData.downloadHistory;
-                const chart = widgetInstance.systemChart;
+                const chart = instance.systemChart;
                 
-                // Clear existing data
                 chart.data.labels = [];
-                chart.data.datasets.forEach(dataset => {
-                    dataset.data = [];
-                });
+                chart.data.datasets.forEach(dataset => dataset.data = []);
                 
-                // Process download history data
                 if (downloadData.timestamp && Array.isArray(downloadData.timestamp) && downloadData.timestamp.length > 0) {
                     downloadData.timestamp.forEach((timestamp, index) => {
                         chart.data.labels.push(new Date(timestamp));
-                        chart.data.datasets[0].data.push(downloadData.total[index] || 0);        // Total Downloads
-                        chart.data.datasets[1].data.push(downloadData.active[index] || 0);       // Active Downloads
-                        chart.data.datasets[2].data.push(downloadData.failed[index] || 0);       // Failed Downloads
-                        chart.data.datasets[3].data.push(downloadData.completed[index] || 0);    // Completed Downloads
+                        chart.data.datasets[0].data.push(downloadData.total[index] || 0);
+                        chart.data.datasets[1].data.push(downloadData.active[index] || 0);
+                        chart.data.datasets[2].data.push(downloadData.failed[index] || 0);
+                        chart.data.datasets[3].data.push(downloadData.completed[index] || 0);
                     });
                 }
                 
@@ -515,24 +493,20 @@ class StatisticsWidget extends BaseWidget {
             }
 
             // Update thread historical chart
-            if (responseData.threadHistory && widgetInstance && widgetInstance.threadChart) {
+            if (instance.threadChart && responseData.threadHistory) {
                 const threadData = responseData.threadHistory;
-                const chart = widgetInstance.threadChart;
+                const chart = instance.threadChart;
                 
-                // Clear existing data
                 chart.data.labels = [];
-                chart.data.datasets.forEach(dataset => {
-                    dataset.data = [];
-                });
+                chart.data.datasets.forEach(dataset => dataset.data = []);
                 
-                // Process thread history data
                 if (threadData.timestamp && Array.isArray(threadData.timestamp) && threadData.timestamp.length > 0) {
                     threadData.timestamp.forEach((timestamp, index) => {
                         chart.data.labels.push(new Date(timestamp));
-                        chart.data.datasets[0].data.push(threadData.active[index] || 0);         // Active Threads
-                        chart.data.datasets[1].data.push(threadData.queued[index] || 0);         // Queued Tasks
-                        chart.data.datasets[2].data.push(threadData.RUNNABLE[index] || 0);       // RUNNABLE threads
-                        chart.data.datasets[3].data.push(threadData.WAITING[index] || 0);        // WAITING threads
+                        chart.data.datasets[0].data.push(threadData.active[index] || 0);
+                        chart.data.datasets[1].data.push(threadData.queued[index] || 0);
+                        chart.data.datasets[2].data.push(threadData.RUNNABLE[index] || 0);
+                        chart.data.datasets[3].data.push(threadData.WAITING[index] || 0);
                     });
                 }
                 
@@ -586,12 +560,15 @@ class StatisticsWidget extends BaseWidget {
             groups.push(groupElem);
         }
 
-        // Update statistics tables for all widgets
-        statisticsWidgets.each(function() {
-            const container = $(this).find('.statistics-tables');
-            container.empty();
-            container.append(groups.map(group => group.clone()));
-        });
+        // Update statistics tables for all active widget instances
+        if (StatisticsWidget.activeInstances.size > 0) {
+            const containers = $('.statistics-tables');
+            containers.each(function() {
+                const container = $(this);
+                container.empty();
+                container.append(groups.map(group => group.clone()));
+            });
+        }
     }
 
     // Static methods for visibility-based polling management

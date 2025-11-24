@@ -1,6 +1,7 @@
 const yeti = new Yeti();
 let dashboard;
 let targetFolders = [];
+let currentEmbeddedWidget = null;
 getTargetsAPI();
 
 const settings = [
@@ -24,7 +25,7 @@ const settings = [
 connect(); // Connect WebSocket
 $(document).ready(function () {
     initUI();
-    $('.embeded-widget').html(new DownloadsWidget().createContent());
+    switchToWidget(() => new DownloadsWidget());
 });
 
 /**
@@ -181,17 +182,38 @@ function getSystemInfoAPI() {
     })
 }
 
+function switchToWidget(widgetFactory) {
+    // Cleanup current widget
+    if (currentEmbeddedWidget && typeof currentEmbeddedWidget.destroy === 'function') {
+        currentEmbeddedWidget.destroy();
+    }
+    
+    // Create and initialize new widget
+    currentEmbeddedWidget = widgetFactory();
+    $('.embeded-widget').html(currentEmbeddedWidget.createContent());
+    currentEmbeddedWidget.init();
+}
+
 function initUI() {
     // Initialize tab navigation - TabBar constructor initializes itself
     const tabNavigation = new TabBar($('.embeded-widget-toolbar'), $('.embeded-widget'), true, {
-        downloads: function () { $('.embeded-widget').html(new DownloadsWidget().createContent()); },
-        settings: function () { $('.embeded-widget').html(new SettingsWidget().createContent()); },
-        statistics: function () { 
-            $('.embeded-widget').html(new StatisticsWidget().createContent()); 
-            // Trigger immediate system info request when statistics tab is opened
-            getSystemInfoAPI();
+        downloads: function () { 
+            switchToWidget(() => new DownloadsWidget());
         },
-        subscriptions: function () { $('.embeded-widget').html(new SubscriptionsWidget().createContent()); },
+        settings: function () { 
+            switchToWidget(() => new SettingsWidget());
+        },
+        statistics: function () { 
+            switchToWidget(() => {
+                const widget = new StatisticsWidget();
+                // Trigger immediate system info request when statistics tab is opened
+                setTimeout(() => getSystemInfoAPI(), 100);
+                return widget;
+            });
+        },
+        subscriptions: function () { 
+            switchToWidget(() => new SubscriptionsWidget());
+        },
     });
     // TabBar instance stored for potential future use
     window.tabNavigation = tabNavigation;
@@ -254,7 +276,6 @@ function initUI() {
 
 
     setupGridDashboard();
-    //setupGridstack();
 }
 
 function setupGridDashboard(){
@@ -291,75 +312,6 @@ function setupGridDashboard(){
     }
 }
 
-function setupGridstack() {
-    GridStack.renderCB = function (el, w) {
-        el.innerHTML = w.content;
-    };
-
-    let insert = [{ h: 2, content: 'new item' }];
-
-    grid = GridStack.init({
-        cellHeight: 70,
-        minRow: 1,
-        acceptWidgets: true,
-        float: true,
-        handle: '.widget-handle',
-        staticGrid: true
-    });
-
-    GridStack.setupDragIn('.grid-stack-item', {/* appendTo: 'body',  */helper: 'clone' }, insert);
-
-    let addToggle = true;
-    grid.on('added', function (event, items) {
-        addToggle = !addToggle;
-        if(addToggle){
-            return
-        }
-
-        let o = items[0];
-        let addedElem = $(o.el);
-        let widgetName = o.widgetName;
-
-        if(!widgetName){
-            widgetName = addedElem.attr('widget-name');
-        }
-
-        grid.removeWidget(o.el);
-        let widget = $(WidgetManager.getWidget(widgetName, "").render());
-        addRemoveButtonToWidget(widget);
-        grid.addWidget(widget.get(0), {
-            x: o.x,
-            y: o.y,
-            w: o.w,
-            h: o.h,
-            widgetName: widgetName
-        });
-    });
-
-    let dashboardData = localStorage.getItem('dashboard-content');
-    if(dashboardData){
-        let dashboardItems = JSON.parse(dashboardData);
-        for(let item of dashboardItems){
-            grid.addWidget(WidgetManager.getWidget(item.widgetName, "").render(), {
-                x: item.x,
-                y: item.y,
-                w: item.w,
-                h: item.h,
-                widgetName: item.widgetName
-            })
-        }
-    }
-}
-
-function addRemoveButtonToWidget(widget){
-    let removeBtn = $('<button>')
-        .addClass('remove-widget-btn')
-        .html('<i class="fa-solid fa-trash"></i>')
-        .click(function(){
-            grid.removeWidget(this.parentElement);
-        });
-    widget.append(removeBtn);
-}
 
 function onWSResponseDefault(cmd, content) {
     switch (cmd) {

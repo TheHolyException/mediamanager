@@ -179,25 +179,7 @@
         min-height: 0; /* Allow container to shrink below content size */
         position: relative;
         
-        /* Custom scrollbar for better visibility */
-        &::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        
-        &::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
-        
-        &::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 4px;
-            
-            &:hover {
-                background: rgba(255, 255, 255, 0.3);
-            }
-        }
+        /* Scrollbar styles handled by shared scrollbar.css */
     }
 
     .queue-table {

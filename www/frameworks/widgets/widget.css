@@ -106,46 +106,7 @@
     color: var(--textColor);
 }
 
-/* Beautiful Light Blue Scrollbar for all widgets */
-.widget::-webkit-scrollbar,
-.widget *::-webkit-scrollbar,
-.table-container::-webkit-scrollbar,
-.subscriptions-container::-webkit-scrollbar,
-.settings-container::-webkit-scrollbar,
-.statistics::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-}
-
-.widget::-webkit-scrollbar-track,
-.widget *::-webkit-scrollbar-track,
-.table-container::-webkit-scrollbar-track,
-.subscriptions-container::-webkit-scrollbar-track,
-.settings-container::-webkit-scrollbar-track,
-.statistics::-webkit-scrollbar-track {
-    background: var(--darkBGColor1);
-    border-radius: 3px;
-}
-
-.widget::-webkit-scrollbar-thumb,
-.widget *::-webkit-scrollbar-thumb,
-.table-container::-webkit-scrollbar-thumb,
-.subscriptions-container::-webkit-scrollbar-thumb,
-.settings-container::-webkit-scrollbar-thumb,
-.statistics::-webkit-scrollbar-thumb {
-    background: var(--selectedBorderColor);
-    border-radius: 3px;
-    transition: background-color 0.3s ease;
-}
-
-.widget::-webkit-scrollbar-thumb:hover,
-.widget *::-webkit-scrollbar-thumb:hover,
-.table-container::-webkit-scrollbar-thumb:hover,
-.subscriptions-container::-webkit-scrollbar-thumb:hover,
-.settings-container::-webkit-scrollbar-thumb:hover,
-.statistics::-webkit-scrollbar-thumb:hover {
-    background: var(--hover-color);
-}
+/* Note: Scrollbar styles moved to shared/scrollbar.css */
 
 /* Sticky toolbars within widgets */
 .widget .toolbar {
