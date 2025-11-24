@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.smarthttp.HTTPRequestOptions;
 import me.kaigermany.ultimateutils.networking.smarthttp.HTTPResult;
 import me.kaigermany.ultimateutils.networking.smarthttp.SmartHTTP;
+import me.kaigermany.ultimateutils.sync.thread.Parallel;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -51,7 +52,7 @@ public class ProxyHandler {
 			return;
 		}
 
-		for (int i = 0; i < array.size(); i ++) {
+		Parallel.exec(array.size(), i -> {
 			TomlTable x = array.getTable(i);
 			String host = x.getString("host", () -> "127.0.0.1");
 			int port = Math.toIntExact(x.getLong("port", () -> 8080));
@@ -59,11 +60,11 @@ public class ProxyHandler {
 			Proxy proxy = new Proxy(type, new InetSocketAddress(host, port));
 			if (!checkTorNetwork(proxy)) {
 				log.error("Proxy {}:{} ({}) is not a tor proxy", host, port, type);
-				continue;
+				return;
 			}
 			proxies.add(proxy);
 			log.info("Added proxy: {}:{} ({})", host, port, type);
-		}
+		}, array.size());
 	}
 
 	/**
