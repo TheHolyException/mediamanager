@@ -512,7 +512,36 @@
             }
             
             i {
-                opacity: 0.3;
+                opacity: 0.3 !important;
+            }
+            
+            /* Maintain icon colors even when disabled, just with reduced opacity */
+            &[data-action="retry"] i {
+                color: #ffc107 !important;
+            }
+            
+            &[data-action="retrySkipValidation"] i {
+                color: #17a2b8 !important;
+            }
+            
+            &[data-action="retryOtherStream"] i {
+                color: #6f42c1 !important;
+            }
+            
+            &[data-action="viewLog"] i {
+                color: #6c757d !important;
+            }
+            
+            &[data-action="copyUrl"] i {
+                color: #28a745 !important;
+            }
+            
+            &[data-action="copyTarget"] i {
+                color: #007bff !important;
+            }
+            
+            &[data-action="delete"] i {
+                color: #dc3545 !important;
             }
         }
         
@@ -520,6 +549,35 @@
             width: 16px;
             font-size: 14px;
             text-align: center;
+        }
+        
+        /* Icon colors for different actions */
+        &[data-action="retry"] i {
+            color: #ffc107;
+        }
+        
+        &[data-action="retrySkipValidation"] i {
+            color: #17a2b8;
+        }
+        
+        &[data-action="retryOtherStream"] i {
+            color: #6f42c1;
+        }
+        
+        &[data-action="viewLog"] i {
+            color: #6c757d;
+        }
+        
+        &[data-action="copyUrl"] i {
+            color: #28a745;
+        }
+        
+        &[data-action="copyTarget"] i {
+            color: #007bff;
+        }
+        
+        &[data-action="delete"] i {
+            color: #dc3545;
         }
         
         span {
