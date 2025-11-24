@@ -7,6 +7,7 @@ class StatisticsWidget extends BaseWidget {
             height: 2,
             ...options
         });
+        this.instanceId = 'stats-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
         this.memoryChart = null;
         this.systemChart = null;
         this.threadChart = null;
@@ -20,7 +21,7 @@ class StatisticsWidget extends BaseWidget {
 
     createContent() {
         let widget = $(`
-        <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="StatisticsWidget">
+        <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="StatisticsWidget" widget-id="${this.instanceId}">
             <div class="widget-header">
                 <div class="widget-title">
                     <i class="fas fa-chart-bar"></i>
@@ -31,18 +32,18 @@ class StatisticsWidget extends BaseWidget {
                 <div class="chart-grid">
                     <div class="chart-container">
                         <h3>RAM Usage History</h3>
-                        <canvas id="memoryChart" width="300" height="200"></canvas>
+                        <canvas class="memory-chart" width="300" height="200"></canvas>
                         <div class="memory-details">
                             <div class="memory-item">
                                 <span class="label">Current:</span>
-                                <span class="value" id="memory-used">-</span>
+                                <span class="value memory-used">-</span>
                             </div>
                             <div class="memory-item">
                                 <span class="label">Max:</span>
-                                <span class="value" id="memory-max">-</span>
+                                <span class="value memory-max">-</span>
                             </div>
                             <div class="memory-item">
-                                <button id="gc-button" class="gc-button" onclick="StatisticsWidget.triggerGC()">
+                                <button class="gc-button" onclick="StatisticsWidget.triggerGC()">
                                     <i class="fas fa-trash"></i> Force GC
                                 </button>
                             </div>
@@ -50,29 +51,29 @@ class StatisticsWidget extends BaseWidget {
                     </div>
                     <div class="chart-container">
                         <h3>Download Statistics History</h3>
-                        <canvas id="systemChart" width="300" height="200"></canvas>
+                        <canvas class="system-chart" width="300" height="200"></canvas>
                         <div class="system-details">
                             <div class="system-item">
                                 <span class="label">CPU Cores:</span>
-                                <span class="value" id="cpu-cores">-</span>
+                                <span class="value cpu-cores">-</span>
                             </div>
                             <div class="system-item">
                                 <span class="label">Active Now:</span>
-                                <span class="value" id="active-downloads">-</span>
+                                <span class="value active-downloads-stat">-</span>
                             </div>
                         </div>
                     </div>
                     <div class="chart-container">
                         <h3>Thread Pool History</h3>
-                        <canvas id="threadChart" width="300" height="200"></canvas>
+                        <canvas class="thread-chart" width="300" height="200"></canvas>
                         <div class="thread-details">
                             <div class="thread-item">
                                 <span class="label">Max Threads:</span>
-                                <span class="value" id="max-threads">-</span>
+                                <span class="value max-threads">-</span>
                             </div>
                             <div class="thread-item">
                                 <span class="label">Active:</span>
-                                <span class="value" id="active-threads">-</span>
+                                <span class="value active-threads">-</span>
                             </div>
                         </div>
                     </div>
@@ -96,6 +97,9 @@ class StatisticsWidget extends BaseWidget {
     }
 
     onInit() {
+        // Store reference to widget DOM element
+        this.widgetElement = document.querySelector(`[widget-id="${this.instanceId}"]`);
+        
         if (typeof Chart !== 'undefined') {
             this.initCharts();
             StatisticsWidget.activeInstances.add(this);
@@ -128,11 +132,19 @@ class StatisticsWidget extends BaseWidget {
     }
 
     initCharts() {
-        const memoryCtx = document.getElementById('memoryChart');
-        const systemCtx = document.getElementById('systemChart');
-        const threadCtx = document.getElementById('threadChart');
+        // Use the stored widget element reference
+        if (!this.widgetElement) return;
+        
+        const memoryCtx = this.widgetElement.querySelector('.memory-chart');
+        const systemCtx = this.widgetElement.querySelector('.system-chart');
+        const threadCtx = this.widgetElement.querySelector('.thread-chart');
 
         if (!memoryCtx || !systemCtx || !threadCtx) return;
+
+        // Destroy existing charts if they exist on these canvas elements
+        Chart.getChart(memoryCtx)?.destroy();
+        Chart.getChart(systemCtx)?.destroy();
+        Chart.getChart(threadCtx)?.destroy();
 
         // Memory Usage Historical Chart
         this.memoryChart = new Chart(memoryCtx, {
@@ -514,23 +526,28 @@ class StatisticsWidget extends BaseWidget {
             }
         });
 
-        // Update current memory information
-        if (responseData.memory) {
-            $('#memory-used').text(responseData.memory.current || '-');
-            $('#memory-max').text(responseData.memory.max || '-');
-        }
+        // Update current information for all statistics widget instances
+        $('[widget-name="StatisticsWidget"]').each(function() {
+            const widget = $(this);
+            
+            // Update current memory information
+            if (responseData.memory) {
+                widget.find('.memory-used').text(responseData.memory.current || '-');
+                widget.find('.memory-max').text(responseData.memory.max || '-');
+            }
 
-        // Update current system information
-        if (responseData.system) {
-            $('#cpu-cores').text(responseData.system.availableProcessors || '-');
-            $('#active-downloads').text(responseData.system.activeDownloads || 0);
-        }
+            // Update current system information
+            if (responseData.system) {
+                widget.find('.cpu-cores').text(responseData.system.availableProcessors || '-');
+                widget.find('.active-downloads-stat').text(responseData.system.activeDownloads || 0);
+            }
 
-        // Update current thread information
-        if (responseData.threadPool) {
-            $('#max-threads').text(responseData.threadPool.max || '-');
-            $('#active-threads').text(responseData.threadPool.active || 0);
-        }
+            // Update current thread information
+            if (responseData.threadPool) {
+                widget.find('.max-threads').text(responseData.threadPool.max || '-');
+                widget.find('.active-threads').text(responseData.threadPool.active || 0);
+            }
+        });
 
         // Update tables for other data
         let groups = [];

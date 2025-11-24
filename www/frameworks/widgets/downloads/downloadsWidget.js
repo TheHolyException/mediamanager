@@ -1,5 +1,6 @@
 class DownloadsWidget extends BaseWidget {
     static indexes = new Map();
+    static instanceContextMenus = new Map();
 
     constructor(options = {}) {
         super({
@@ -8,16 +9,33 @@ class DownloadsWidget extends BaseWidget {
             height: 2,
             ...options
         });
+        this.instanceId = 'downloads-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
     }
 
     onInit() {
+        // Store reference to widget content for instance-scoped operations
+        this.widgetElement = $('.embeded-widget [widget-name="DownloadsWidget"]').last();
+        if (this.widgetElement.length === 0) {
+            // For grid view, find the widget element differently
+            this.widgetElement = $('[widget-name="DownloadsWidget"]').last();
+        }
+        
         // Request initial data when widget is initialized
         sendPacket("syn", "default");
     }
 
+    onDestroy() {
+        // Clean up context menu when widget is destroyed
+        const contextMenu = DownloadsWidget.instanceContextMenus.get(this.instanceId);
+        if (contextMenu) {
+            contextMenu.remove();
+            DownloadsWidget.instanceContextMenus.delete(this.instanceId);
+        }
+    }
+
     createContent() {
         let widgetContent = $(`
-        <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="DownloadsWidget">
+        <div class="widget scrollbar-on-hover custom-scrollbar" widget-name="DownloadsWidget" widget-id="${this.instanceId}">
             <div class="widget-header">
                 <div class="widget-title">
                     <i class="fas fa-download"></i>
@@ -30,28 +48,28 @@ class DownloadsWidget extends BaseWidget {
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-download"></i></div>
                             <div class="stat-info">
-                                <span class="stat-value" id="total-downloads">0</span>
+                                <span class="stat-value total-downloads">0</span>
                                 <span class="stat-label">Total</span>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-bars-progress"></i></div>
                             <div class="stat-info">
-                                <span class="stat-value" id="active-downloads-count">0</span>
+                                <span class="stat-value active-downloads-count">0</span>
                                 <span class="stat-label">Active</span>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                             <div class="stat-info">
-                                <span class="stat-value" id="completed-downloads">0</span>
+                                <span class="stat-value completed-downloads">0</span>
                                 <span class="stat-label">Completed</span>
                             </div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
                             <div class="stat-info">
-                                <span class="stat-value" id="failed-downloads-count">0</span>
+                                <span class="stat-value failed-downloads-count">0</span>
                                 <span class="stat-label">Failed</span>
                             </div>
                         </div>
@@ -179,7 +197,7 @@ class DownloadsWidget extends BaseWidget {
         
         // Create context menu container
         const contextMenu = $(`
-            <div class="download-context-menu" style="display: none;">
+            <div class="download-context-menu download-context-menu-${this.instanceId}" style="display: none;">
                 <div class="context-menu-item" data-action="retry">
                     <i class="fa fa-rotate-right"></i>
                     <span>Retry Download</span>
@@ -215,6 +233,9 @@ class DownloadsWidget extends BaseWidget {
         
         $('body').append(contextMenu);
         
+        // Store reference to context menu for this instance
+        DownloadsWidget.instanceContextMenus.set(this.instanceId, contextMenu);
+        
         // Hide context menu when clicking elsewhere
         $(document).on('click', function() {
             $('.download-context-menu').hide();
@@ -234,11 +255,16 @@ class DownloadsWidget extends BaseWidget {
         addDownloadsAPI(commitPacket);
     }
     
-    static showContextMenu(event, uuid) {
-        const contextMenu = $('.download-context-menu');
+    static showContextMenu(event, uuid, widgetId) {
+        // Find the specific context menu for this widget instance
+        const contextMenu = widgetId ? 
+            $(`.download-context-menu-${widgetId}`) : 
+            $('.download-context-menu').first();
         const data = DownloadsWidget.indexes.get(uuid);
         
-        if (!data) return;
+        if (!data || contextMenu.length === 0) {
+            return;
+        }
         
         // Reset all items to enabled state first
         contextMenu.find('.context-menu-item').removeClass('disabled');
@@ -360,10 +386,24 @@ class DownloadsWidget extends BaseWidget {
             y = windowHeight - menuHeight - 10;
         }
         
-        contextMenu.css({
-            left: x + 'px',
-            top: y + 'px'
-        }).show();
+        // Hide all other context menus first
+        $('.download-context-menu').hide();
+        
+        // Force all the necessary styles with ultra-high z-index
+        contextMenu[0].style.cssText = `
+            position: fixed !important;
+            left: ${x}px !important;
+            top: ${y}px !important;
+            display: block !important;
+            z-index: 999999 !important;
+            background: rgba(40, 44, 52, 0.98) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 4px !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4) !important;
+            min-width: 200px !important;
+            padding: 8px 0 !important;
+            font-size: 14px !important;
+        `;
     }
 
     static addDownloaderItem(item) {
@@ -445,10 +485,14 @@ class DownloadsWidget extends BaseWidget {
         const completed = items.filter(item => item.state.includes('Completed')).length;
         const failed = items.filter(item => item.state.includes('Error')).length;
 
-        $('#total-downloads').text(total);
-        $('#active-downloads-count').text(active);
-        $('#completed-downloads').text(completed);
-        $('#failed-downloads-count').text(failed);
+        // Update all download widget instances
+        $('[widget-name="DownloadsWidget"]').each(function() {
+            const widget = $(this);
+            widget.find('.total-downloads').text(total);
+            widget.find('.active-downloads-count').text(active);
+            widget.find('.completed-downloads').text(completed);
+            widget.find('.failed-downloads-count').text(failed);
+        });
     }
 
     static setStatusAndTooltip(row, item) {
@@ -469,7 +513,10 @@ class DownloadsWidget extends BaseWidget {
             .css('cursor', 'context-menu')
             .on('contextmenu', function(e) {
                 e.preventDefault();
-                DownloadsWidget.showContextMenu(e, item.uuid);
+                // Find the widget instance this row belongs to
+                const widgetElement = $(this).closest('[widget-name="DownloadsWidget"]');
+                const widgetId = widgetElement.attr('widget-id');
+                DownloadsWidget.showContextMenu(e, item.uuid, widgetId);
             });
         //===============================================================================
         //==============================Column - State===============================

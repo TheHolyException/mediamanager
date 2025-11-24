@@ -86,7 +86,7 @@ class SubscriptionsWidget extends BaseWidget {
                             <i class="fa fa-link"></i>
                             Anime URL *
                         </label>
-                        <input type="text" id="sub-url" placeholder="https://aniworld.to/anime/..." required>
+                        <input type="text" class="sub-url" placeholder="https://aniworld.to/anime/..." required>
                         <div class="input-hint">Enter the full URL to the anime series</div>
                     </div>
 
@@ -95,7 +95,7 @@ class SubscriptionsWidget extends BaseWidget {
                             <i class="fa fa-language"></i>
                             Preferred Language
                         </label>
-                        <select id="sub-language">
+                        <select class="sub-language">
                             <option value="1">German (Dub)</option>
                             <option value="2">German (Sub)</option>
                             <option value="3">English (Dub)</option>
@@ -109,7 +109,7 @@ class SubscriptionsWidget extends BaseWidget {
                             <i class="fa fa-hdd"></i>
                             Target Folder
                         </label>
-                        <select id="sub-target-folder" class="targetfolder">
+                        <select class="sub-target-folder targetfolder">
                         </select>
                     </div>
                     
@@ -119,8 +119,8 @@ class SubscriptionsWidget extends BaseWidget {
                             Subfolder
                         </label>
                         <div class="custom-dropdown">
-                            <input type="text" id="sub-subfolder" placeholder="Anime/Series Name" list="sub-subfolder-list" style="width: 100%;">
-                            <datalist id="sub-subfolder-list">
+                            <input type="text" class="sub-subfolder" placeholder="Anime/Series Name" list="sub-subfolder-list" style="width: 100%;">
+                            <datalist class="sub-subfolder-list">
                             </datalist>
                         </div>
                         <div class="input-hint">Leave empty to auto-detect from title, or select from existing folders</div>
@@ -131,7 +131,7 @@ class SubscriptionsWidget extends BaseWidget {
                             <i class="fa fa-ban"></i>
                             Excluded Seasons
                         </label>
-                        <input type="text" id="sub-excluded" placeholder="1,3,5">
+                        <input type="text" class="sub-excluded" placeholder="1,3,5">
                         <div class="input-hint">Comma-separated season numbers to skip</div>
                     </div>
                     
@@ -158,7 +158,7 @@ class SubscriptionsWidget extends BaseWidget {
                     
                     <div class="form-group">
                         <label class="checkbox-label">
-                            <input type="checkbox" id="auto-start">
+                            <input type="checkbox" class="auto-start">
                             <span class="checkmark"></span>
                             Start downloading immediately
                         </label>
@@ -186,7 +186,7 @@ class SubscriptionsWidget extends BaseWidget {
                             <i class="fa fa-link"></i>
                             Anime URL
                         </label>
-                        <input type="text" id="edit-url" readonly disabled>
+                        <input type="text" class="edit-url" readonly disabled>
                         <div class="input-hint">URL cannot be changed after subscription</div>
                     </div>
 
@@ -195,7 +195,7 @@ class SubscriptionsWidget extends BaseWidget {
                             <i class="fa fa-language"></i>
                             Preferred Language
                         </label>
-                        <select id="edit-language">
+                        <select class="edit-language">
                             <option value="1">German (Dub)</option>
                             <option value="2">German (Sub)</option>
                             <option value="3">English (Dub)</option>
@@ -210,7 +210,7 @@ class SubscriptionsWidget extends BaseWidget {
                             <i class="fa fa-hdd"></i>
                             Target Folder
                         </label>
-                        <select id="edit-target-folder" class="targetfolder">
+                        <select class="edit-target-folder targetfolder">
                         </select>
                     </div>
                     
@@ -220,8 +220,8 @@ class SubscriptionsWidget extends BaseWidget {
                             Subfolder
                         </label>
                         <div class="custom-dropdown">
-                            <input type="text" id="edit-subfolder" placeholder="Anime/Series Name" list="edit-subfolder-list" style="width: 100%;">
-                            <datalist id="edit-subfolder-list">
+                            <input type="text" class="edit-subfolder" placeholder="Anime/Series Name" list="edit-subfolder-list" style="width: 100%;">
+                            <datalist class="edit-subfolder-list">
                             </datalist>
                         </div>
                         <div class="input-hint">Leave empty to auto-detect from title, or select from existing folders</div>
@@ -232,7 +232,7 @@ class SubscriptionsWidget extends BaseWidget {
                             <i class="fa fa-ban"></i>
                             Excluded Seasons
                         </label>
-                        <input type="text" id="edit-excluded" placeholder="1,3,5">
+                        <input type="text" class="edit-excluded" placeholder="1,3,5">
                         <div class="input-hint">Comma-separated season numbers to skip downloading</div>
                     </div>
                 </div>
@@ -323,28 +323,28 @@ class SubscriptionsWidget extends BaseWidget {
         });
 
         // Form validation
-        widget.find('#sub-url').on('input', function() {
+        widget.find('.sub-url').on('input', function() {
             self.validateForm(widget);
         });
 
         // Target folder change handlers
-        widget.find('#sub-target-folder').on('change', function() {
+        widget.find('.sub-target-folder').on('change', function() {
             const selection = $(this).val();
-            widget.find('#sub-subfolder').val('');
-            self.fetchSubfolders(selection, widget.find('#sub-subfolder-list'));
+            widget.find('.sub-subfolder').val('');
+            self.fetchSubfolders(selection, widget.find('.sub-subfolder-list'));
         });
         
-        widget.find('#edit-target-folder').on('change', function() {
+        widget.find('.edit-target-folder').on('change', function() {
             const selection = $(this).val();
-            widget.find('#edit-subfolder').val('');
-            self.fetchSubfolders(selection, widget.find('#edit-subfolder-list'));
+            widget.find('.edit-subfolder').val('');
+            self.fetchSubfolders(selection, widget.find('.edit-subfolder-list'));
         });
     }
 
     showAddForm(widget) {
         this.populateTargetFolders(widget);
         widget.find('.add-subscription-form').slideDown(300);
-        widget.find('#sub-url').focus();
+        widget.find('.sub-url').focus();
     }
 
     hideAddForm(widget) {
@@ -379,19 +379,19 @@ class SubscriptionsWidget extends BaseWidget {
         }
         
         // Populate form with current values
-        widget.find('#edit-url').val(item.url);
-        widget.find('#edit-target-folder').val(targetFolder);
-        widget.find('#edit-subfolder').val(subfolder);
-        widget.find('#edit-language').val(item.languageId || 1);
-        widget.find('#edit-excluded').val(item.excludedSeasons || '');
+        widget.find('.edit-url').val(item.url);
+        widget.find('.edit-target-folder').val(targetFolder);
+        widget.find('.edit-subfolder').val(subfolder);
+        widget.find('.edit-language').val(item.languageId || 1);
+        widget.find('.edit-excluded').val(item.excludedSeasons || '');
         
         // Fetch subfolders for the selected target folder
         if (targetFolder) {
-            this.fetchSubfolders(targetFolder, widget.find('#edit-subfolder-list'));
+            this.fetchSubfolders(targetFolder, widget.find('.edit-subfolder-list'));
         }
         
         widget.find('.edit-subscription-form').slideDown(300);
-        widget.find('#edit-subfolder').focus();
+        widget.find('.edit-subfolder').focus();
     }
 
     hideEditForm(widget) {
@@ -400,15 +400,15 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     clearForm(widget) {
-        widget.find('#sub-url, #sub-subfolder, #sub-excluded').val('');
-        widget.find('#sub-language').val('1');
-        widget.find('#sub-target-folder').prop('selectedIndex', 0);
+        widget.find('.sub-url, .sub-subfolder, .sub-excluded').val('');
+        widget.find('.sub-language').val('1');
+        widget.find('.sub-target-folder').prop('selectedIndex', 0);
         widget.find('input[name="quality"][value="720p"]').prop('checked', true);
-        widget.find('#auto-start').prop('checked', false);
+        widget.find('.auto-start').prop('checked', false);
     }
 
     validateForm(widget) {
-        const url = widget.find('#sub-url').val().trim();
+        const url = widget.find('.sub-url').val().trim();
         const isValid = url && url.includes('aniworld.to');
         widget.find('.save-subscription-btn').prop('disabled', !isValid);
         return isValid;
@@ -421,8 +421,8 @@ class SubscriptionsWidget extends BaseWidget {
 
     populateTargetFolders(widget) {
         // Populate target folders in both forms
-        const addTargetSelect = widget.find('#sub-target-folder');
-        const editTargetSelect = widget.find('#edit-target-folder');
+        const addTargetSelect = widget.find('.sub-target-folder');
+        const editTargetSelect = widget.find('.edit-target-folder');
         
         // Clear existing options
         addTargetSelect.empty();
@@ -483,16 +483,16 @@ class SubscriptionsWidget extends BaseWidget {
     saveSubscription(widget) {
         if (!this.validateForm(widget)) return;
 
-        const targetFolderSelect = widget.find('#sub-target-folder').val();
-        const subfolder = widget.find('#sub-subfolder').val().trim();
+        const targetFolderSelect = widget.find('.sub-target-folder').val();
+        const subfolder = widget.find('.sub-subfolder').val().trim();
         
         const data = {
-            url: widget.find('#sub-url').val().trim(),
-            languageId: parseInt(widget.find('#sub-language').val()),
+            url: widget.find('.sub-url').val().trim(),
+            languageId: parseInt(widget.find('.sub-language').val()),
             directory: subfolder,
-            excludedSeasons: widget.find('#sub-excluded').val().trim(),
+            excludedSeasons: widget.find('.sub-excluded').val().trim(),
             quality: widget.find('input[name="quality"]:checked').val(),
-            autoStart: widget.find('#auto-start').prop('checked')
+            autoStart: widget.find('.auto-start').prop('checked')
         };
 
         ApiClient.addSubscription(data)
@@ -512,13 +512,13 @@ class SubscriptionsWidget extends BaseWidget {
             return;
         }
 
-        const subfolder = widget.find('#edit-subfolder').val().trim();
+        const subfolder = widget.find('.edit-subfolder').val().trim();
         
         const data = {
             id: SubscriptionsWidget.currentEditItem.id,
-            languageId: parseInt(widget.find('#edit-language').val()),
+            languageId: parseInt(widget.find('.edit-language').val()),
             directory: subfolder,
-            excludedSeasons: widget.find('#edit-excluded').val().trim()
+            excludedSeasons: widget.find('.edit-excluded').val().trim()
         };
 
         ApiClient.updateSubscription(SubscriptionsWidget.currentEditItem.id, data)

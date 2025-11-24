@@ -336,7 +336,7 @@ class GridDashboard {
             element.style.zIndex = this.widgets.size + 1;
             element.addEventListener('mousedown', () => {
                 // Bring to front when clicked
-                element.style.zIndex = Date.now();
+                element.style.zIndex = Math.max(1000, ...Array.from(this.widgets.values()).map(w => parseInt(w.element.style.zIndex) || 0)) + 1;
             });
         }
         

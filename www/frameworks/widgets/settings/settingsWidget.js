@@ -332,6 +332,16 @@ class SettingsWidget extends BaseWidget {
             if (data.status === 'success') {
                 this.#showStatus(widget, 'success', 'Settings saved successfully');
                 
+                // Show yeti notification
+                if (window.yeti) {
+                    window.yeti.show({
+                        title: 'Settings',
+                        message: 'Settings saved successfully',
+                        severity: 'ok',
+                        time: 3000
+                    });
+                }
+                
                 // Update original values
                 widget.find('.setting-input').each((_, input) => {
                     const $input = $(input);
@@ -343,11 +353,31 @@ class SettingsWidget extends BaseWidget {
                 this.#updateSaveButtonState(widget);
             } else {
                 this.#showStatus(widget, 'error', data.message || 'Failed to save settings');
+                
+                // Show yeti notification
+                if (window.yeti) {
+                    window.yeti.show({
+                        title: 'Settings Error',
+                        message: data.message || 'Failed to save settings',
+                        severity: 'nok',
+                        time: 5000
+                    });
+                }
             }
         })
         .catch(error => {
             console.error('Error saving settings:', error);
             this.#showStatus(widget, 'error', 'Failed to save settings');
+            
+            // Show yeti notification
+            if (window.yeti) {
+                window.yeti.show({
+                    title: 'Settings Error',
+                    message: 'Failed to save settings',
+                    severity: 'nok',
+                    time: 5000
+                });
+            }
         })
         .finally(() => {
             this.#resetSaveButton(widget);

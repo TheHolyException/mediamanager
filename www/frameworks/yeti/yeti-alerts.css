@@ -24,7 +24,7 @@
     align-items: flex-end;
     gap: var(--yeti-gap);
     width: calc(100% - 20px);
-    z-index: 99999999999999;
+    z-index: 8000;
     font-size: var(--yeti-font);
 }
 
