@@ -1,0 +1,135 @@
+/* Shared form styles - to be used across all components */
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.form-label {
+    font-weight: 500;
+    color: var(--textColor);
+    font-size: 0.9rem;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    background: var(--darkBGColor2);
+    border: 1px solid var(--darkerTextColor);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    color: var(--textColor);
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    border-color: var(--selectedBorderColor);
+    box-shadow: 0 0 0 2px rgba(8, 145, 178, 0.2);
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: var(--darkerTextColor);
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.form-checkbox,
+.form-radio {
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--darkerTextColor);
+    border-radius: 3px;
+    background: var(--darkBGColor2);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.form-radio {
+    border-radius: 50%;
+}
+
+.form-checkbox:checked,
+.form-radio:checked {
+    background: var(--selectedBorderColor);
+    border-color: var(--selectedBorderColor);
+}
+
+.form-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--textColor);
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.form-radio:checked::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    background: var(--textColor);
+    border-radius: 50%;
+}
+
+.form-horizontal {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-horizontal .form-label {
+    margin-bottom: 0;
+    min-width: 120px;
+}
+
+.form-horizontal .form-input,
+.form-horizontal .form-select {
+    flex: 1;
+}
+
+.form-error {
+    color: var(--error);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.form-help {
+    color: var(--darkerTextColor);
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+
+.form-section {
+    background: var(--darkBGColor2);
+    border-radius: 4px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--textColor);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}

@@ -1,0 +1,162 @@
+/* Shared button styles - to be used across all components */
+.btn-primary {
+    background: linear-gradient(135deg, var(--selectedBorderColor), var(--hover-color));
+    border: 1px solid var(--selectedBorderColor);
+    color: var(--textColor);
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, var(--hover-color), var(--selectedBorderColor));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(8, 145, 178, 0.3);
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--darkerTextColor);
+    color: var(--darkerTextColor);
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-secondary:hover {
+    border-color: var(--selectedBorderColor);
+    color: var(--selectedBorderColor);
+    background: rgba(8, 145, 178, 0.1);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--error), #c53030);
+    border: 1px solid var(--error);
+    color: var(--textColor);
+    padding: 0.75rem 1.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #c53030, var(--error));
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+.btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.8rem;
+}
+
+.btn-large {
+    padding: 1rem 2rem;
+    font-size: 1rem;
+}
+
+.btn-disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.btn-icon {
+    padding: 0.5rem;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    border-radius: 50%;
+    justify-content: center;
+}
+
+.btn-full-width {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Progress bars */
+.progress-container {
+    margin: 0.5rem 0;
+}
+
+.progress-label {
+    font-size: 0.9rem;
+    color: var(--textColor);
+    margin-bottom: 0.25rem;
+}
+
+.progress-bar {
+    background: var(--darkBGColor2);
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    background: linear-gradient(90deg, var(--selectedBorderColor), var(--hover-color));
+    height: 100%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+/* Status indicators */
+.status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-success {
+    color: var(--success);
+}
+
+.status-error {
+    color: var(--error);
+}
+
+.status-warning {
+    color: var(--processing);
+}
+
+.status-info {
+    color: var(--selectedBorderColor);
+}
+
+/* Spinner styles */
+.spinner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinner-small {
+    font-size: 0.8rem;
+}
+
+.spinner-medium {
+    font-size: 1rem;
+}
+
+.spinner-large {
+    font-size: 1.5rem;
+}
