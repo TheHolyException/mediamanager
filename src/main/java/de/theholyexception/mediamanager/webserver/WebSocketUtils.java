@@ -23,89 +23,73 @@ import java.util.*;
 public class WebSocketUtils {
     private WebSocketUtils() {}
 
-    private static Map<String, JSONObject> packetBuffer;
-    private static Map<WsContext, Map<String, JSONObject>> directPacketBuffer;
-    private static List<String> deleteBuffer = new ArrayList<>();
+    private static final Map<String, JSONObject> packetBuffer = new HashMap<>();
+    private static final List<String> deleteBuffer = new ArrayList<>();
 
     public static void initialize(TomlParseResult config) {
-
-        packetBuffer = new HashMap<>();
-        directPacketBuffer = new HashMap<>();
-
-        if (Boolean.TRUE.equals(config.getBoolean("general.enablePacketBuffer", () -> true))) {Thread packetThread = new Thread(() -> {
-            while (true) {
-                try {
-                    Utils.sleep(config.getLong("general.packetBufferSleep", () -> 1000));
-                    synchronized (packetBuffer) {
-                        if (!packetBuffer.isEmpty()) {
-                            JSONObject response = new JSONObject();
-                            JSONArray dataset = new JSONArray();
-                            for (Map.Entry<String, JSONObject> entry : packetBuffer.entrySet()) {
-                                dataset.add(entry.getValue());
+        if (config.getBoolean("general.enablePacketBuffer", () -> true)) {
+            Thread packetThread = new Thread(() -> {
+                while (true) {
+                    try {
+                        Utils.sleep(config.getLong("general.packetBufferSleep", () -> 1000));
+                        synchronized (packetBuffer) {
+                            if (!packetBuffer.isEmpty()) {
+                                JSONObject response = new JSONObject();
+                                JSONArray dataset = new JSONArray();
+                                for (Map.Entry<String, JSONObject> entry : packetBuffer.entrySet()) {
+                                    dataset.add(entry.getValue());
+                                }
+                                response.put("data", dataset);
+                                sendPacket("syn", TargetSystem.DEFAULT, response, null);
+                                packetBuffer.clear();
                             }
-                            response.put("data", dataset);
-                            sendPacket("syn", TargetSystem.DEFAULT, response, null);
+                        }
+
+                        synchronized (deleteBuffer) {
+                            if (!deleteBuffer.isEmpty()) {
+                                JSONObject body = new JSONObject();
+                                JSONArray list = new JSONArray();
+                                list.addAll(deleteBuffer);
+                                body.put("list", list);
+                                sendPacket("del", TargetSystem.DEFAULT, body, null);
+                                deleteBuffer.clear();
+                            }
+                        }
+                    } catch (Exception ex) {
+                        log.error("Failed to send bulk packets", ex);
+                        synchronized (packetBuffer) {
                             packetBuffer.clear();
                         }
                     }
-                    synchronized (directPacketBuffer) {
-                        if (!directPacketBuffer.isEmpty()) {
-                            for (WsContext ctx : directPacketBuffer.keySet()) {
-                                JSONObject response = new JSONObject();
-                                JSONArray dataset = new JSONArray();
-                                for (JSONObject value : directPacketBuffer.get(ctx).values()) {
-                                    dataset.add(value);
-                                }
-                                response.put("data", dataset);
-                                sendPacket("syn", TargetSystem.DEFAULT, response, ctx);
-                            }
-                            directPacketBuffer.clear();
-                        }
-                    }
-
-                    synchronized (deleteBuffer) {
-                        if (!deleteBuffer.isEmpty()) {
-                            JSONObject body = new JSONObject();
-                            JSONArray list = new JSONArray();
-							list.addAll(deleteBuffer);
-                            body.put("list", list);
-                            sendPacket("del", TargetSystem.DEFAULT, body, null);
-                            deleteBuffer.clear();
-                        }
-                    }
-                } catch (Exception ex) {
-                    log.error("Failed to send bulk packets", ex);
-                    synchronized (directPacketBuffer) {
-                        directPacketBuffer.clear();
-                    }
-                    synchronized (packetBuffer) {
-                        packetBuffer.clear();
-                    }
                 }
-            }
-        });
+            });
             packetThread.setName("PacketThread");
             packetThread.start();
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public static void sendObject(WsContext ctx, List<JSONObject> objects) {
+    public static void sendObject(DownloadTask task) {
         synchronized (packetBuffer) {
-            for (JSONObject object : objects) {
-                String uuid = object.get("uuid").toString();
-                packetBuffer.put(uuid, object);
+            packetBuffer.put(task.getUuid().toString(), task.getContent().getRaw());
+        }
+    }
+
+    public static void sendObject(List<DownloadTask> tasks) {
+        synchronized (packetBuffer) {
+            for (DownloadTask task : tasks) {
+                packetBuffer.put(task.getUuid().toString(), task.getContent().getRaw());
             }
         }
-        if (ctx != null) {
-            synchronized (directPacketBuffer) {
-                Map<String, JSONObject> map1 = directPacketBuffer.computeIfAbsent(ctx, k -> new HashMap<>());
-                for (JSONObject object : objects) {
-                    String uuid = object.get("uuid").toString();
-                    map1.put(uuid, object);
-                }
-            }
+    }
+
+    public static void sendObjectTo(WsContext ctx, List<DownloadTask> tasks) {
+        JSONObject response = new JSONObject();
+        JSONArray dataset = new JSONArray();
+        for (DownloadTask task : tasks) {
+            dataset.add(task.getContent());
         }
+        response.put("data", dataset);
+        sendPacket("syn", TargetSystem.DEFAULT, response, ctx);
     }
 
     @SuppressWarnings("unchecked")
@@ -131,38 +115,28 @@ public class WebSocketUtils {
         sendPacket("setting", TargetSystem.DEFAULT, dataset, ctx);
     }
 
-    public static void sendObjectToAll(JSONObject... objects) {
-        sendObjectToAll(Arrays.stream(objects).toList());
-    }
-
-    public static void sendObjectToAll(List<JSONObject> objects) {
-        try {
-            sendObject(null, objects);
-        } catch (Exception ex) {
-            log.error(ex.getMessage());
-        }
-    }
-
     public static void deleteObjectToAll(List<DownloadTask> objects) {
         for (DownloadTask object : objects) {
             deleteBuffer.add(object.getUuid().toString());
         }
     }
 
-    public static void changeObject(JSONObjectContainer object, Object key, Object value) {
-        object.set(key, value);
-        object.set("modified", System.currentTimeMillis());
-        sendObjectToAll(object.getRaw());
+    public static void changeObject(DownloadTask task, Object key, Object val) {
+        JSONObjectContainer container = task.getContent();
+        container.set(key, val);
+        container.set("modified", System.currentTimeMillis());
+        sendObject(task);
     }
 
-    public static void changeObject(JSONObjectContainer object, Object... data) {
+    public static void changeObject(DownloadTask task, Object... data) {
         if (data.length % 2 != 0)
             throw new IllegalArgumentException("data must be even");
 
+        JSONObjectContainer content = task.getContent();
         for (int i = 0 ; i < data.length; i += 2)
-            object.set(data[i], data[i + 1]);
-        object.set("modified", System.currentTimeMillis());
-        sendObjectToAll(object.getRaw());
+            content.set(data[i], data[i + 1]);
+        content.set("modified", System.currentTimeMillis());
+        sendObject(task);
     }
 
 

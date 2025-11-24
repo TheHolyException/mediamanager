@@ -22,14 +22,20 @@ import io.javalin.websocket.WsContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.downloaders.FFmpeg;
+import me.kaigermany.ultimateutils.StaticUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.tomlj.TomlArray;
 import org.tomlj.TomlTable;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.concurrent.Executors;
+import java.util.zip.GZIPOutputStream;
 
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
 
@@ -71,6 +77,7 @@ public class DefaultHandler extends Handler {
 
     @Override
     public void initialize() {
+        compressLogFiles();
         retryTask = new TimerTask() {
             @Override
             public void run() {
@@ -188,15 +195,19 @@ public class DefaultHandler extends Handler {
      * @param ctx The WebSocket connection to send the synchronized data to
      */
     private void cmdSyncData(WsContext ctx) {
-        List<JSONObjectContainer> jsonData = urls.values().stream()
+        List<DownloadTask> taskData = urls.values().stream()
                 .sorted(DownloadTask::compareTo)
-                .map(DownloadTask::getContent)
                 .toList();
-        sendObject(ctx, jsonData.stream().map(JSONObjectContainer::getRaw).toList());
+        sendObjectTo(ctx, taskData);
         sendSettings(ctx);
     }
 
     public void scheduleDownload(JSONObjectContainer content) {
+        String url = content.get("url", String.class);
+        if (urls.values().stream().anyMatch(dt -> dt.getUrl().equals(url))) {
+			log.error("Duplicated download detected: {}", url);
+            return;
+        }
         UUID uuid = UUID.fromString(content.get("uuid", String.class));
         DownloadTask downloadTask;
         if (urls.containsKey(uuid)) {
@@ -230,7 +241,25 @@ public class DefaultHandler extends Handler {
         }
         removed.add(toDelete);
         toDelete.setDeleted(true);
+        toDelete.close();
         return null;
+    }
+
+    private void compressLogFiles() {
+        File[] files = DownloadTask.getDEBUG_LOG_FOLDER().listFiles();
+        if (files == null)
+            return;
+        for (File file : files) {
+            if (file.isDirectory() || !file.toPath().endsWith(".log"))
+                continue;
+			log.debug("Compressing log file {}", file.getName());
+            try (GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(file.getName()+".gz")))) {
+                gos.write(StaticUtils.loadBytes(file));
+                Files.delete(file.toPath());
+            } catch (IOException ex) {
+				log.error("Failed to compress log file {}", file.getName(), ex);
+            }
+        }
     }
 
     //region OpenAPI

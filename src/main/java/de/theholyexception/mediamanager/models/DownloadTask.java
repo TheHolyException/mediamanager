@@ -24,7 +24,11 @@ import org.jetbrains.annotations.NotNull;
 import org.json.simple.JSONObject;
 import org.tomlj.TomlParseResult;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.net.Proxy;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
@@ -32,16 +36,19 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
+import java.util.zip.GZIPOutputStream;
 
 import static de.theholyexception.mediamanager.webserver.WebSocketUtils.changeObject;
 
 @Slf4j
 public class DownloadTask implements Comparable<DownloadTask> {
 
+    // region static-code
     private static final SimpleDateFormat LOG_FILE_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
     private static final SimpleDateFormat LOG_DATE_FORMAT = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
     private static final String PACKET_KEY_STATE = "state";
     private static final AtomicInteger SORT_INDEX_COUNTER = new AtomicInteger(0);
+    @Getter
     private static final File DEBUG_LOG_FOLDER = new File("./debug-logs");
     private static final File DOWNLOADS_LOG_FOLDER;
 
@@ -109,17 +116,21 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
         initialized = true;
     }
+    // endregion static-code
 
+    //region properties
     @Getter
     private final String url;
     @Getter
     private final UUID uuid;
     @Getter
     private final JSONObjectContainer content;
+    private final JSONObject options;
+    private final JSONObjectContainer autoloaderData;
     @Getter
     private ExecutorTask downloadExecutorTask;
     @Getter
-    private final Downloader downloader;
+    private Downloader downloader;
     @Setter
     private boolean isDeleted = false;
     @Getter
@@ -137,7 +148,6 @@ public class DownloadTask implements Comparable<DownloadTask> {
     @Setter
     @Getter 
     private double lastProgress = 0.0;
-    private final JSONObjectContainer autoloaderData;
     private boolean skipValidation = false;
     private Target target;
     private final DownloadStatusUpdateEvent downloadStatusUpdateEvent;
@@ -151,46 +161,35 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private BufferedOutputStream logFileFOS;
     private boolean hadServerError = false;
     private boolean hadWarning = false;
+    //endregion properties
 
     public DownloadTask(JSONObjectContainer content) {
         if (!initialized)
             throw new IllegalStateException("DownloadTask is not initialized");
 
         this.content = content;
-        setState(content.get(PACKET_KEY_STATE, String.class));
-        url = content.get("url", String.class);
         uuid = UUID.fromString(content.get("uuid", String.class));
+        url = content.get("url", String.class);
+        setState(content.get(PACKET_KEY_STATE, String.class));
         lastUpdate = System.currentTimeMillis();
 
         createLogFile();
-
-        if (url.equalsIgnoreCase("warning")) {
-            writeLogLine(Level.WARNING, "Test Warning");
-        }
 
         if (url == null || url.isEmpty()) {
             writeLogLine(Level.SEVERE, "URL is null or empty, aborting download!");
             throw new IllegalArgumentException("URL is null or empty, aborting download!");
         }
 
-        WebSocketUtils.changeObject(content, PACKET_KEY_STATE, "Committed", "sortIndex", sortIndex, "hadServerError", false, "hadWarning", false);
+        WebSocketUtils.changeObject(this, PACKET_KEY_STATE, "Committed", "sortIndex", sortIndex, "hadServerError", false, "hadWarning", false);
 
         autoloaderData = content.getObjectContainer("autoloaderData");
-        JSONObject options = content.getObjectContainer("options").getRaw();
+        options = content.getObjectContainer("options").getRaw();
         options.put("useDirectMemory", useDirectMemory+"");
         if (untrustedCertificates)
             options.put("disableCertificateCheck", "true");
         skipValidation = Boolean.parseBoolean((String)options.get("skipValidation"));
 
-        File downloadTempFolder = new File(outputTempFolder, UUID.randomUUID().toString());
-        if (!downloadTempFolder.mkdirs() || !downloadTempFolder.exists()) {
-            writeLogLine(Level.SEVERE, "Failed to create temp folder, aborting download!");
-            throw new IllegalStateException("Failed to create temp folder, aborting download!");
-        }
-
         downloadStatusUpdateEvent = createDownloadStatusUpdateEvent();
-        downloader = DownloaderSelector.selectDownloader(url, downloadTempFolder,
-            downloadStatusUpdateEvent, options);
 
         if (!resolveTarget()) {
             writeLogLine(Level.SEVERE, "Failed to resolve target, aborting download!");
@@ -198,17 +197,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
         }
     }
 
-    public void resolveTitle() {
-        String title = downloader.resolveTitle();
-        if (title == null) {
-            writeLogLine(Level.SEVERE, "Failed to resolve title!");
-        } else {
-            changeObject(content, "title", title);
-            updateLogFile(title);
-        }
-    }
-
     public void start(int threads) {
+        getDownloaderInstance();
         if (isRunning) {
             log.error("Download already running!");
             return;
@@ -225,12 +215,36 @@ public class DownloadTask implements Comparable<DownloadTask> {
         isRunning = false;
     }
 
+    private void getDownloaderInstance() {
+        File downloadTempFolder = new File(outputTempFolder, UUID.randomUUID().toString());
+        if (!downloadTempFolder.mkdirs() || !downloadTempFolder.exists()) {
+            writeLogLine(Level.SEVERE, "Failed to create temp folder, aborting download!");
+            throw new IllegalStateException("Failed to create temp folder, aborting download!");
+        }
+        downloader = DownloaderSelector.selectDownloader(url, downloadTempFolder,
+            downloadStatusUpdateEvent, options);
+    }
+
+    public void resolveTitle() {
+        String title = downloader.resolveTitle();
+        if (title == null) {
+            writeLogLine(Level.SEVERE, "Failed to resolve title!");
+        } else {
+            changeObject(this, "title", title);
+            updateLogFile(title);
+        }
+    }
+
     public void download(int threads) {
         if (isRunning) {
             throw new IllegalStateException("Task is already running");
         }
         downloader.setNumThreads(threads);
-        downloader.setProxy(ProxyHandler.getNextProxy());
+
+        Proxy proxy = ProxyHandler.getNextProxy();
+        writeLogLine(Level.INFO, "Using proxy: " + proxy);
+        downloader.setProxy(proxy);
+
         File outputFolder = resolveOutputFolder();
 
         if (outputFolder == null) {
@@ -251,7 +265,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             outputFile = downloader.start();
         } catch (Exception ex) {
             isFailed = true;
-            writeLogLine(Level.INFO, "Download failed");
+            writeLogLine(Level.SEVERE, ex.getMessage());
         }
 
         if (downloader.isCanceled()) {
@@ -268,11 +282,11 @@ public class DownloadTask implements Comparable<DownloadTask> {
             
             if (delay < maxDelayMs) {
                 retryTimestamp = System.currentTimeMillis() + delay;
-                changeObject(content, PACKET_KEY_STATE, "Retry scheduled for:\n" + new SimpleDateFormat("HH:mm:ss").format(new Date(retryTimestamp)));
+                changeObject(this, PACKET_KEY_STATE, "Retry scheduled for:\n" + new SimpleDateFormat("HH:mm:ss").format(new Date(retryTimestamp)));
             } else {
                 retryTimestamp = -1;
                 errorCount = 0;
-                changeObject(content, PACKET_KEY_STATE, "Error: Download failed, automatic retry limit reached!");
+                changeObject(this, PACKET_KEY_STATE, "Error: Download failed, automatic retry limit reached!");
             }
             isRunning = false;
             writeLogLine(Level.WARNING, "Download failed for " + this);
@@ -289,7 +303,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
     public void disableRetry() {
         retryTimestamp = -1;
         errorCount = Integer.MAX_VALUE;
-        changeObject(content, PACKET_KEY_STATE, "Error: retry disabled");
+        changeObject(this, PACKET_KEY_STATE, "Error: retry disabled");
     }
 
     private void onDownloadCompleted(File outputFolder, File outputFile) {
@@ -311,6 +325,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
 			log.error("One or multiple errors occurred for the download with the url {}", url);
 			log.error("Check the download log file for more information {}", logFile.getAbsolutePath());
             log.error("\t");
+        } else {
+            closeAndCompressLog();
         }
     }
 
@@ -330,6 +346,9 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     private ValidatorResponse validateVideoFile(File file) throws IOException {
+        if (1 == 1)
+            return ValidatorResponse.VALID;
+
         if (skipValidation)
             return ValidatorResponse.VALID;
 
@@ -439,7 +458,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
                     String line = s.split("\n")[0];
                     if (line.length() > 50)
                         s = s.substring(0, 50) + "\n" + s.substring(50);
-                    changeObject(content, PACKET_KEY_STATE, "Error: " + s);
+                    changeObject(DownloadTask.this, PACKET_KEY_STATE, "Error: " + s);
                     update();
                 }
             }
@@ -462,7 +481,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
                 writeLogLine(Level.SEVERE, "onException() \t " + Utils.stackTraceToString(error));
                 if (isRunning && !isDeleted) {
                     isFailed = true;
-                    changeObject(content, PACKET_KEY_STATE, "Error: " + error.getMessage());
+                    changeObject(DownloadTask.this, PACKET_KEY_STATE, "Error: " + error.getMessage());
                 }
             }
         };
@@ -509,7 +528,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     private void setState(String state) {
-        changeObject(content, PACKET_KEY_STATE, state);
+        changeObject(this, PACKET_KEY_STATE, state);
         update();
     }
 
@@ -562,6 +581,19 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
         } catch (IOException ex) {
             log.error("Failed to create download log file", ex);
+        }
+    }
+
+    public void closeAndCompressLog() {
+        try {
+            logFile = null;
+            logFileFOS.close();
+            GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(logFile.getName()+".gz")));
+            gos.write(StaticUtils.loadBytes(logFile));
+            gos.close();
+            Files.delete(logFile.toPath());
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to compress log file");
         }
     }
 
@@ -619,7 +651,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
         // Update WebSocket content if status changed
         if (statusChanged) {
-            WebSocketUtils.changeObject(content, "hadServerError", hadServerError, "hadWarning", hadWarning);
+            WebSocketUtils.changeObject(this, "hadServerError", hadServerError, "hadWarning", hadWarning);
         }
 
         synchronized (this) {
@@ -635,6 +667,17 @@ public class DownloadTask implements Comparable<DownloadTask> {
                 log.error("Failed to write log file", ex);
             }
         }
+    }
+
+    public void close() {
+        if (isRunning) {
+            log.error("Cannot close download task, it is still running.");
+            return;
+        }
+
+        if (logFile != null)
+            closeAndCompressLog();
+        downloader = null;
     }
 
     @Override

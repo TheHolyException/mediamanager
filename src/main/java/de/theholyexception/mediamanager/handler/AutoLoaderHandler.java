@@ -88,13 +88,13 @@ public class AutoLoaderHandler extends Handler {
             subscribedAnimes.addAll(Anime.loadFromDB(db));
 
             ExecutorHandler handler = new ExecutorHandler(Executors.newFixedThreadPool(10));
-            subscribedAnimes.forEach(a ->
+            subscribedAnimes.forEach(anime ->
                 handler.putTask(() -> {
-                    a.loadMissingEpisodes();
-                    a.scanDirectoryForExistingEpisodes();
-                    log.debug("Unloaded episodes for " + a.getTitle() + " : " + a.getUnloadedEpisodeCount(false));
-                    if (a.isDeepDirty())
-                        a.writeToDB(db);
+                    anime.loadMissingEpisodes();
+                    anime.scanDirectoryForExistingEpisodes();
+                    log.debug("Unloaded episodes for " + anime.getTitle() + " : " + anime.getUnloadedEpisodeCount(false));
+                    if (anime.isDeepDirty())
+                        anime.writeToDB(db);
                 }, 1)
             );
             handler.awaitGroup(1);
