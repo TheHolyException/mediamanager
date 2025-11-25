@@ -16,6 +16,7 @@ import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.InitializationException;
 import de.theholyexception.mediamanager.util.ProxyHandler;
 import de.theholyexception.mediamanager.util.TargetSystem;
+import de.theholyexception.mediamanager.util.Utils;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,8 @@ import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Slf4j
 public class MediaManager {
@@ -40,6 +43,26 @@ public class MediaManager {
 
     @Getter
     private final ComplexDIContainer dependencyInjector;
+
+    private static final Pattern pattern = Pattern.compile("https:\\/\\/aniworld\\.to\\/anime\\/stream\\/([^\\/]+)");
+    private static final Map<String, String> urlToSubdirectory = new HashMap<>();
+    public static synchronized String getSubdirectoryFromURL(String url) {
+        if (urlToSubdirectory.containsKey(url))
+            return urlToSubdirectory.get(url);
+
+        Matcher matcher = pattern.matcher(url);
+        if (!matcher.find()) {
+            String uuid = UUID.randomUUID().toString();
+            log.error("Failed to obtain anime directory name from url: " + url);
+            log.error("Using alternative directory: ./" + uuid);
+            urlToSubdirectory.put(url, uuid);
+            return uuid;
+        }
+        String match = matcher.group(1);
+        match = Utils.escape(match);
+        urlToSubdirectory.put(url, match);
+        return match;
+    }
 
     /**
      * Main entry point for the MediaManager application.

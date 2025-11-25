@@ -757,25 +757,68 @@ class SubscriptionsWidget extends BaseWidget {
             contextMenu.hide();
         });
         
-        // Position and show menu
-        const menuWidth = 200;
-        const menuHeight = 180;
+        // Hide all other context menus first
+        $('.subscription-context-menu').hide();
+        
+        // Show menu temporarily to measure its actual dimensions
+        contextMenu.css({
+            position: 'fixed',
+            left: '-9999px',
+            top: '-9999px',
+            display: 'block',
+            visibility: 'hidden'
+        });
+        
+        // Get actual menu dimensions
+        const menuWidth = contextMenu.outerWidth();
+        const menuHeight = contextMenu.outerHeight();
         const windowWidth = $(window).width();
         const windowHeight = $(window).height();
         
-        let x = event.pageX;
-        let y = event.pageY;
+        // Get widget boundaries
+        const widgetElement = widgetId ? 
+            $(`[widget-id="${widgetId}"]`) : 
+            $('.subscription-widget').first();
         
-        // Adjust position if menu would go off screen
-        if (x + menuWidth > windowWidth) {
-            x = windowWidth - menuWidth - 10;
+        // Use clientX/clientY instead of pageX/pageY to avoid scroll offset issues
+        let x = event.clientX;
+        let y = event.clientY;
+        
+        // Get widget boundaries in viewport coordinates
+        const widgetRect = widgetElement[0].getBoundingClientRect();
+        const widgetLeft = widgetRect.left;
+        const widgetTop = widgetRect.top;
+        const widgetRight = widgetRect.right;
+        const widgetBottom = widgetRect.bottom;
+        
+        // Determine effective boundaries (smaller of widget or window)
+        const effectiveRight = Math.min(windowWidth, widgetRight);
+        const effectiveBottom = Math.min(windowHeight, widgetBottom);
+        const effectiveLeft = Math.max(0, widgetLeft);
+        const effectiveTop = Math.max(0, widgetTop);
+        
+        // Adjust horizontal position
+        if (x + menuWidth > effectiveRight) {
+            x = effectiveRight - menuWidth - 5; // 5px padding from edge
         }
-        if (y + menuHeight > windowHeight) {
-            y = windowHeight - menuHeight - 10;
+        if (x < effectiveLeft) {
+            x = effectiveLeft + 5; // 5px padding from edge
         }
         
-        // Hide all other context menus first
-        $('.subscription-context-menu').hide();
+        // Adjust vertical position - prioritize showing the full menu
+        if (y + menuHeight > effectiveBottom) {
+            // Try to position above the click point first
+            const aboveY = y - menuHeight - 10;
+            if (aboveY >= effectiveTop) {
+                y = aboveY;
+            } else {
+                // If not enough space above, position at the bottom edge
+                y = effectiveBottom - menuHeight - 5;
+            }
+        }
+        if (y < effectiveTop) {
+            y = effectiveTop + 5;
+        }
         
         // Force all the necessary styles with ultra-high z-index
         contextMenu[0].style.cssText = `
@@ -783,6 +826,7 @@ class SubscriptionsWidget extends BaseWidget {
             left: ${x}px !important;
             top: ${y}px !important;
             display: block !important;
+            visibility: visible !important;
             z-index: 999999 !important;
             background: rgba(40, 44, 52, 0.98) !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
