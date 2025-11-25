@@ -48,8 +48,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private static final SimpleDateFormat LOG_DATE_FORMAT = new SimpleDateFormat("yyyy.MM.dd HH:mm:ss");
     private static final String PACKET_KEY_STATE = "state";
     private static final AtomicInteger SORT_INDEX_COUNTER = new AtomicInteger(0);
-    @Getter
     private static final File DEBUG_LOG_FOLDER = new File("./debug-logs");
+    @Getter
     private static final File DOWNLOADS_LOG_FOLDER;
 
     private static DefaultHandler defaultHandler;

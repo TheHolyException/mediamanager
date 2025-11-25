@@ -246,14 +246,15 @@ public class DefaultHandler extends Handler {
     }
 
     private void compressLogFiles() {
-        File[] files = DownloadTask.getDEBUG_LOG_FOLDER().listFiles();
+        File[] files = DownloadTask.getDOWNLOADS_LOG_FOLDER().listFiles();
         if (files == null)
             return;
         for (File file : files) {
-            if (file.isDirectory() || !file.toPath().endsWith(".log"))
+            if (file.isDirectory() || !file.getName().endsWith(".log"))
                 continue;
 			log.debug("Compressing log file {}", file.getName());
-            try (GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(file.getName()+".gz")))) {
+            File compressedFile = new File(DownloadTask.getDOWNLOADS_LOG_FOLDER(), file.getName()+".gz");
+            try (GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(compressedFile)))) {
                 gos.write(StaticUtils.loadBytes(file));
                 Files.delete(file.toPath());
             } catch (IOException ex) {
