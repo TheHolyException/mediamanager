@@ -249,6 +249,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
         if (outputFolder == null) {
             downloadStatusUpdateEvent.onError("Failed to resolve output folder");
+            isFailed = true;
+            changeObject(this, PACKET_KEY_STATE, "Error: Failed to resolve output folder");
             return;
         }
 
@@ -586,12 +588,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
     public void closeAndCompressLog() {
         try {
-            logFile = null;
             logFileFOS.close();
             GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(logFile.getName()+".gz")));
             gos.write(StaticUtils.loadBytes(logFile));
             gos.close();
             Files.delete(logFile.toPath());
+            logFile = null;
         } catch (IOException ex) {
             throw new IllegalStateException("Failed to compress log file");
         }
