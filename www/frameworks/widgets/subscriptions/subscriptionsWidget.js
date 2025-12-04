@@ -401,6 +401,26 @@ class SubscriptionsWidget extends BaseWidget {
             widget.find('.edit-subfolder').val('');
             self.fetchSubfolders(selection, widget.find('.edit-subfolder-list'));
         });
+
+        // Context menu event delegation for subscription cards
+        widget.on('contextmenu', '.subscription-card', function(e) {
+            e.preventDefault();
+            const card = $(this);
+            const widgetId = widget.attr('widget-id');
+            
+            // Get the stored subscription item data from HTML attribute
+            try {
+                const subscriptionData = card.attr('data-subscription');
+                const item = subscriptionData ? JSON.parse(subscriptionData) : null;
+                
+                
+                if (item) {
+                    self.showContextMenu(e, item, widgetId);
+                }
+            } catch (error) {
+                console.error('Error parsing subscription data:', error);
+            }
+        });
     }
 
     showAddForm(widget) {
@@ -599,6 +619,47 @@ class SubscriptionsWidget extends BaseWidget {
         this.addSubscriptionCardToWidget(widget, item);
     }
 
+    updateSingleSubscription(item) {
+        const widgets = $('[widget-name="SubscriptionsWidget"]');
+        widgets.each((index, widgetElement) => {
+            const widget = $(widgetElement);
+            this.updateSingleSubscriptionForWidget(widget, item);
+        });
+    }
+
+    updateSingleSubscriptionForWidget(widget, item) {
+        // Get the current search/filter state from the widget's input elements
+        const searchTerm = widget.find('.search-input').val().toLowerCase() || '';
+        const filterStatus = widget.find('.status-filter').val() || 'all';
+        const sortBy = widget.find('.sort-select').val() || 'title';
+        const sortOrderBtn = widget.find('.sort-order-btn');
+        const sortOrder = sortOrderBtn.attr('data-order') || 'asc';
+        
+        // Temporarily store current state
+        const currentState = {
+            searchTerm: this.searchTerm,
+            filterStatus: this.filterStatus,
+            sortBy: this.sortBy,
+            sortOrder: this.sortOrder
+        };
+        
+        // Apply current widget state
+        this.searchTerm = searchTerm;
+        this.filterStatus = filterStatus;
+        this.sortBy = sortBy;
+        this.sortOrder = sortOrder;
+        
+        // Update the card and apply filtering
+        this.addSubscriptionCardToWidget(widget, item);
+        this.filterAndSort(widget);
+        
+        // Restore previous state
+        this.searchTerm = currentState.searchTerm;
+        this.filterStatus = currentState.filterStatus;
+        this.sortBy = currentState.sortBy;
+        this.sortOrder = currentState.sortOrder;
+    }
+
     addSubscriptionCardToWidget(widget, item) {
         const container = widget.find('.subscriptions-grid');
         
@@ -609,7 +670,7 @@ class SubscriptionsWidget extends BaseWidget {
         const lastScan = this.formatLastScan(item.lastScan);
         
         const card = $(`
-            <div class="subscription-card" data-id="${item.id}" data-status="${status}">
+            <div class="subscription-card" data-id="${item.id}" data-status="${status}" data-subscription='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
                 <div class="card-header">
                     <div class="title-section">
                         <h3 class="anime-title" title="${item.title}">${item.title}</h3>
@@ -656,14 +717,8 @@ class SubscriptionsWidget extends BaseWidget {
             </div>
         `);
 
-        // Add right-click context menu to the card
-        card.css('cursor', 'context-menu')
-            .on('contextmenu', (e) => {
-                e.preventDefault();
-                const widgetElement = card.closest('[widget-name="SubscriptionsWidget"]');
-                const widgetId = widgetElement.attr('widget-id');
-                this.showContextMenu(e, item, widgetId);
-            });
+        // Add cursor style for context menu
+        card.css('cursor', 'context-menu');
         
         container.append(card);
         this.updateEmptyState(widget);
@@ -672,14 +727,21 @@ class SubscriptionsWidget extends BaseWidget {
 
     showContextMenu(event, item, widgetId) {
         // Find the specific context menu for this widget instance
-        const contextMenu = widgetId ? 
-            $(`.subscription-context-menu-${widgetId}`) : 
-            $('.subscription-context-menu').first();
-        
-        if (contextMenu.length === 0) {
-            return;
+        let contextMenu;
+        if (widgetId) {
+            contextMenu = $(`.subscription-context-menu-${widgetId}`);
         }
         
+        // Fallback to any subscription context menu if specific one not found
+        if (!contextMenu || contextMenu.length === 0) {
+            contextMenu = $('.subscription-context-menu').first();
+        }
+        
+        
+        if (contextMenu.length === 0) {
+            console.error('No context menu element found');
+            return;
+        }
         // Update menu item states based on subscription status
         const pauseItem = contextMenu.find('[data-action="pause"]');
         const resumeItem = contextMenu.find('[data-action="resume"]');
@@ -719,35 +781,11 @@ class SubscriptionsWidget extends BaseWidget {
                     this.showSettingsForItem(item);
                     break;
                 case 'copyUrl':
-                    navigator.clipboard.writeText(item.url).then(() => {
-                        this.showNotification('URL copied to clipboard', 'success');
-                    }).catch(err => {
-                        console.error('Failed to copy URL: ', err);
-                        // Fallback for older browsers
-                        const textArea = document.createElement('textarea');
-                        textArea.value = item.url;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                        this.showNotification('URL copied to clipboard', 'success');
-                    });
+                    this.copyToClipboard(item.url, 'URL copied to clipboard');
                     break;
                 case 'copyFolder':
                     const folderPath = item.directory || 'Auto';
-                    navigator.clipboard.writeText(folderPath).then(() => {
-                        this.showNotification('Folder path copied to clipboard', 'success');
-                    }).catch(err => {
-                        console.error('Failed to copy folder path: ', err);
-                        // Fallback for older browsers
-                        const textArea = document.createElement('textarea');
-                        textArea.value = folderPath;
-                        document.body.appendChild(textArea);
-                        textArea.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(textArea);
-                        this.showNotification('Folder path copied to clipboard', 'success');
-                    });
+                    this.copyToClipboard(folderPath, 'Folder path copied to clipboard');
                     break;
                 case 'delete':
                     this.confirmDelete(item);
@@ -838,6 +876,48 @@ class SubscriptionsWidget extends BaseWidget {
         `;
     }
 
+    copyToClipboard(text, successMessage) {
+        // Check if the modern clipboard API is available
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.showNotification(successMessage, 'success');
+            }).catch(err => {
+                console.error('Failed to copy using clipboard API: ', err);
+                this.fallbackCopyToClipboard(text, successMessage);
+            });
+        } else {
+            // Use fallback method
+            this.fallbackCopyToClipboard(text, successMessage);
+        }
+    }
+
+    fallbackCopyToClipboard(text, successMessage) {
+        try {
+            // Create a temporary textarea element
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            // Try to copy using the older API
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            
+            if (successful) {
+                this.showNotification(successMessage, 'success');
+            } else {
+                this.showNotification('Failed to copy to clipboard', 'error');
+            }
+        } catch (err) {
+            console.error('Failed to copy using fallback method: ', err);
+            this.showNotification('Failed to copy to clipboard', 'error');
+        }
+    }
+
     scanSubscription(item) {
         ApiClient.scanSubscription(item.id)
             .then(data => {
@@ -914,31 +994,32 @@ class SubscriptionsWidget extends BaseWidget {
         const container = widget.find('.subscriptions-grid');
         const cards = container.find('.subscription-card').get();
         
-        // Filter
-        const filteredCards = cards.filter(card => {
-            const $card = $(card);
-            const title = $card.find('.anime-title').text().toLowerCase();
-            const status = $card.attr('data-status');
-            
-            const matchesSearch = !this.searchTerm || title.includes(this.searchTerm);
-            const matchesFilter = this.filterStatus === 'all' || status === this.filterStatus;
-            
-            return matchesSearch && matchesFilter;
-        });
-
-        // Sort
-        filteredCards.sort((a, b) => {
+        // Clear container and re-add ALL cards in sorted order
+        container.empty();
+        
+        // Sort ALL cards (not just filtered ones)
+        const allCards = cards.slice(); // Create a copy
+        allCards.sort((a, b) => {
             const $a = $(a), $b = $(b);
             let valueA, valueB;
             
             switch(this.sortBy) {
                 case 'title':
-                    valueA = $a.find('.anime-title').text();
-                    valueB = $b.find('.anime-title').text();
+                    valueA = $a.find('.anime-title').text().toLowerCase();
+                    valueB = $b.find('.anime-title').text().toLowerCase();
+                    break;
+                case 'lastScan':
+                    valueA = this.getLastScanTimestamp($a);
+                    valueB = this.getLastScanTimestamp($b);
                     break;
                 case 'unloaded':
                     valueA = parseInt($a.find('.episodes-count').text()) || 0;
                     valueB = parseInt($b.find('.episodes-count').text()) || 0;
+                    break;
+                case 'dateAdded':
+                    // Use subscription ID as proxy for date added (newer = higher ID)
+                    valueA = parseInt($a.attr('data-id')) || 0;
+                    valueB = parseInt($b.attr('data-id')) || 0;
                     break;
                 default:
                     valueA = $a.attr('data-' + this.sortBy) || '';
@@ -948,12 +1029,63 @@ class SubscriptionsWidget extends BaseWidget {
             const comparison = valueA < valueB ? -1 : valueA > valueB ? 1 : 0;
             return this.sortOrder === 'asc' ? comparison : -comparison;
         });
-
-        // Hide all cards and show filtered/sorted ones
-        container.find('.subscription-card').hide();
-        filteredCards.forEach(card => $(card).show());
+        
+        // Add all sorted cards back to container
+        allCards.forEach(card => {
+            container.append($(card));
+        });
+        
+        // Apply filtering (show/hide based on search and filter)
+        allCards.forEach(card => {
+            const $card = $(card);
+            const title = $card.find('.anime-title').text().toLowerCase();
+            const status = $card.attr('data-status');
+            
+            const matchesSearch = !this.searchTerm || title.includes(this.searchTerm);
+            const matchesFilter = this.filterStatus === 'all' || status === this.filterStatus;
+            
+            if (matchesSearch && matchesFilter) {
+                $card.show();
+            } else {
+                $card.hide();
+            }
+        });
         
         this.updateEmptyState(widget);
+    }
+
+    getLastScanTimestamp(cardElement) {
+        const $card = $(cardElement);
+        const lastScanText = $card.find('.info-item:contains("Last Scan:") .value').text().trim();
+        
+        if (lastScanText === 'Never') {
+            return 0; // Oldest possible
+        }
+        
+        if (lastScanText === 'Just now') {
+            return Date.now();
+        }
+        
+        // Parse relative times like "5m ago", "2h ago"
+        const match = lastScanText.match(/^(\d+)([mh])\s+ago$/);
+        if (match) {
+            const value = parseInt(match[1]);
+            const unit = match[2];
+            const now = Date.now();
+            
+            if (unit === 'm') {
+                return now - (value * 60 * 1000); // minutes ago
+            } else if (unit === 'h') {
+                return now - (value * 60 * 60 * 1000); // hours ago
+            }
+        }
+        
+        // Try parsing as date
+        try {
+            return new Date(lastScanText).getTime();
+        } catch (e) {
+            return 0; // Default to oldest if can't parse
+        }
     }
 
     getSubscriptionStatus(item) {
@@ -1065,6 +1197,8 @@ class SubscriptionsWidget extends BaseWidget {
                     data.forEach(item => {
                         this.addSubscriptionCardToWidget(widget, item);
                     });
+                    // Preserve search/filter state after rebuilding cards
+                    this.filterAndSort(widget);
                 });
             })
             .catch(error => {
@@ -1127,6 +1261,8 @@ class SubscriptionsWidget extends BaseWidget {
                     content.items?.forEach(item => {
                         instance.addSubscriptionCardToWidget(widget, item);
                     });
+                    // Preserve search/filter state after full reload
+                    instance.filterAndSort(widget);
                     break;
                 case "del":
                     widget.find(`[data-id="${content.id}"]`).fadeOut(300, function() {
@@ -1137,12 +1273,17 @@ class SubscriptionsWidget extends BaseWidget {
                     break;
                 case "update":
                     instance.addSubscriptionCardToWidget(widget, content);
+                    instance.filterAndSort(widget);
                     instance.showNotification('Subscription updated', 'success');
+                    break;
+                case "subscription-updated":
+                    // Handle selective subscription updates - preserves search/filter state
+                    instance.updateSingleSubscriptionForWidget(widget, content);
                     break;
                 case "data-changed":
                     // Handle data-changed notifications from REST API
                     if (content.dataType === "subscriptions") {
-                        // Refetch the subscription data
+                        // Refetch the subscription data (full reload for add/remove)
                         instance.requestData();
                     }
                     break;

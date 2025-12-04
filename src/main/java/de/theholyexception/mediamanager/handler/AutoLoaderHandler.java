@@ -289,8 +289,8 @@ public class AutoLoaderHandler extends Handler {
                 anime.scanDirectoryForExistingEpisodes();
                 anime.writeToDB(db);
                 
-                // Notify all WebSocket clients that subscriptions have changed
-                notifyDataChanged("subscriptions");
+                // Send selective update to preserve UI search/filter state
+                notifySubscriptionUpdated(anime);
             }
             
             ctx.json(anime.toJSONObject());
@@ -507,8 +507,8 @@ public class AutoLoaderHandler extends Handler {
                 anime.writeToDB(db);
                 log.info("Paused anime subscription: {}", anime.getTitle());
                 
-                // Notify all WebSocket clients that subscriptions have changed
-                notifyDataChanged("subscriptions");
+                // Send selective update to preserve UI search/filter state
+                notifySubscriptionUpdated(anime);
             }
             
             ctx.json(Map.of("message", "Subscription paused", "anime", anime.toJSONObject()));
@@ -559,8 +559,8 @@ public class AutoLoaderHandler extends Handler {
                 anime.writeToDB(db);
                 log.info("Resumed anime subscription: {}", anime.getTitle());
                 
-                // Notify all WebSocket clients that subscriptions have changed
-                notifyDataChanged("subscriptions");
+                // Send selective update to preserve UI search/filter state
+                notifySubscriptionUpdated(anime);
             }
             
             ctx.json(Map.of("message", "Subscription resumed", "anime", anime.toJSONObject()));
@@ -630,7 +630,7 @@ public class AutoLoaderHandler extends Handler {
             anime.setScanning(true);
             
             // Notify clients that scanning has started
-            notifyDataChanged("subscriptions");
+            notifySubscriptionUpdated(anime);
 
 
             // Check for language updates on existing episodes
@@ -661,8 +661,8 @@ public class AutoLoaderHandler extends Handler {
             // Set scanning state to false when done
             anime.setScanning(false);
 
-            // Notify all WebSocket clients that subscriptions have changed
-            notifyDataChanged("subscriptions");
+            // Send selective update to preserve UI search/filter state
+            notifySubscriptionUpdated(anime);
             
             ctx.json(Map.of(
                 "message", "Scan completed", 
@@ -707,6 +707,16 @@ public class AutoLoaderHandler extends Handler {
         notification.put("dataType", dataType);
         notification.put("timestamp", System.currentTimeMillis());
         WebSocketUtils.sendPacket("data-changed", TargetSystem.AUTOLOADER, notification, null);
+    }
+
+    /**
+     * Notifies all WebSocket clients that a specific subscription has been updated.
+     * This allows for selective updates that preserve UI search/filter state.
+     *
+     * @param anime The updated anime subscription
+     */
+    private void notifySubscriptionUpdated(Anime anime) {
+        WebSocketUtils.sendPacket("subscription-updated", TargetSystem.AUTOLOADER, anime.toJSONObject(), null);
     }
 
     /**
