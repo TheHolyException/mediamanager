@@ -137,6 +137,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private boolean isRunning = false;
     @Getter
     private boolean isFailed = false;
+    private String failedCause;
     @Getter
     private boolean validationError = false;
     private final int sortIndex = SORT_INDEX_COUNTER.getAndIncrement();
@@ -240,6 +241,9 @@ public class DownloadTask implements Comparable<DownloadTask> {
             throw new IllegalStateException("Task is already running");
         }
         downloader.setNumThreads(threads);
+        isFailed = false;
+        isRunning = false;
+        isDeleted = false;
 
         Proxy proxy = ProxyHandler.getNextProxy();
         writeLogLine(Level.INFO, "Using proxy: " + proxy);
@@ -250,6 +254,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
         if (outputFolder == null) {
             downloadStatusUpdateEvent.onError("Failed to resolve output folder");
             isFailed = true;
+            failedCause = "NO_OUTPUT_FOLDER";
             changeObject(this, PACKET_KEY_STATE, "Error: Failed to resolve output folder");
             return;
         }
@@ -267,6 +272,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             outputFile = downloader.start();
         } catch (Exception ex) {
             isFailed = true;
+            failedCause = Utils.getStackTraceAsString(ex);
             writeLogLine(Level.SEVERE, ex.getMessage());
         }
 
@@ -277,7 +283,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
         }
 
         if (isFailed) {
-            writeLogLine(Level.WARNING, "Download has failed");
+            writeLogLine(Level.WARNING, "Download has failed, last cause:");
+            writeLogLine(Level.WARNING, failedCause);
             errorCount ++;
             long delay = calculateRetryDelay();
             long maxDelayMs = getMaxRetryDelayMs();
@@ -483,6 +490,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
                 writeLogLine(Level.SEVERE, "onException() \t " + Utils.stackTraceToString(error));
                 if (isRunning && !isDeleted) {
                     isFailed = true;
+                    failedCause = Utils.getStackTraceAsString(error);
                     changeObject(DownloadTask.this, PACKET_KEY_STATE, "Error: " + error.getMessage());
                 }
             }
