@@ -655,6 +655,20 @@ class DownloadsWidget extends BaseWidget {
         }
     }
 
+    static generateUUID() {
+        // Fallback UUID generation for compatibility
+        if (crypto && crypto.randomUUID) {
+            return crypto.randomUUID();
+        } else {
+            // Fallback implementation
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+    }
+
     static addNewElement(urls, settings, targetSelection, subfolder) {
         if (!urls) {
             console.error("No URLs provided to addNewElement");
@@ -664,7 +678,7 @@ class DownloadsWidget extends BaseWidget {
 
         for (let urlElement of urlArray) {
             let obj = {
-                uuid: crypto.randomUUID(),
+                uuid: DownloadsWidget.generateUUID(),
                 state: "new",
                 created: new Date().getTime(),
                 url: urlElement,
