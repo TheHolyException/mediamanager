@@ -4,6 +4,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.holyapi.util.ExecutorTask;
+import de.theholyexception.mediamanager.logging.DownloadLogger;
 import de.theholyexception.mediamanager.models.DownloadTask;
 import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.settings.SettingProperty;
@@ -458,8 +459,8 @@ public class DefaultHandler extends Handler {
                 return;
             }
 
-            File logFile = detailed ? downloadTask.getDetailedLogFile() : downloadTask.getOutputLogFile();
-            if (logFile == null || !logFile.exists()) {
+            DownloadLogger logFile = detailed ? downloadTask.getDetailedLog() : downloadTask.getOutputLog();
+            if (logFile == null) {
                 String logType = detailed ? "detailed log" : "log";
                 ctx.status(404);
                 ctx.json(Map.of("error", logType + " file not found"));
@@ -470,7 +471,7 @@ public class DefaultHandler extends Handler {
             ctx.header("Content-Type", "text/plain; charset=utf-8");
             
             // Send the file content for viewing
-            ctx.result(new String(java.nio.file.Files.readAllBytes(logFile.toPath())));
+            ctx.result(logFile.getContent());
 
         } catch (IllegalArgumentException ex) {
             ctx.status(400);

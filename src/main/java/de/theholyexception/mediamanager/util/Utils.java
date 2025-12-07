@@ -104,4 +104,46 @@ public class Utils {
         return sw.toString();
     }
 
+    /**
+     * Simple expression evaluator for mathematical formulas containing the errorCount variable.
+     * Supports basic arithmetic operations: +, -, *, /, parentheses
+     * @param formula The mathematical formula as a string
+     * @param errorCount The current error count to substitute in the formula
+     * @return The evaluated result
+     */
+    public static long evaluateFormula(String formula, int errorCount) {
+        if (formula == null || formula.trim().isEmpty()) {
+            throw new IllegalArgumentException("Formula cannot be null or empty");
+        }
+
+        // Replace the errorCount variable with its actual value
+        String expression = formula.replace("errorCount", String.valueOf(errorCount));
+
+        // Basic validation - ensure only allowed characters
+        if (!expression.matches("[0-9+\\-*/()\\s.]+")) {
+            throw new IllegalArgumentException("Formula contains invalid characters");
+        }
+
+        try {
+            // Use JavaScript engine for expression evaluation
+            javax.script.ScriptEngineManager manager = new javax.script.ScriptEngineManager();
+            javax.script.ScriptEngine engine = manager.getEngineByName("nashorn");
+
+            if (engine == null) {
+                throw new RuntimeException("Nashorn JavaScript engine not available");
+            }
+
+            Object result = engine.eval(expression);
+
+            if (result instanceof Number number) {
+                // Convert seconds to milliseconds for internal use
+                return number.longValue() * 1000L;
+            } else {
+                throw new IllegalArgumentException("Formula did not evaluate to a number: " + result);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to evaluate formula: " + expression, e);
+        }
+    }
+
 }
