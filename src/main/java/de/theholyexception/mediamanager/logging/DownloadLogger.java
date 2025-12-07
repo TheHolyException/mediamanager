@@ -1,12 +1,10 @@
 package de.theholyexception.mediamanager.logging;
 
+import de.theholyexception.mediamanager.util.MediaManagerConfig;
 import lombok.Getter;
 import lombok.Setter;
-import org.tomlj.TomlParseResult;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Level;
 
@@ -17,19 +15,9 @@ public abstract class DownloadLogger {
 	protected static final DateTimeFormatter LOG_FILE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
 	protected String outputFilename;
 
-	public static void initialize(TomlParseResult config) {
-		DEBUG_LOG_FOLDER = Paths.get(config.getString("logging.debugLogFolder", () -> "debug-logs"));
-		DOWNLOADS_LOG_FOLDER = Paths.get(config.getString("logging.downloadLogFolder", () -> "debug-logs/downloads"));
-	}
-
-	static {
-		try {
-			Files.createDirectories(DEBUG_LOG_FOLDER);
-			DOWNLOADS_LOG_FOLDER = DEBUG_LOG_FOLDER.resolve("downloads");
-			Files.createDirectories(DOWNLOADS_LOG_FOLDER);
-		} catch (Exception ex) {
-			throw new IllegalStateException("Failed to create debug log directories", ex);
-		}
+	public static void initialize() {
+		DEBUG_LOG_FOLDER = MediaManagerConfig.Logging.debugLogFolder;
+		DOWNLOADS_LOG_FOLDER = MediaManagerConfig.Logging.downloadLogFolder;
 	}
 
 	public DownloadLogger(String name) {

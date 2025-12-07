@@ -8,16 +8,19 @@ import de.theholyexception.mediamanager.models.DownloadTask;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
+import de.theholyexception.mediamanager.util.MediaManagerConfig;
 import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.util.Utils;
 import io.javalin.websocket.WsContext;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.tomlj.TomlParseResult;
 
 import java.nio.channels.ClosedChannelException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 public class WebSocketUtils {
@@ -26,12 +29,12 @@ public class WebSocketUtils {
     private static final Map<String, JSONObject> packetBuffer = new HashMap<>();
     private static final List<String> deleteBuffer = new ArrayList<>();
 
-    public static void initialize(TomlParseResult config) {
-        if (config.getBoolean("general.enablePacketBuffer", () -> true)) {
+    public static void initialize() {
+        if (MediaManagerConfig.General.enablePacketBuffer) {
             Thread packetThread = new Thread(() -> {
                 while (true) {
                     try {
-                        Utils.sleep(config.getLong("general.packetBufferSleep", () -> 1000));
+                        Utils.sleep(MediaManagerConfig.General.packetBufferSleep);
                         synchronized (packetBuffer) {
                             if (!packetBuffer.isEmpty()) {
                                 JSONObject response = new JSONObject();

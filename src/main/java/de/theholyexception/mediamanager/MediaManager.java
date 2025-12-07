@@ -10,30 +10,25 @@ import de.theholyexception.holyapi.util.DataUtils;
 import de.theholyexception.holyapi.util.ResourceUtilities;
 import de.theholyexception.mediamanager.api.WebServer;
 import de.theholyexception.mediamanager.handler.*;
+import de.theholyexception.mediamanager.logging.DownloadLogger;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.InitializationException;
+import de.theholyexception.mediamanager.util.MediaManagerConfig;
 import de.theholyexception.mediamanager.util.ProxyHandler;
 import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.Utils;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.StaticUtils;
 import org.slf4j.LoggerFactory;
-import org.tomlj.Toml;
-import org.tomlj.TomlParseResult;
 
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Slf4j
 public class MediaManager {
@@ -43,26 +38,6 @@ public class MediaManager {
 
     @Getter
     private final ComplexDIContainer dependencyInjector;
-
-    private static final Pattern pattern = Pattern.compile("https:\\/\\/aniworld\\.to\\/anime\\/stream\\/([^\\/]+)");
-    private static final Map<String, String> urlToSubdirectory = new HashMap<>();
-    public static synchronized String getSubdirectoryFromURL(String url) {
-        if (urlToSubdirectory.containsKey(url))
-            return urlToSubdirectory.get(url);
-
-        Matcher matcher = pattern.matcher(url);
-        if (!matcher.find()) {
-            String uuid = UUID.randomUUID().toString();
-            log.error("Failed to obtain anime directory name from url: " + url);
-            log.error("Using alternative directory: ./" + uuid);
-            urlToSubdirectory.put(url, uuid);
-            return uuid;
-        }
-        String match = matcher.group(1);
-        match = Utils.escape(match);
-        urlToSubdirectory.put(url, match);
-        return match;
-    }
 
     /**
      * Main entry point for the MediaManager application.
@@ -79,7 +54,7 @@ public class MediaManager {
      * The log level is read from the 'general.logLevel' configuration property.
      */
     public void changeLogLevel() {
-        Level level = Level.valueOf(config.getString("general.logLevel"));
+        Level level = MediaManagerConfig.General.logLevel;
         LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
         context.getLogger("ROOT").setLevel(level);
     }
@@ -90,7 +65,6 @@ public class MediaManager {
     private ConfigJSON systemSettings;
     @Getter
     private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
-    private TomlParseResult config;
 
     @Getter
     private String downloadersVersion = "unknown";
@@ -138,7 +112,6 @@ public class MediaManager {
             }
         }
 
-        WebSocketUtils.initialize(config);
         handlers.values().forEach(Handler::initialize);
     }
 
@@ -178,18 +151,7 @@ public class MediaManager {
      * @throws InitializationException if the configuration file could not be loaded
      */
     private void loadConfigFile() throws InitializationException {
-        try {
-            Path path = Paths.get(("./config/config.toml"));
-            config = Toml.parse(path);
-            StringBuilder errors = new StringBuilder();
-            config.errors().forEach(error -> errors.append(error.getMessage()));
-            if (!errors.isEmpty())
-                throw new InitializationException("Failed to parse config.toml", errors.toString());
-
-            dependencyInjector.register(TomlParseResult.class, config);
-        } catch (IOException ex) {
-            throw new InitializationException("Failed to load config.toml", ex.getMessage());
-        }
+        MediaManagerConfig.initialize(Paths.get(("./config/config.toml")));
 
         try {
             systemSettings = new ConfigJSON(new File("./config/systemsettings.json"));
@@ -220,7 +182,9 @@ public class MediaManager {
             throw ex2;
         }
 
-        ProxyHandler.initialize(config);
+        ProxyHandler.initialize();
+        DownloadLogger.initialize();
+        WebSocketUtils.initialize();
     }
 
     /**
@@ -264,16 +228,17 @@ public class MediaManager {
     private void loadDatabase() throws InitializationException {
         try {
             MySQLInterface db = new MySQLInterface(
-                    config.getString("mysql.host", () -> "localhost"),
-                    Math.toIntExact(config.getLong("mysql.port", () -> 3306)),
-                config.getString("mysql.username", () -> "mediamanager"),
-                config.getString("mysql.password", () -> "mediamanager"),
-                config.getString("mysql.database", () -> "mediamanager"));
+                MediaManagerConfig.MySQL.host,
+                MediaManagerConfig.MySQL.port,
+                MediaManagerConfig.MySQL.username,
+                MediaManagerConfig.MySQL.password,
+                MediaManagerConfig.MySQL.database
+            );
             db.asyncDataSettings(2);
             db.connect();
             dependencyInjector.register(MySQLInterface.class, db);
 
-            if (Boolean.TRUE.equals(config.getBoolean("autoloader.executeDBScripts"))) {
+            if (MediaManagerConfig.Autoloader.executeDBScripts) {
                 executeDatabaseScripts(db);
             }
 

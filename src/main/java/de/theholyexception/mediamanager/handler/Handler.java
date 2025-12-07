@@ -1,12 +1,10 @@
 package de.theholyexception.mediamanager.handler;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
-import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.mediamanager.util.TargetSystem;
 import io.javalin.Javalin;
 import io.javalin.websocket.WsContext;
 import lombok.Getter;
-import org.tomlj.TomlParseResult;
 
 /**
  * Abstract base class for all handler implementations in the MediaManager application.
@@ -19,9 +17,6 @@ public abstract class Handler {
 
     @Getter
     private TargetSystem targetSystem;
-
-    @DIInject
-    protected TomlParseResult config;
 
     /**
      * Creates a new Handler instance for the specified target system.

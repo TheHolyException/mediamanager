@@ -10,6 +10,7 @@ import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.InitializationException;
+import de.theholyexception.mediamanager.util.MediaManagerConfig;
 import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.util.WebResponseException;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
@@ -23,17 +24,13 @@ import io.javalin.websocket.WsContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.downloaders.FFmpeg;
-import me.kaigermany.ultimateutils.StaticUtils;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.tomlj.TomlArray;
-import org.tomlj.TomlTable;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.zip.GZIPOutputStream;
@@ -122,11 +119,11 @@ public class DefaultHandler extends Handler {
         
         spMaxRetryDelayMinutes = Settings.getSettingProperty("MAX_RETRY_DELAY_MINUTES", 1440, systemSettings);
 
-        FFmpeg.setFFmpegPath(config.getString("general.ffmpeg"));
+        FFmpeg.setFFmpegPath(MediaManagerConfig.General.ffmpeg);
 
         loadTargets();
 
-        DownloadTask.initialize(config);
+        DownloadTask.initialize();
         spDownloadThreads.addSubscriber(value -> DownloadTask.getDownloadHandler().updateExecutorService(Executors.newFixedThreadPool(value)));
     }
     
@@ -153,17 +150,7 @@ public class DefaultHandler extends Handler {
      * @throws InitializationException if the targets configuration is invalid or missing
      */
     private void loadTargets() {
-        TomlArray targetArray = config.getArray("target");
-        if (targetArray == null)
-            throw new InitializationException("LoadTargets", "Failed to load targets");
-
-        for (int i = 0; i < targetArray.size(); i ++) {
-            TomlTable x = targetArray.getTable(i);
-            Target tar = new Target(
-                    x.getString("identifier"),
-                    x.getString("displayName"),
-                    x.getString("path"),
-					Boolean.TRUE.equals(x.getBoolean("subFolders")));
+        for (Target tar : MediaManagerConfig.Targets.list) {
             targets.put(tar.identifier(), tar);
         }
     }
@@ -248,20 +235,26 @@ public class DefaultHandler extends Handler {
     }
 
     private void compressLogFiles() {
-        File[] files = DownloadTask.getDOWNLOADS_LOG_FOLDER().listFiles();
-        if (files == null)
-            return;
-        for (File file : files) {
-            if (file.isDirectory() || !file.getName().endsWith(".log"))
-                continue;
-			log.debug("Compressing log file {}", file.getName());
-            File compressedFile = new File(DownloadTask.getDOWNLOADS_LOG_FOLDER(), file.getName()+".gz");
-            try (GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(compressedFile)))) {
-                gos.write(StaticUtils.loadBytes(file));
-                Files.delete(file.toPath());
-            } catch (IOException ex) {
-				log.error("Failed to compress log file {}", file.getName(), ex);
+        try (var stream = Files.list(MediaManagerConfig.Logging.downloadLogFolder)) {
+            stream.filter(Files::isRegularFile)
+                  .filter(path -> path.toString().endsWith(".log"))
+                  .forEach(this::compressLogFile);
+        } catch (IOException ex) {
+            log.error("Failed to list log files for compression", ex);
+        }
+    }
+    
+    private void compressLogFile(Path logFile) {
+        try {
+            log.debug("Compressing log file {}", logFile.getFileName());
+            Path compressedFile = MediaManagerConfig.Logging.downloadLogFolder.resolve(logFile.getFileName() + ".gz");
+            
+            try (GZIPOutputStream gos = new GZIPOutputStream(Files.newOutputStream(compressedFile))) {
+                gos.write(Files.readAllBytes(logFile));
             }
+            Files.delete(logFile);
+        } catch (IOException ex) {
+            log.error("Failed to compress log file {}", logFile.getFileName(), ex);
         }
     }
 

@@ -8,9 +8,6 @@ import me.kaigermany.ultimateutils.sync.thread.Parallel;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import org.tomlj.TomlArray;
-import org.tomlj.TomlParseResult;
-import org.tomlj.TomlTable;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -37,33 +34,29 @@ public class ProxyHandler {
 	}
 
 	/**
-	 * Initializes the proxy handler with configurations from the TOML file.
+	 * Initializes the proxy handler
 	 * Validates each proxy by checking if it's a Tor exit node.
 	 *
-	 * @param config The TOML configuration containing proxy settings
 	 * @throws IllegalArgumentException if the configuration is invalid
 	 */
-	public static void initialize(TomlParseResult config) {
-		if (!config.getBoolean("proxy.enabled", () -> false))
+	public static void initialize() {
+		if (!MediaManagerConfig.Proxy.enabled)
 			return;
-		TomlArray array = config.getArray("proxies");
+		List<MediaManagerConfig.ProxyEntry> array = MediaManagerConfig.Proxies.list;
 		if (array == null) {
 			log.error("No proxies found in config");
 			return;
 		}
 
 		Parallel.exec(array.size(), i -> {
-			TomlTable x = array.getTable(i);
-			String host = x.getString("host", () -> "127.0.0.1");
-			int port = Math.toIntExact(x.getLong("port", () -> 8080));
-			Proxy.Type type = Proxy.Type.valueOf(x.getString("type", () -> "SOCKS").toUpperCase());
-			Proxy proxy = new Proxy(type, new InetSocketAddress(host, port));
+			MediaManagerConfig.ProxyEntry x = array.get(i);
+			Proxy proxy = new Proxy(x.type, new InetSocketAddress(x.host, x.port));
 			if (!checkTorNetwork(proxy)) {
-				log.error("Proxy {}:{} ({}) is not a tor proxy", host, port, type);
+				log.error("Proxy {}:{} ({}) is not a tor proxy", x.host, x.port, x.type);
 				return;
 			}
 			proxies.add(proxy);
-			log.info("Added proxy: {}:{} ({})", host, port, type);
+			log.info("Added proxy: {}:{} ({})", x.host, x.port, x.type);
 		}, array.size());
 	}
 

@@ -1,13 +1,11 @@
 package de.theholyexception.mediamanager.logging;
 
-import de.theholyexception.mediamanager.MediaManager;
-import org.tomlj.TomlParseResult;
+import de.theholyexception.mediamanager.util.MediaManagerConfig;
 
 public class DownloadLoggerFactory {
 
-	public static DownloadLogger getLogger(String name) {
-		TomlParseResult config = MediaManager.getInstance().getDependencyInjector().resolve(TomlParseResult.class);
-		String loggerType = config.getString("general.downloadLoggerType", () -> "DISK");
+	public static DownloadLogger getLogger(String name) {;
+		String loggerType = MediaManagerConfig.Logging.downloadLoggerType;
 
 		return switch (loggerType.toUpperCase()) {
 			case "RAM" -> new RamLogger(name);

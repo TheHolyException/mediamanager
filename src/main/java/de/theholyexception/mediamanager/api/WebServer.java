@@ -7,8 +7,8 @@ import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.MediaManager;
-import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.handler.Handler;
+import de.theholyexception.mediamanager.util.MediaManagerConfig;
 import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.util.WebResponseException;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
@@ -21,7 +21,6 @@ import io.javalin.websocket.WsContext;
 import io.javalin.websocket.WsMessageContext;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.tomlj.TomlParseResult;
 
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,18 +40,13 @@ public class WebServer implements DIInitializer {
 
 	@DIInject
 	private MediaManager mediaManager;
-	@DIInject
-	private TomlParseResult config;
-
-	@DIInject
-	private DefaultHandler defaultHandler;
 
 	@Override
 	public void initialize() {
 		if (app != null)
 			throw new IllegalStateException("WebServer already initialized");
 
-		int webSocketThreads = Math.toIntExact(config.getLong("webserver.webSocketThreads", () -> 10));
+		int webSocketThreads = Math.toIntExact(MediaManagerConfig.WebServer.webSocketThreads);
 		executorHandler = new ExecutorHandler(Executors.newFixedThreadPool(webSocketThreads));
 		executorHandler.setThreadNameFactory(cnt -> "WS-Executor-" + cnt);
 
@@ -60,10 +54,6 @@ public class WebServer implements DIInitializer {
 		keepAliveExecutor = Executors.newScheduledThreadPool(1);
 		activeConnections = ConcurrentHashMap.newKeySet();
 		startKeepAliveTimer();
-
-		String webserverHost = config.getString("webserver.host", () -> "localhost");
-		int webserverPort = Math.toIntExact(config.getLong("webserver.port", () -> 8080));
-		String webRoot = config.getString("webserver.webroot", () -> "./www");
 
 		app = Javalin.create(cfg -> {
 				cfg.registerPlugin(new OpenApiPlugin(pluginConfig -> {
@@ -77,7 +67,7 @@ public class WebServer implements DIInitializer {
 				}));
 				cfg.staticFiles.add(staticFiles -> {
 					staticFiles.hostedPath = "/";
-					staticFiles.directory = webRoot;
+					staticFiles.directory = MediaManagerConfig.WebServer.webroot;
 					staticFiles.location = Location.EXTERNAL;
 				});
 				cfg.showJavalinBanner = false;
@@ -85,7 +75,7 @@ public class WebServer implements DIInitializer {
 				cfg.registerPlugin(new SwaggerPlugin());
 
 			})
-			.start(webserverHost, webserverPort);
+			.start(MediaManagerConfig.WebServer.host, MediaManagerConfig.WebServer.port);
 
 		mediaManager.getHandlers().values().forEach(handler -> handler.registerAPI(app));
 

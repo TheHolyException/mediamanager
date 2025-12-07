@@ -5,6 +5,7 @@ import de.theholyexception.holyapi.util.GUIUtils;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.models.DownloadTask;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
+import de.theholyexception.mediamanager.util.MediaManagerConfig;
 import de.theholyexception.mediamanager.util.ProxyHandler;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
@@ -70,7 +71,7 @@ public class StatisticsHandler extends Handler {
 	}
 
 	private void startProxyDataFetcher() {
-		if (config.getBoolean("proxy.enabled", () -> false)) {
+		if (MediaManagerConfig.Proxy.enabled) {
 			new Timer().schedule(new TimerTask() {
 				@Override
 				public void run() {

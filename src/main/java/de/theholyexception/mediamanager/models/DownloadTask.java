@@ -22,7 +22,6 @@ import me.kaigermany.downloaders.Downloader;
 import me.kaigermany.downloaders.DownloaderSelector;
 import org.jetbrains.annotations.NotNull;
 import org.json.simple.JSONObject;
-import org.tomlj.TomlParseResult;
 
 import java.io.File;
 import java.io.IOException;
@@ -56,16 +55,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private static boolean initialized = false;
 
     private static File outputTempFolder;
-    private static boolean useDirectMemory;
 
-    private static boolean untrustedCertificates;
-
-    private static boolean enableValidator;
     private static final List<Target> validatorTargets = new ArrayList<>();
     private static double validatorLengthThreshold;
 
 
-    public static void initialize(TomlParseResult config) {
+    public static void initialize() {
         defaultHandler = MediaManager.getInstance().getDependencyInjector().resolve(DefaultHandler.class);
         autoLoaderHandler = MediaManager.getInstance().getDependencyInjector().resolve(AutoLoaderHandler.class);
 
@@ -77,18 +72,13 @@ public class DownloadTask implements Comparable<DownloadTask> {
         if (defaultHandler == null || autoLoaderHandler == null)
             throw new IllegalStateException("DefaultHandler or AutoLoaderHandler is not initialized");
 
-        outputTempFolder = new File(config.getString("downloader.tmpDownloadFolder", () -> "./tmp"));
+        outputTempFolder = new File(MediaManagerConfig.Downloader.tmpDownloadFolder);
         if (!outputTempFolder.exists() && !outputTempFolder.mkdirs())
             log.error("Failed to create tmp download folder");
 
-        useDirectMemory = config.getBoolean("downloader.useDirectMemory", () -> false);
-
-        untrustedCertificates = config.getBoolean("downloader.untrustedCertificates", () -> false);
-
-        enableValidator = config.getBoolean("validator.enabled", () -> false);
-        if (enableValidator) {
-            validatorLengthThreshold = Integer.parseInt(config.getString("validator.videoLengthThreshold", () -> "50%").replace("%", ""))/100d;
-            String targetsCSV = config.getString("validator.targets", () -> "");
+        if (MediaManagerConfig.Validator.enabled) {
+            validatorLengthThreshold = MediaManagerConfig.Validator.videoLengthThreshold;
+            String targetsCSV = MediaManagerConfig.Validator.targets;
             String[] virtualTargets = targetsCSV.split(",");
             for (String virtualTarget : virtualTargets) {
                 validatorTargets.add(defaultHandler.getTargets().get(virtualTarget));
@@ -168,8 +158,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
         autoloaderData = content.getObjectContainer("autoloaderData");
         options = content.getObjectContainer("options").getRaw();
-        options.put("useDirectMemory", useDirectMemory+"");
-        if (untrustedCertificates)
+        options.put("useDirectMemory", MediaManagerConfig.Downloader.useDirectMemory+"");
+        if (MediaManagerConfig.Downloader.untrustedCertificates)
             options.put("disableCertificateCheck", "true");
         skipValidation = Boolean.parseBoolean((String)options.get("skipValidation"));
 
@@ -340,8 +330,6 @@ public class DownloadTask implements Comparable<DownloadTask> {
 			log.error("One or multiple errors occurred for the download with the url {}", url);
 			log.error("Check the download log file for more information");
             log.error("\t");
-        } else {
-            closeAndCompressLog();
         }
     }
 
@@ -608,11 +596,6 @@ public class DownloadTask implements Comparable<DownloadTask> {
         detailedLog.setLoggerCallback(callback);
     }
 
-    public void closeAndCompressLog() {
-        outputLog.close();
-        detailedLog.close();
-    }
-
     /**
      * Updates the download log file with the specified title.
      */
@@ -624,6 +607,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
         outputLog.changeOutputFilename(filename);
         detailedLog.changeOutputFilename(filenameDetailed);
     }
+
+    public void closeAndCompressLog() {
+        outputLog.close();
+        detailedLog.close();
+    }
+
 
     public void close() {
         if (isRunning) {

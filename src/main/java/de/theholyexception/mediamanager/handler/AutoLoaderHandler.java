@@ -11,10 +11,7 @@ import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
-import de.theholyexception.mediamanager.util.AniworldProvider;
-import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.Utils;
-import de.theholyexception.mediamanager.util.WebResponseException;
+import de.theholyexception.mediamanager.util.*;
 import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import io.javalin.Javalin;
@@ -43,10 +40,6 @@ public class AutoLoaderHandler extends Handler {
     private final Random random = new Random();
     private Boolean initialized = false;
 
-    private long checkIntervalMin;
-    private long checkDelayMs;
-    private boolean enabled;
-    
     @DIInject
     private MySQLInterface db;
 
@@ -64,13 +57,7 @@ public class AutoLoaderHandler extends Handler {
     @Override
     public void loadConfigurations() {
         super.loadConfigurations();
-        int urlResolverThreads = Math.toIntExact(config.getLong("autoloader.urlResolverThreads", () -> 10));
-        AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(urlResolverThreads));
-
-        checkIntervalMin = config.getLong("autoloader.checkIntervalMin", () -> 60);
-        checkDelayMs = config.getLong("autoloader.checkDelayMs", () -> 5000);
-        enabled = Boolean.TRUE.equals(config.getBoolean("autoloader.enabled"));
-
+        AniworldHelper.urlResolver.updateExecutorService(Executors.newFixedThreadPool(MediaManagerConfig.Autoloader.urlResolverThreads));
         spAutoDownload = Settings.getSettingProperty("AUTO_DOWNLOAD", false, "systemSettings");
     }
 
@@ -100,7 +87,7 @@ public class AutoLoaderHandler extends Handler {
             handler.awaitGroup(1);
             db.getExecutorHandler().awaitGroup(-1);
 
-            if (enabled)
+            if (MediaManagerConfig.Autoloader.enabled)
                 startThread();
 
             log.info("AutoLoader initialized");
@@ -587,7 +574,7 @@ public class AutoLoaderHandler extends Handler {
     )
     private void getAutoloaderStatus(Context ctx) {
         JSONObject status = new JSONObject();
-        status.put("enabled", enabled);
+        status.put("enabled", MediaManagerConfig.Autoloader.enabled);
         status.put("initialized", initialized);
         ctx.json(status);
     }
@@ -765,10 +752,10 @@ public class AutoLoaderHandler extends Handler {
                         // Set scanning state to false when done
                         anime.setScanning(false);
 
-                        Utils.sleep(checkDelayMs);
+                        Utils.sleep(MediaManagerConfig.Autoloader.checkDelayMs);
                     }
 
-                    long sleepTime = checkIntervalMin*1000L*60L;
+                    long sleepTime = MediaManagerConfig.Autoloader.checkIntervalMin*1000L*60L;
 
                     sleepTime = random.nextLong(sleepTime * 3 / 4, sleepTime * 5 / 4);
                     log.info("Scan done, next in " + (sleepTime/1000) + "s");
