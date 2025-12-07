@@ -600,12 +600,6 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
     public void closeAndCompressLog() {
         try {
-            logFileFOS.close();
-            GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(logFile.getName()+".gz")));
-            gos.write(StaticUtils.loadBytes(logFile));
-            gos.close();
-            Files.delete(logFile.toPath());
-            logFile = null;
             {
                 outputLogFileStream.close();
                 GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(outputLogFile.getName()+".gz")));
