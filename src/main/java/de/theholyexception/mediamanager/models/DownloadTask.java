@@ -8,10 +8,8 @@ import de.theholyexception.mediamanager.handler.AutoLoaderHandler;
 import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
-import de.theholyexception.mediamanager.util.MP4Utils;
-import de.theholyexception.mediamanager.util.ProxyHandler;
-import de.theholyexception.mediamanager.util.Utils;
-import de.theholyexception.mediamanager.util.ValidatorResponse;
+import de.theholyexception.mediamanager.util.*;
+import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import de.theholyexception.mediamanager.webserver.WebSocketUtils;
 import lombok.Getter;
 import lombok.Setter;
@@ -125,8 +123,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private final UUID uuid;
     @Getter
     private final JSONObjectContainer content;
-    private final JSONObject options;
-    private final JSONObjectContainer autoloaderData;
+    private JSONObject options;
+    private JSONObjectContainer autoloaderData;
     @Getter
     private ExecutorTask downloadExecutorTask;
     @Getter
@@ -135,11 +133,10 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private boolean isDeleted = false;
     @Getter
     private boolean isRunning = false;
+    private boolean validationError = false;
     @Getter
     private boolean isFailed = false;
-    private String failedCause;
-    @Getter
-    private boolean validationError = false;
+    private String lastFailedCause;
     private final int sortIndex = SORT_INDEX_COUNTER.getAndIncrement();
     @Getter
     private long lastUpdate;
@@ -149,7 +146,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
     @Setter
     @Getter 
     private double lastProgress = 0.0;
-    private boolean skipValidation = false;
+    private boolean skipValidation;
     private Target target;
     private final DownloadStatusUpdateEvent downloadStatusUpdateEvent;
     @Getter
@@ -172,6 +169,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             throw new IllegalStateException("DownloadTask is not initialized");
 
         this.content = content;
+        updateContent(content);
         uuid = UUID.fromString(content.get("uuid", String.class));
         url = content.get("url", String.class);
         setState(content.get(PACKET_KEY_STATE, String.class));
@@ -199,6 +197,16 @@ public class DownloadTask implements Comparable<DownloadTask> {
             writeLogLine(Level.SEVERE, "Failed to resolve target, aborting download!");
             throw new IllegalStateException("Failed to resolve target, aborting download!");
         }
+    }
+
+    public void updateContent(JSONObjectContainer content) throws WebResponseException {
+        String localUUID = content.get("uuid", String.class);
+        if (uuid != null && UUID.fromString(localUUID) != uuid) {
+            throw new WebResponseException(WebSocketResponse.ERROR.setMessage("UUID mismatch, please delete and reschedule again!"));
+        }
+        autoloaderData = content.getObjectContainer("autoloaderData");
+        options = content.getObjectContainer("options").getRaw();
+        skipValidation = Boolean.parseBoolean((String)options.get("skipValidation"));
     }
 
     public void start(int threads) {
@@ -244,9 +252,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             throw new IllegalStateException("Task is already running");
         }
         downloader.setNumThreads(threads);
-        isFailed = false;
-        isRunning = false;
-        isDeleted = false;
+        reset();
 
         Proxy proxy = ProxyHandler.getNextProxy();
         writeLogLine(Level.INFO, "Using proxy: " + proxy);
@@ -257,8 +263,9 @@ public class DownloadTask implements Comparable<DownloadTask> {
         if (outputFolder == null) {
             downloadStatusUpdateEvent.onError("Failed to resolve output folder");
             isFailed = true;
-            failedCause = "NO_OUTPUT_FOLDER";
+            lastFailedCause = "NO_OUTPUT_FOLDER";
             changeObject(this, PACKET_KEY_STATE, "Error: Failed to resolve output folder");
+            onDownloadFailed();
             return;
         }
 
@@ -270,13 +277,15 @@ public class DownloadTask implements Comparable<DownloadTask> {
         isRunning = true;
 
         writeLogLine(Level.INFO, "Download is started");
-        File outputFile = null;
+        File outputFile;
         try {
             outputFile = downloader.start();
         } catch (Exception ex) {
             isFailed = true;
-            failedCause = Utils.getStackTraceAsString(ex);
+            lastFailedCause = Utils.getStackTraceAsString(ex);
             writeLogLine(Level.SEVERE, ex.getMessage());
+            onDownloadFailed();
+            return;
         }
 
         if (downloader.isCanceled()) {
@@ -286,23 +295,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
         }
 
         if (isFailed) {
-            writeLogLine(Level.WARNING, "Download has failed, last cause:");
-            writeLogLine(Level.WARNING, failedCause);
-            errorCount ++;
-            long delay = calculateRetryDelay();
-            long maxDelayMs = getMaxRetryDelayMs();
-            
-            if (delay < maxDelayMs) {
-                retryTimestamp = System.currentTimeMillis() + delay;
-                changeObject(this, PACKET_KEY_STATE, "Retry scheduled for:\n" + new SimpleDateFormat("HH:mm:ss").format(new Date(retryTimestamp)));
-            } else {
-                retryTimestamp = -1;
-                errorCount = 0;
-                changeObject(this, PACKET_KEY_STATE, "Error: Download failed, automatic retry limit reached!");
-            }
-            isRunning = false;
-            writeLogLine(Level.WARNING, "Download failed for " + this);
-            log.warn("Download failed for {}", this);
+            onDownloadFailed();
             return;
         }
 
@@ -316,6 +309,33 @@ public class DownloadTask implements Comparable<DownloadTask> {
         retryTimestamp = -1;
         errorCount = Integer.MAX_VALUE;
         changeObject(this, PACKET_KEY_STATE, "Error: retry disabled");
+    }
+
+    private void reset() {
+        isFailed = false;
+        isRunning = false;
+        isDeleted = false;
+        validationError = false;
+    }
+
+    private void onDownloadFailed() {
+        writeLogLine(Level.WARNING, "Download has failed, last cause:");
+        writeLogLine(Level.WARNING, lastFailedCause);
+        errorCount ++;
+        long delay = calculateRetryDelay();
+        long maxDelayMs = getMaxRetryDelayMs();
+
+        if (delay < maxDelayMs) {
+            retryTimestamp = System.currentTimeMillis() + delay;
+            changeObject(this, PACKET_KEY_STATE, "Retry scheduled for:\n" + new SimpleDateFormat("HH:mm:ss").format(new Date(retryTimestamp)));
+        } else {
+            retryTimestamp = -1;
+            errorCount = 0;
+            changeObject(this, PACKET_KEY_STATE, "Error: Download failed, automatic retry limit reached!");
+        }
+        isRunning = false;
+        writeLogLine(Level.WARNING, "Download failed for " + this);
+        log.warn("Download failed for {}", this);
     }
 
     private void onDownloadCompleted(File outputFolder, File outputFile) {
@@ -332,10 +352,10 @@ public class DownloadTask implements Comparable<DownloadTask> {
         writeLogLine(Level.INFO, "File moved to target destination");
         handleAutoloader();
 
-        if (hadServerError) {
+        if (hadSeverError) {
             log.error("\t");
 			log.error("One or multiple errors occurred for the download with the url {}", url);
-			log.error("Check the download log file for more information {}", logFile.getAbsolutePath());
+			log.error("Check the download log file for more information {}", outputLogFile.getAbsolutePath());
             log.error("\t");
         } else {
             closeAndCompressLog();
@@ -477,7 +497,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
             @Override
             public void onLogFile(String fileName, byte[] bytes) {
-                writeLogLine(Level.INFO, "onLogFile("+fileName+") \t" + new String(bytes));
+                writeLogLine(Level.INFO, "onLogFile("+fileName+") \t" + new String(bytes), detailedLogFileStream);
                 if (enableDebugFileLogging) {
                     try (FileOutputStream fos = new FileOutputStream(new File(DEBUG_LOG_FOLDER, fileName))) {
                         fos.write(bytes);
@@ -493,7 +513,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
                 writeLogLine(Level.SEVERE, "onException() \t " + Utils.stackTraceToString(error));
                 if (isRunning && !isDeleted) {
                     isFailed = true;
-                    failedCause = Utils.getStackTraceAsString(error);
+                    lastFailedCause = Utils.getStackTraceAsString(error);
                     changeObject(DownloadTask.this, PACKET_KEY_STATE, "Error: " + error.getMessage());
                 }
             }
@@ -645,7 +665,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
                 File newFile = new File(DOWNLOADS_LOG_FOLDER, filename);
 
-				log.debug("Updating log file -> {}", newFile.getAbsolutePath());
+                log.debug("Updating log file -> {}", newFile.getAbsolutePath());
 
                 Files.delete(outputLogFile.toPath());
 

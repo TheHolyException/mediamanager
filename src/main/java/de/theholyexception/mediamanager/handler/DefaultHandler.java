@@ -212,6 +212,7 @@ public class DefaultHandler extends Handler {
         DownloadTask downloadTask;
         if (urls.containsKey(uuid)) {
             downloadTask = urls.get(uuid);
+            downloadTask.updateContent(content);
         } else {
             downloadTask = new DownloadTask(content);
             urls.put(uuid, downloadTask);
@@ -338,16 +339,19 @@ public class DefaultHandler extends Handler {
     private void addDownloadsRequest(Context ctx) {
         try {
             JSONObjectContainer requestData = (JSONObjectContainer) JSONReader.readString(ctx.body());
-            
+
             for (Object data : requestData.getArrayContainer("list").getRaw()) {
                 JSONObjectContainer item = (JSONObjectContainer) JSONReader.readString(data.toString());
                 scheduleDownload(item);
             }
-            
+
             // Return success response
             ctx.status(200);
             ctx.json(Map.of("status", "success", "message", "Downloads added successfully"));
-            
+        } catch (WebResponseException ex) {
+			log.error("Failed to add downloads, cause: {}", ex.getMessage());
+            ctx.status(400);
+            ctx.json(Map.of("error", ex.getResponse().getMessage()));
         } catch (Exception ex) {
             log.error("Failed to add downloads via REST API", ex);
             ctx.status(500);
