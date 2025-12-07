@@ -431,6 +431,9 @@ public class DefaultHandler extends Handler {
         pathParams = {
             @OpenApiParam(name = "uuid", description = "The UUID of the download task", required = true)
         },
+        queryParams = {
+            @OpenApiParam(name = "detailed", description = "Set to 'true' to view detailed log file", required = false)
+        },
         responses = {
             @OpenApiResponse(status = "200", description = "Log file content displayed successfully"),
             @OpenApiResponse(status = "404", description = "Download task or log file not found"),
@@ -442,6 +445,7 @@ public class DefaultHandler extends Handler {
         try {
             String uuidStr = ctx.pathParam("uuid");
             UUID uuid = UUID.fromString(uuidStr);
+            boolean detailed = "true".equals(ctx.queryParam("detailed"));
 
             DownloadTask downloadTask = urls.get(uuid);
             if (downloadTask == null) {
@@ -450,10 +454,11 @@ public class DefaultHandler extends Handler {
                 return;
             }
 
-            File logFile = downloadTask.getLogFile();
+            File logFile = detailed ? downloadTask.getDetailedLogFile() : downloadTask.getOutputLogFile();
             if (logFile == null || !logFile.exists()) {
+                String logType = detailed ? "detailed log" : "log";
                 ctx.status(404);
-                ctx.json(Map.of("error", "Log file not found"));
+                ctx.json(Map.of("error", logType + " file not found"));
                 return;
             }
 

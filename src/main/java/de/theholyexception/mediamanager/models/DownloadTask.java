@@ -158,9 +158,12 @@ public class DownloadTask implements Comparable<DownloadTask> {
     private long retryTimestamp;
 
     @Getter
-    private File logFile;
-    private BufferedOutputStream logFileFOS;
-    private boolean hadServerError = false;
+    private File outputLogFile;
+    private BufferedOutputStream outputLogFileStream;
+    @Getter
+    private File detailedLogFile;
+    private BufferedOutputStream detailedLogFileStream;
+    private boolean hadSeverError = false;
     private boolean hadWarning = false;
     //endregion properties
 
@@ -585,10 +588,11 @@ public class DownloadTask implements Comparable<DownloadTask> {
     }
 
     private void createLogFile() {
-        logFile = new File(DOWNLOADS_LOG_FOLDER, LOG_FILE_DATE_FORMAT.format(new Date())+"-"+Utils.escape(url)+".log");
+        outputLogFile = new File(DOWNLOADS_LOG_FOLDER, LOG_FILE_DATE_FORMAT.format(new Date())+"-"+Utils.escape(url)+".log");
+        detailedLogFile = new File(DOWNLOADS_LOG_FOLDER, LOG_FILE_DATE_FORMAT.format(new Date())+"-"+Utils.escape(url)+".detailed.log");
         try {
-            logFileFOS = new BufferedOutputStream(new FileOutputStream(logFile));
-
+            outputLogFileStream = new BufferedOutputStream(new FileOutputStream(outputLogFile));
+            detailedLogFileStream = new BufferedOutputStream(new FileOutputStream(detailedLogFile));
         } catch (IOException ex) {
             log.error("Failed to create download log file", ex);
         }
@@ -602,6 +606,22 @@ public class DownloadTask implements Comparable<DownloadTask> {
             gos.close();
             Files.delete(logFile.toPath());
             logFile = null;
+            {
+                outputLogFileStream.close();
+                GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(outputLogFile.getName()+".gz")));
+                gos.write(StaticUtils.loadBytes(outputLogFile));
+                gos.close();
+                Files.delete(outputLogFile.toPath());
+                outputLogFile = null;
+            }
+            {
+                detailedLogFileStream.close();
+                GZIPOutputStream gos = new GZIPOutputStream(new BufferedOutputStream(new FileOutputStream(detailedLogFile.getName()+"detailed.gz")));
+                gos.write(StaticUtils.loadBytes(detailedLogFile));
+                gos.close();
+                Files.delete(detailedLogFile.toPath());
+                detailedLogFile = null;
+            }
         } catch (IOException ex) {
             throw new IllegalStateException("Failed to compress log file");
         }
@@ -614,14 +634,16 @@ public class DownloadTask implements Comparable<DownloadTask> {
      * @param title The title to use in the log file name
      */
     private void updateLogFile(String title) {
-        if (logFile == null || logFileFOS == null)
+        if (outputLogFile == null || outputLogFileStream == null)
             throw new IllegalStateException("Log file is not initialized");
+        if (detailedLogFile == null || detailedLogFileStream == null)
+            throw new IllegalStateException("Detailed log file is not initialized");
 
         synchronized (this) {
             try {
-                logFileFOS.flush();
-                logFileFOS.close();
-                byte[] data = StaticUtils.loadBytes(logFile);
+                outputLogFileStream.flush();
+                outputLogFileStream.close();
+                byte[] data = StaticUtils.loadBytes(outputLogFile);
 
                 String formatedTime = LOG_FILE_DATE_FORMAT.format(new Date());
                 String formatedUrl = Utils.escape(url.split("e/")[1]).replace("_","");
@@ -631,26 +653,53 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
 				log.debug("Updating log file -> {}", newFile.getAbsolutePath());
 
-                Files.delete(logFile.toPath());
+                Files.delete(outputLogFile.toPath());
 
-                logFile = newFile;
-                logFileFOS = new BufferedOutputStream(new FileOutputStream(logFile));
-                logFileFOS.write(data);
-                logFileFOS.flush();
+                outputLogFile = newFile;
+                outputLogFileStream = new BufferedOutputStream(new FileOutputStream(outputLogFile));
+                outputLogFileStream.write(data);
+                outputLogFileStream.flush();
             } catch (IOException ex) {
                 log.error("Failed to update download log file", ex);
+            }
+
+            try {
+                detailedLogFileStream.flush();
+                detailedLogFileStream.close();
+                byte[] data = StaticUtils.loadBytes(detailedLogFile);
+
+                String formatedTime = LOG_FILE_DATE_FORMAT.format(new Date());
+                String formatedUrl = Utils.escape(url.split("e/")[1]).replace("_","");
+                String filename = String.format("%s-%s-%s.detailed.log", formatedTime, formatedUrl, title);
+
+                File newFile = new File(DOWNLOADS_LOG_FOLDER, filename);
+
+                log.debug("Updating detailed log file -> {}", newFile.getAbsolutePath());
+
+                Files.delete(detailedLogFile.toPath());
+
+                detailedLogFile = newFile;
+                detailedLogFileStream = new BufferedOutputStream(new FileOutputStream(detailedLogFile));
+                detailedLogFileStream.write(data);
+                detailedLogFileStream.flush();
+            } catch (IOException ex) {
+                log.error("Failed to update download detailed log file", ex);
             }
         }
     }
 
-    private void writeLogLine(Level level, String message)  {
-        if (logFile == null || logFileFOS == null)
+    private void writeLogLine(Level level, String message) {
+        writeLogLine(level, message, outputLogFileStream);
+    }
+
+    private void writeLogLine(Level level, String message, BufferedOutputStream bos)  {
+        if (bos == null)
             throw new IllegalStateException("Log file is not initialized");
 
         boolean statusChanged = false;
         
-        if (!hadServerError && level == Level.SEVERE) {
-            hadServerError = true;
+        if (!hadSeverError && level == Level.SEVERE) {
+            hadSeverError = true;
             statusChanged = true;
         }
 
@@ -661,7 +710,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
 
         // Update WebSocket content if status changed
         if (statusChanged) {
-            WebSocketUtils.changeObject(this, "hadServerError", hadServerError, "hadWarning", hadWarning);
+            WebSocketUtils.changeObject(this, "hadServerError", hadSeverError, "hadWarning", hadWarning);
         }
 
         synchronized (this) {
@@ -671,8 +720,8 @@ public class DownloadTask implements Comparable<DownloadTask> {
                 logMessage += " \t" + message;
                 logMessage += "\n";
 
-                logFileFOS.write(logMessage.getBytes());
-                logFileFOS.flush();
+                bos.write(logMessage.getBytes());
+                bos.flush();
             } catch (IOException ex) {
                 log.error("Failed to write log file", ex);
             }
@@ -685,7 +734,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             return;
         }
 
-        if (logFile != null)
+        if (outputLogFile != null)
             closeAndCompressLog();
         downloader = null;
     }

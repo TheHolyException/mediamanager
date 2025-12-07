@@ -214,6 +214,10 @@ class DownloadsWidget extends BaseWidget {
                     <i class="fas fa-file-text"></i>
                     <span>View Log</span>
                 </div>
+                <div class="context-menu-item" data-action="viewDetailedLog">
+                    <i class="fas fa-file-alt"></i>
+                    <span>View Detailed Log</span>
+                </div>
                 <div class="context-menu-separator"></div>
                 <div class="context-menu-item" data-action="copyUrl">
                     <i class="fas fa-copy"></i>
@@ -325,6 +329,9 @@ class DownloadsWidget extends BaseWidget {
                     break;
                 case 'viewLog':
                     window.open('/api/view-log/' + uuid, '_blank');
+                    break;
+                case 'viewDetailedLog':
+                    window.open('/api/view-log/' + uuid + '?detailed=true', '_blank');
                     break;
                 case 'copyUrl':
                     navigator.clipboard.writeText(data.url).then(() => {

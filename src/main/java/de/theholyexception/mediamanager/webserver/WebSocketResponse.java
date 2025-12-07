@@ -21,4 +21,8 @@ public enum WebSocketResponse {
         response.set("message", message);
         return this;
     }
+
+    public String getMessage() {
+        return response.get("message", String.class);
+    }
 }
