@@ -7,6 +7,8 @@ import java.nio.charset.StandardCharsets;
 
 public class MP4Utils {
 
+	private MP4Utils() {}
+
 	public static long getVideoDurationSeconds(File mp4File) throws IOException {
 		try (RandomAccessFile raf = new RandomAccessFile(mp4File, "r")) {
 			long fileSize = raf.length();

@@ -1,7 +1,8 @@
-package de.theholyexception.mediamanager.util;
+package de.theholyexception.mediamanager;
 
 import ch.qos.logback.classic.Level;
 import de.theholyexception.mediamanager.models.Target;
+import de.theholyexception.mediamanager.util.InitializationException;
 import lombok.extern.slf4j.Slf4j;
 import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
@@ -219,7 +220,6 @@ public class MediaManagerConfig {
 		log.info("Configuration loaded successfully");
 	}
 
-
 	public static class ProxyEntry {
 		public final String host;
 		public final int port;
@@ -231,7 +231,6 @@ public class MediaManagerConfig {
 			this.type = type;
 		}
 	}
-
 
 
 }

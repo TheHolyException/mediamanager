@@ -1,4 +1,4 @@
-package de.theholyexception.mediamanager.webserver;
+package de.theholyexception.mediamanager.util;
 
 import de.theholyexception.holyapi.datastorage.json.JSONArrayContainer;
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
@@ -8,9 +8,7 @@ import de.theholyexception.mediamanager.models.DownloadTask;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
-import de.theholyexception.mediamanager.util.MediaManagerConfig;
-import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.util.Utils;
+import de.theholyexception.mediamanager.MediaManagerConfig;
 import io.javalin.websocket.WsContext;
 import lombok.extern.slf4j.Slf4j;
 import org.json.simple.JSONArray;

@@ -8,7 +8,7 @@ public enum ValidatorResponse {
 	FILE_SIZE("File size does not match the average in the same folder!");
 
 	@Getter
-	String description;
+	final String description;
 	ValidatorResponse(String description) {
 		this.description = description;
 	}

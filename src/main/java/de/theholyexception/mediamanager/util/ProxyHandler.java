@@ -1,5 +1,6 @@
 package de.theholyexception.mediamanager.util;
 
+import de.theholyexception.mediamanager.MediaManagerConfig;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.networking.smarthttp.HTTPRequestOptions;
 import me.kaigermany.ultimateutils.networking.smarthttp.HTTPResult;

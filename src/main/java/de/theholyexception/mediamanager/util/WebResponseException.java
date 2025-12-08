@@ -1,6 +1,5 @@
 package de.theholyexception.mediamanager.util;
 
-import de.theholyexception.mediamanager.webserver.WebSocketResponse;
 import lombok.Getter;
 
 public class WebResponseException extends RuntimeException {

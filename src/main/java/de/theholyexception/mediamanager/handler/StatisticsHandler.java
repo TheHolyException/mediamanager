@@ -5,7 +5,7 @@ import de.theholyexception.holyapi.util.GUIUtils;
 import de.theholyexception.mediamanager.MediaManager;
 import de.theholyexception.mediamanager.models.DownloadTask;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
-import de.theholyexception.mediamanager.util.MediaManagerConfig;
+import de.theholyexception.mediamanager.MediaManagerConfig;
 import de.theholyexception.mediamanager.util.ProxyHandler;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
@@ -217,6 +217,7 @@ public class StatisticsHandler extends Handler {
 		JSONObject result = new JSONObject();
 		result.put("downloaders", MediaManager.getInstance().getDownloadersVersion());
 		result.put("ultimateutils", MediaManager.getInstance().getUltimateutilsVersion());
+		result.put("holyapi", MediaManager.getInstance().getHolyapiVersion());
 		return result;
 	}
 

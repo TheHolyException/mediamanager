@@ -15,10 +15,9 @@ import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.InitializationException;
-import de.theholyexception.mediamanager.util.MediaManagerConfig;
 import de.theholyexception.mediamanager.util.ProxyHandler;
 import de.theholyexception.mediamanager.util.TargetSystem;
-import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import de.theholyexception.mediamanager.util.WebSocketUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import me.kaigermany.ultimateutils.StaticUtils;
@@ -33,11 +32,10 @@ import java.util.*;
 @Slf4j
 public class MediaManager {
 
-    @Getter
-    private static MediaManager instance;
+    private static String UNKNOWN_VERSION_STRING = "unknown";
 
     @Getter
-    private final ComplexDIContainer dependencyInjector;
+    private static MediaManager instance;
 
     /**
      * Main entry point for the MediaManager application.
@@ -60,6 +58,8 @@ public class MediaManager {
     }
 
     @Getter
+    private final ComplexDIContainer dependencyInjector;
+    @Getter
     private boolean isDockerEnvironment = false;
     @Getter
     private ConfigJSON systemSettings;
@@ -67,11 +67,11 @@ public class MediaManager {
     private final Map<TargetSystem, Handler> handlers = Collections.synchronizedMap(new HashMap<>());
 
     @Getter
-    private String downloadersVersion = "unknown";
+    private String downloadersVersion = UNKNOWN_VERSION_STRING;
     @Getter
-    private String ultimateutilsVersion = "unknown";
+    private String ultimateutilsVersion = UNKNOWN_VERSION_STRING;
     @Getter
-    private String holyapiVersion = "unknown";
+    private String holyapiVersion = UNKNOWN_VERSION_STRING;
 
 	public MediaManager() {
         dependencyInjector = new ComplexDIContainer().setResolveCircularDependencies(true);

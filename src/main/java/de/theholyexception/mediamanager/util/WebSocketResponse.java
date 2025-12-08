@@ -1,4 +1,4 @@
-package de.theholyexception.mediamanager.webserver;
+package de.theholyexception.mediamanager.util;
 
 import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import lombok.Getter;

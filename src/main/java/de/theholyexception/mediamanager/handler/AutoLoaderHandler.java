@@ -5,6 +5,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONReader;
 import de.theholyexception.holyapi.datastorage.sql.interfaces.MySQLInterface;
 import de.theholyexception.holyapi.di.DIInject;
 import de.theholyexception.holyapi.util.ExecutorHandler;
+import de.theholyexception.mediamanager.MediaManagerConfig;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
@@ -12,8 +13,8 @@ import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.*;
-import de.theholyexception.mediamanager.webserver.WebSocketResponse;
-import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import de.theholyexception.mediamanager.util.WebSocketResponse;
+import de.theholyexception.mediamanager.util.WebSocketUtils;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
@@ -77,11 +78,18 @@ public class AutoLoaderHandler extends Handler {
             ExecutorHandler handler = new ExecutorHandler(Executors.newFixedThreadPool(10));
             subscribedAnimes.forEach(anime ->
                 handler.putTask(() -> {
-                    anime.loadMissingEpisodes();
-                    anime.scanDirectoryForExistingEpisodes();
-                    log.debug("Unloaded episodes for " + anime.getTitle() + " : " + anime.getUnloadedEpisodeCount(false));
-                    if (anime.isDeepDirty())
-                        anime.writeToDB(db);
+                    anime.setScanning(true);
+                    notifySubscriptionUpdated(anime);
+                    try {
+                        anime.loadMissingEpisodes();
+                        anime.scanDirectoryForExistingEpisodes();
+                        log.debug("Unloaded episodes for " + anime.getTitle() + " : " + anime.getUnloadedEpisodeCount(false));
+                        if (anime.isDeepDirty())
+                            anime.writeToDB(db);
+                    } finally {
+                        anime.setScanning(false);
+                        notifySubscriptionUpdated(anime);
+                    }
                 }, 1)
             );
             handler.awaitGroup(1);
@@ -612,11 +620,8 @@ public class AutoLoaderHandler extends Handler {
 
             Anime anime = optAnime.get();
             log.info("Manual scan requested for anime: {}", anime.getTitle());
-            
-            // Set scanning state to true
+
             anime.setScanning(true);
-            
-            // Notify clients that scanning has started
             notifySubscriptionUpdated(anime);
 
 
@@ -631,7 +636,6 @@ public class AutoLoaderHandler extends Handler {
 
             // Scan for new episodes that are not in our data structure
             anime.loadMissingEpisodes();
-
             // Scan directory for existing downloaded episodes
             anime.scanDirectoryForExistingEpisodes();
 
@@ -639,16 +643,13 @@ public class AutoLoaderHandler extends Handler {
                 anime.writeToDB(db);
             }
 
-            // Update the last scan time
             anime.updateLastUpdate();
 
             int unloadedCount = anime.getUnloadedEpisodeCount(true);
             log.info("Manual scan completed for anime: {} - Found {} unloaded episodes",
                 anime.getTitle(), unloadedCount);
-            // Set scanning state to false when done
-            anime.setScanning(false);
 
-            // Send selective update to preserve UI search/filter state
+            anime.setScanning(false);
             notifySubscriptionUpdated(anime);
             
             ctx.json(Map.of(
@@ -724,9 +725,9 @@ public class AutoLoaderHandler extends Handler {
                         }
 
                         log.info("Scanning anime: " + anime.getTitle());
-                        
-                        // Set scanning state to true
+
                         anime.setScanning(true);
+                        notifySubscriptionUpdated(anime);
 
                         // Checks the episodes that do not have the requested language
                         // for an update of the language
@@ -749,8 +750,8 @@ public class AutoLoaderHandler extends Handler {
                             anime.writeToDB(db);
 
                         anime.updateLastUpdate(); // Update the lastUpdate variable
-                        // Set scanning state to false when done
                         anime.setScanning(false);
+                        notifySubscriptionUpdated(anime);
 
                         Utils.sleep(MediaManagerConfig.Autoloader.checkDelayMs);
                     }

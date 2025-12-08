@@ -6,6 +6,7 @@ import java.io.*;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 public class Utils {
@@ -78,17 +79,17 @@ public class Utils {
         }
         File[] files = dir.listFiles();
         if (files == null) {
-            log.error("Directory has no files " + dir.getAbsolutePath());
+			log.error("Directory has no files {}", dir.getAbsolutePath());
             return;
         }
         for(File f : files){
             if(f.isDirectory()){
                 safeDelete(f);
             } else {
-                if (!f.delete()) log.warn("Failed to delete file " + f.getAbsolutePath());
+                if (!f.delete()) log.warn("Failed to delete file {}", f.getAbsolutePath());
             }
         }
-        if (!dir.delete()) log.warn("Failed to delete dir " + dir.getAbsolutePath());
+        if (!dir.delete()) log.warn("Failed to delete dir {}", dir.getAbsolutePath());
     }
 
     public static String stackTraceToString(Throwable t) {
@@ -143,6 +144,14 @@ public class Utils {
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to evaluate formula: " + expression, e);
+        }
+    }
+
+    public static Optional<Integer> parseInteger(String str) {
+        try {
+            return Optional.of(Integer.parseInt(str));
+        } catch (NumberFormatException e) {
+            return Optional.empty();
         }
     }
 

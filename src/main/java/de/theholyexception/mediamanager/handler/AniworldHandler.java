@@ -4,6 +4,7 @@ import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
 import de.theholyexception.mediamanager.models.aniworld.Episode;
 import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.util.TargetSystem;
+import de.theholyexception.mediamanager.util.Utils;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.openapi.HttpMethod;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Handler for resolving anime episode links from Aniworld.
@@ -24,6 +26,7 @@ import java.util.Map;
 @Slf4j
 public class AniworldHandler extends Handler {
 
+    private static final String ERROR_KEY = "error";
 
     /**
      * Creates a new AniworldHandler for the specified target system.
@@ -74,23 +77,21 @@ public class AniworldHandler extends Handler {
             String languageStr = ctx.queryParam("language");
             
             if (url == null || languageStr == null) {
-                ctx.status(400).json(Map.of("error", "Missing required parameters: url and language"));
+                ctx.status(400).json(Map.of(ERROR_KEY, "Missing required parameters: url and language"));
                 return;
             }
 
-            int language;
-            try {
-                language = Integer.parseInt(languageStr);
-            } catch (NumberFormatException e) {
-                ctx.status(400).json(Map.of("error", "Invalid language ID format"));
+            Optional<Integer> language = Utils.parseInteger(languageStr);
+            if (language.isEmpty()) {
+                ctx.status(400).json(Map.of(ERROR_KEY, "Invalid language ID format"));
                 return;
             }
 
-            List<String> links = resolveAnimeLinks(language, url);
+            List<String> links = resolveAnimeLinks(language.get(), url);
             ctx.json(Map.of("links", links));
         } catch (Exception ex) {
             log.error("Failed to resolve anime via REST API", ex);
-            ctx.status(500).json(Map.of("error", ex.getMessage()));
+            ctx.status(500).json(Map.of(ERROR_KEY, ex.getMessage()));
         }
     }
 

@@ -1,6 +1,6 @@
 package de.theholyexception.mediamanager.logging;
 
-import de.theholyexception.mediamanager.util.MediaManagerConfig;
+import de.theholyexception.mediamanager.MediaManagerConfig;
 
 public class DownloadLoggerFactory {
 

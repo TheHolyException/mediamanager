@@ -10,10 +10,10 @@ import de.theholyexception.mediamanager.models.Target;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.InitializationException;
-import de.theholyexception.mediamanager.util.MediaManagerConfig;
+import de.theholyexception.mediamanager.MediaManagerConfig;
 import de.theholyexception.mediamanager.util.TargetSystem;
 import de.theholyexception.mediamanager.util.WebResponseException;
-import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import de.theholyexception.mediamanager.util.WebSocketResponse;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.openapi.HttpMethod;
@@ -35,7 +35,7 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.zip.GZIPOutputStream;
 
-import static de.theholyexception.mediamanager.webserver.WebSocketUtils.*;
+import static de.theholyexception.mediamanager.util.WebSocketUtils.*;
 
 /**
  * Default handler implementation that manages core functionality of the MediaManager application.
@@ -63,8 +63,6 @@ public class DefaultHandler extends Handler {
     /** Setting for maximum retry delay in minutes */
     private SettingProperty<Integer> spMaxRetryDelayMinutes;
 
-    private TimerTask retryTask;
-
     /**
      * Creates a new DefaultHandler instance for the specified target system.
      *
@@ -76,7 +74,7 @@ public class DefaultHandler extends Handler {
     @Override
     public void initialize() {
         compressLogFiles();
-        retryTask = new TimerTask() {
+        TimerTask retryTask = new TimerTask() {
             @Override
             public void run() {
                 List<String> processedUrls = new ArrayList<>();

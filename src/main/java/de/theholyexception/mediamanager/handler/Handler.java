@@ -13,8 +13,6 @@ import lombok.Getter;
  */
 public abstract class Handler {
 
-    protected JSONObjectContainer handlerConfiguration;
-
     @Getter
     private TargetSystem targetSystem;
 

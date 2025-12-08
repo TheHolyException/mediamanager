@@ -8,7 +8,7 @@ import de.theholyexception.holyapi.datastorage.sql.interfaces.DataBaseInterface;
 import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.util.Utils;
 import de.theholyexception.mediamanager.util.WebResponseException;
-import de.theholyexception.mediamanager.webserver.WebSocketResponse;
+import de.theholyexception.mediamanager.util.WebSocketResponse;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import lombok.Getter;

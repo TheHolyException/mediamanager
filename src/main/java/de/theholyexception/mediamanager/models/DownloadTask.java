@@ -4,6 +4,7 @@ import de.theholyexception.holyapi.datastorage.json.JSONObjectContainer;
 import de.theholyexception.holyapi.util.ExecutorHandler;
 import de.theholyexception.holyapi.util.ExecutorTask;
 import de.theholyexception.mediamanager.MediaManager;
+import de.theholyexception.mediamanager.MediaManagerConfig;
 import de.theholyexception.mediamanager.handler.AutoLoaderHandler;
 import de.theholyexception.mediamanager.handler.DefaultHandler;
 import de.theholyexception.mediamanager.logging.DownloadLogger;
@@ -12,8 +13,8 @@ import de.theholyexception.mediamanager.logging.LoggerCallback;
 import de.theholyexception.mediamanager.models.aniworld.Anime;
 import de.theholyexception.mediamanager.models.aniworld.AniworldHelper;
 import de.theholyexception.mediamanager.util.*;
-import de.theholyexception.mediamanager.webserver.WebSocketResponse;
-import de.theholyexception.mediamanager.webserver.WebSocketUtils;
+import de.theholyexception.mediamanager.util.WebSocketResponse;
+import de.theholyexception.mediamanager.util.WebSocketUtils;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
@@ -34,7 +35,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
-import static de.theholyexception.mediamanager.webserver.WebSocketUtils.changeObject;
+import static de.theholyexception.mediamanager.util.WebSocketUtils.changeObject;
 
 @Slf4j
 public class DownloadTask implements Comparable<DownloadTask> {
@@ -587,7 +588,7 @@ public class DownloadTask implements Comparable<DownloadTask> {
             public void onError(String message) {
                 if (!hadSeverError) {
                     hadSeverError = true;
-                    WebSocketUtils.changeObject(DownloadTask.this, "hadServerError", hadSeverError, "hadWarning", hadWarning);
+                    WebSocketUtils.changeObject(DownloadTask.this, "hadServerError", hadSeverError);
                 }
             }
         };
