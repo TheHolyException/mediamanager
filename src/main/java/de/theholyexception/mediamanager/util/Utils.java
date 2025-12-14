@@ -10,6 +10,9 @@ import java.util.Optional;
 
 @Slf4j
 public class Utils {
+
+    private Utils() {}
+
     public static void saveBytes(String filename, byte[] data) {
         try {
             File file = new File(filename);

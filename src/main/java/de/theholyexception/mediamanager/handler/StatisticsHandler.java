@@ -35,8 +35,7 @@ public class StatisticsHandler extends Handler {
 	private final Queue<JSONObject> threadHistory = new LinkedList<>();
 	private static final int MAX_HISTORY_SIZE = 120; // Keep last 720 data points (60 minutes at 5-second intervals)
 
-	public StatisticsHandler() {
-	}
+	private StatisticsHandler() {}
 
 	@Override
 	public void initialize() {

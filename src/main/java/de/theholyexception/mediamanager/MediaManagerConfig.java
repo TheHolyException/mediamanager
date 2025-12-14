@@ -7,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.tomlj.Toml;
 import org.tomlj.TomlParseResult;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,7 +17,8 @@ import java.util.List;
 @Slf4j
 public class MediaManagerConfig {
 
-	private static File file;
+	private MediaManagerConfig() {}
+
 	private static TomlParseResult config;
 
 	public static class General {
@@ -191,7 +191,7 @@ public class MediaManagerConfig {
 	}
 
 	public static void initialize(Path path) {
-		if (file != null)
+		if (config != null)
 			throw new IllegalStateException("Already initialized");
 
 		try {

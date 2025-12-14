@@ -31,8 +31,7 @@ public class ProxyHandler {
 	/**
 	 * Private constructor to prevent instantiation
 	 */
-	private ProxyHandler() {
-	}
+	private ProxyHandler() {}
 
 	/**
 	 * Initializes the proxy handler
