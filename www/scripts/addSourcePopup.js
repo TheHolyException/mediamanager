@@ -740,8 +740,3 @@ function fetchSubfolders(targetPath, $subfolderElement) {
         }
     });
 }
-
-// Make sure the function is available when the document is ready
-$(document).ready(function() {
-    console.log('addSourcePopup.js loaded, openAddSourcePopup available:', typeof window.openAddSourcePopup);
-});

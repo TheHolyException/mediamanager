@@ -86,178 +86,6 @@ class SubscriptionsWidget extends BaseWidget {
                 </button>
             </div>
 
-            <div class="add-subscription-form" style="display: none;">
-                <div class="form-header">
-                    <h3><i class="fa fa-plus-circle"></i> New Subscription</h3>
-                    <button class="close-form-btn"><i class="fa fa-times"></i></button>
-                </div>
-                
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="sub-url">
-                            <i class="fa fa-link"></i>
-                            Anime URL *
-                        </label>
-                        <input type="text" class="sub-url" placeholder="https://aniworld.to/anime/..." required>
-                        <div class="input-hint">Enter the full URL to the anime series</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="sub-language">
-                            <i class="fa fa-language"></i>
-                            Preferred Language
-                        </label>
-                        <select class="sub-language">
-                            <option value="1">German (Dub)</option>
-                            <option value="2">German (Sub)</option>
-                            <option value="3">English (Dub)</option>
-                            <option value="4">English (Sub)</option>
-                            <option value="5">Japanese (Sub)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="sub-target-folder">
-                            <i class="fa fa-hdd"></i>
-                            Target Folder
-                        </label>
-                        <select class="sub-target-folder targetfolder">
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="sub-subfolder">
-                            <i class="fa fa-folder"></i>
-                            Subfolder
-                        </label>
-                        <div class="custom-dropdown">
-                            <input type="text" class="sub-subfolder" placeholder="Anime/Series Name" list="sub-subfolder-list" style="width: 100%;">
-                            <datalist class="sub-subfolder-list">
-                            </datalist>
-                        </div>
-                        <div class="input-hint">Leave empty to auto-detect from title, or select from existing folders</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="sub-excluded">
-                            <i class="fa fa-ban"></i>
-                            Excluded Seasons
-                        </label>
-                        <input type="text" class="sub-excluded" placeholder="1,3,5">
-                        <div class="input-hint">Comma-separated season numbers to skip</div>
-                    </div>
-                    
-                    <div class="form-group quality-group">
-                        <label>
-                            <i class="fa fa-video"></i>
-                            Preferred Quality
-                        </label>
-                        <div class="quality-options">
-                            <label class="quality-option">
-                                <input type="radio" name="quality" value="720p" checked>
-                                <span>720p</span>
-                            </label>
-                            <label class="quality-option">
-                                <input type="radio" name="quality" value="1080p">
-                                <span>1080p</span>
-                            </label>
-                            <label class="quality-option">
-                                <input type="radio" name="quality" value="any">
-                                <span>Any</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" class="auto-start">
-                            <span class="checkmark"></span>
-                            Start downloading immediately
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button class="cancel-btn">Cancel</button>
-                    <button class="save-subscription-btn primary-btn">
-                        <i class="fa fa-save"></i>
-                        Add Subscription
-                    </button>
-                </div>
-            </div>
-
-            <div class="edit-subscription-form" style="display: none;">
-                <div class="form-header">
-                    <h3><i class="fa fa-edit"></i> Edit Subscription</h3>
-                    <button class="close-edit-form-btn"><i class="fa fa-times"></i></button>
-                </div>
-                
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="edit-url">
-                            <i class="fa fa-link"></i>
-                            Anime URL
-                        </label>
-                        <input type="text" class="edit-url" readonly disabled>
-                        <div class="input-hint">URL cannot be changed after subscription</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="edit-language">
-                            <i class="fa fa-language"></i>
-                            Preferred Language
-                        </label>
-                        <select class="edit-language">
-                            <option value="1">German (Dub)</option>
-                            <option value="2">German (Sub)</option>
-                            <option value="3">English (Dub)</option>
-                            <option value="4">English (Sub)</option>
-                            <option value="5">Japanese (Sub)</option>
-                        </select>
-                        <div class="input-hint">Changing language will affect future downloads</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-target-folder">
-                            <i class="fa fa-hdd"></i>
-                            Target Folder
-                        </label>
-                        <select class="edit-target-folder targetfolder">
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-subfolder">
-                            <i class="fa fa-folder"></i>
-                            Subfolder
-                        </label>
-                        <div class="custom-dropdown">
-                            <input type="text" class="edit-subfolder" placeholder="Anime/Series Name" list="edit-subfolder-list" style="width: 100%;">
-                            <datalist class="edit-subfolder-list">
-                            </datalist>
-                        </div>
-                        <div class="input-hint">Leave empty to auto-detect from title, or select from existing folders</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="edit-excluded">
-                            <i class="fa fa-ban"></i>
-                            Excluded Seasons
-                        </label>
-                        <input type="text" class="edit-excluded" placeholder="1,3,5">
-                        <div class="input-hint">Comma-separated season numbers to skip downloading</div>
-                    </div>
-                </div>
-                
-                <div class="form-actions">
-                    <button class="cancel-edit-btn cancel-btn">Cancel</button>
-                    <button class="save-edit-btn primary-btn">
-                        <i class="fa fa-save"></i>
-                        Save Changes
-                    </button>
-                </div>
-            </div>
-
             <div class="subscriptions-container scrollable-content">
                 <div class="subscriptions-grid"></div>
             </div>
@@ -424,61 +252,33 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     showAddForm(widget) {
-        this.populateTargetFolders(widget);
-        widget.find('.add-subscription-form').slideDown(300);
-        widget.find('.sub-url').focus();
+        // Open the subscription popup in add mode
+        if (typeof window.openSubscriptionPopup === 'function') {
+            window.openSubscriptionPopup('add');
+        } else {
+            console.error('openSubscriptionPopup function not available');
+            alert('Subscription dialog is not ready yet. Please try again in a moment.');
+        }
     }
 
     hideAddForm(widget) {
-        widget.find('.add-subscription-form').slideUp(300);
-        this.clearForm(widget);
+        // Deprecated - forms are now handled by popup
+        console.warn('hideAddForm called but forms are now in popup');
     }
 
     showEditForm(widget, item) {
-        SubscriptionsWidget.currentEditItem = item;
-        
-        this.populateTargetFolders(widget);
-        
-        // Parse the directory path to separate target folder and subfolder
-        const directory = item.directory || '';
-        let targetFolder = '';
-        let subfolder = '';
-        
-        if (directory) {
-            // Find the target folder that matches the beginning of the directory
-            for (let folder of targetFolders) {
-                if (directory.startsWith(folder.displayName + '/') || directory === folder.displayName) {
-                    targetFolder = folder.identifier;
-                    subfolder = directory.substring(folder.displayName.length + 1);
-                    break;
-                }
-            }
-            // If no match found, treat the whole thing as a subfolder
-            if (!targetFolder && targetFolders.length > 0) {
-                targetFolder = targetFolders[0].identifier;
-                subfolder = directory;
-            }
+        // Open the subscription popup in edit mode
+        if (typeof window.openSubscriptionPopup === 'function') {
+            window.openSubscriptionPopup('edit', item);
+        } else {
+            console.error('openSubscriptionPopup function not available');
+            alert('Subscription dialog is not ready yet. Please try again in a moment.');
         }
-        
-        // Populate form with current values
-        widget.find('.edit-url').val(item.url);
-        widget.find('.edit-target-folder').val(targetFolder);
-        widget.find('.edit-subfolder').val(subfolder);
-        widget.find('.edit-language').val(item.languageId || 1);
-        widget.find('.edit-excluded').val(item.excludedSeasons || '');
-        
-        // Fetch subfolders for the selected target folder
-        if (targetFolder) {
-            this.fetchSubfolders(targetFolder, widget.find('.edit-subfolder-list'));
-        }
-        
-        widget.find('.edit-subscription-form').slideDown(300);
-        widget.find('.edit-subfolder').focus();
     }
 
     hideEditForm(widget) {
-        widget.find('.edit-subscription-form').slideUp(300);
-        SubscriptionsWidget.currentEditItem = null;
+        // Deprecated - forms are now handled by popup
+        console.warn('hideEditForm called but forms are now in popup');
     }
 
     clearForm(widget) {
