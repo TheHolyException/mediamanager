@@ -177,19 +177,22 @@ public class AutoLoaderHandler extends Handler {
                 return;
             }
 
-            subscribedAnimes.add(anime);
-            anime.writeToDB(db);
-
-            //db.getExecutorHandler().awaitGroup(-1);
-
-            anime.loadMissingEpisodes();
-            anime.scanDirectoryForExistingEpisodes();
-
-            // Notify all WebSocket clients that subscriptions have changed
-            notifyDataChanged("subscriptions");
-            
             ctx.status(HttpStatus.CREATED);
             ctx.json(anime.toJSONObject());
+
+            CoProcessor.getInstance().putJob(() -> {
+                anime.setScanning(true);
+                notifySubscriptionUpdated(anime);
+
+                subscribedAnimes.add(anime);
+                anime.loadMissingEpisodes();
+                anime.scanDirectoryForExistingEpisodes();
+                anime.writeToDB(db);
+
+                // Notify all WebSocket clients that subscriptions have changed
+                anime.setScanning(false);
+                notifySubscriptionUpdated(anime);
+            });
         } catch (Exception ex) {
             log.error("Error subscribing to anime", ex);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR);
