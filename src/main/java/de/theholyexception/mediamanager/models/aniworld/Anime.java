@@ -35,6 +35,8 @@ public class Anime {
     @Getter
     private final String url;
     @Getter
+    private String coverImageUrl;
+    @Getter
     private File directory;
     @Getter
     private List<Integer> excludedSeasons;
@@ -121,6 +123,7 @@ public class Anime {
         this.id = Anime.getAndAddCurrentID();
         this.excludedSeasons = excludedSeasons;
         this.paused = false;
+        loadCoverImageURL();
         setDirectoryPath(null, false);
     }
 
@@ -129,6 +132,7 @@ public class Anime {
         this.languageId = row.get("nLanguageId", Integer.class);
         this.title = row.get("szTitle", String.class);
         this.url = row.get("szURL", String.class);
+        this.coverImageUrl = row.get("szCoverImageUrl", String.class);
         String overridePath = row.get("szCustomDirectory", String.class);
         if (overridePath == null || overridePath.isEmpty()) overridePath = null;
         this.excludedSeasons = new ArrayList<>();
@@ -322,6 +326,11 @@ public class Anime {
         lastUpdate = System.currentTimeMillis();
     }
 
+    public void loadCoverImageURL() {
+        this.coverImageUrl = AniworldHelper.getCoverImageUrl(url);
+        isDirty = true;
+    }
+
     /**
      * Initiates downloads for all unloaded episodes of a specific anime.
      * Creates download tasks for each missing episode and adds them to the download queue.
@@ -377,11 +386,12 @@ public class Anime {
     public void writeToDB(DataBaseInterface db) {
         if (isDirty) {
             log.debug("Writing anime to db: " + this);
-            db.executeSafe("call addAnime(?, ?, ?, ?, ?, ?, ?)",
+            db.executeSafe("call addAnime(?, ?, ?, ?, ?, ?, ?, ?)",
                     id,
                     languageId,
                     title,
                     url,
+                    coverImageUrl == null ? "" : coverImageUrl,
                     customDirectory == null ?"" : customDirectory,
                     Utils.intergerListToString(excludedSeasons),
                     paused ? 1 : 0);
@@ -402,6 +412,7 @@ public class Anime {
         object.put("languageId", languageId);
         object.put("title", title);
         object.put("url", url);
+        object.put("coverImageUrl", coverImageUrl);
         object.put("unloaded", getUnloadedEpisodeCount(true) + " [\uD83C\uDDE9\uD83C\uDDEA]  ("+getUnloadedEpisodeCount(false)+"[\uD83C\uDDEF\uD83C\uDDF5])");
         object.put("lastScan", lastUpdate);
         String relativePath = getDirectory().toString().replace(baseDirectory.toString(), "");

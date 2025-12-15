@@ -458,53 +458,56 @@ class SubscriptionsWidget extends BaseWidget {
 
     addSubscriptionCardToWidget(widget, item) {
         const container = widget.find('.subscriptions-grid');
-        
+
         // Remove existing card
         container.find(`[data-id="${item.id}"]`).remove();
 
         const status = this.getSubscriptionStatus(item);
         const lastScan = this.formatLastScan(item.lastScan);
-        
+
         const card = $(`
             <div class="subscription-card" data-id="${item.id}" data-status="${status}" data-subscription='${JSON.stringify(item).replace(/'/g, "&#39;")}'>
+                ${item.coverImageUrl ? `
+                <div class="cover-image">
+                    <img src="${item.coverImageUrl}" alt="${item.title}" onerror="this.parentElement.style.display='none'">
+                </div>
+                ` : ''}
+
                 <div class="card-header">
                     <div class="title-section">
                         <h3 class="anime-title" title="${item.title}">${item.title}</h3>
                     </div>
                 </div>
-                
+
                 <div class="card-content">
                     <div class="info-grid">
                         <div class="info-item">
                             <i class="fa fa-folder"></i>
-                            <span class="label">Folder:</span>
                             <span class="value folder-path" title="${item.directory || 'Auto'}">${item.directory || 'Auto'}</span>
                         </div>
                         <div class="info-item">
                             <i class="fa fa-download"></i>
-                            <span class="label">Unloaded:</span>
                             <span class="value episodes-count">${item.unloaded || 0}</span>
+                            <span class="label">unloaded</span>
                         </div>
                         <div class="info-item">
                             <i class="fa fa-clock"></i>
-                            <span class="label">Last Scan:</span>
                             <span class="value">${lastScan}</span>
                         </div>
                         <div class="info-item">
                             <i class="fa fa-link"></i>
-                            <span class="label">Source:</span>
-                            <a href="${item.url}" target="_blank" class="value link">Aniworld</a>
+                            <a href="${item.url}" target="_blank" class="value link">Source</a>
                         </div>
                     </div>
-                    
+
                     ${item.excludedSeasons ? `
                     <div class="excluded-seasons">
                         <i class="fa fa-ban"></i>
-                        <span>Excluded seasons: ${item.excludedSeasons}</span>
+                        <span>Excluded: ${item.excludedSeasons}</span>
                     </div>
                     ` : ''}
                 </div>
-                
+
                 <div class="card-footer">
                     <div class="status-div">
                         <span class="status-badge status-${status}">${item.status || status}</span>
@@ -515,7 +518,7 @@ class SubscriptionsWidget extends BaseWidget {
 
         // Add cursor style for context menu
         card.css('cursor', 'context-menu');
-        
+
         container.append(card);
         this.updateEmptyState(widget);
         this.updateStats(widget);

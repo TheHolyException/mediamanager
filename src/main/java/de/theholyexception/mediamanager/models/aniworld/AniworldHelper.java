@@ -134,6 +134,27 @@ public class AniworldHelper {
         return null;
     }
 
+    public static @Null String getCoverImageUrl(String url) {
+        statistics.computeIfAbsent("Cover Image Requests", k -> new AtomicInteger(0)).incrementAndGet();
+        try {
+            Connection con = Jsoup.connect(url);
+            if (ProxyHandler.hasProxies()) con.proxy(ProxyHandler.getNextProxy());
+            Document document = con.get();
+            Element coverBox = document.selectFirst(".seriesCoverBox img");
+
+            if (coverBox != null) {
+                String imageUrl = coverBox.attr("data-src");
+                if (imageUrl == null || imageUrl.isEmpty()) {
+                    imageUrl = coverBox.attr("src");
+                }
+                return ANIWORLD_URL + imageUrl;
+            }
+        } catch (Exception ex) {
+            log.error("Failed to obtain anime cover image", ex);
+        }
+        return null;
+    }
+
     public static String getRedirectedURL(String url) {
         statistics.computeIfAbsent("Redirect Requests", k -> new AtomicInteger(0)).incrementAndGet();
         try {

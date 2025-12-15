@@ -80,9 +80,13 @@ public class AutoLoaderHandler extends Handler {
                     anime.setScanning(true);
                     notifySubscriptionUpdated(anime);
                     try {
+                        if (anime.getCoverImageUrl() == null || anime.getCoverImageUrl().isEmpty()) {
+							log.warn("Found missing cover image for {} trying to obtain...", anime.getTitle());
+                            anime.loadCoverImageURL();
+                        }
                         anime.loadMissingEpisodes();
                         anime.scanDirectoryForExistingEpisodes();
-                        log.debug("Unloaded episodes for " + anime.getTitle() + " : " + anime.getUnloadedEpisodeCount(false));
+						log.debug("Unloaded episodes for {} : {}", anime.getTitle(), anime.getUnloadedEpisodeCount(false));
                         if (anime.isDeepDirty())
                             anime.writeToDB(db);
                     } finally {

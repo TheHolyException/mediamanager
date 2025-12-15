@@ -3,17 +3,19 @@ CREATE OR REPLACE PROCEDURE `mediamanager`.`addAnime`(
 	IN _nLanguageId int,
 	IN _szTitle varchar(200),
 	IN _szURL varchar(200),
+	IN _szCoverImageUrl varchar(512),
 	IN _szCustomDirectory varchar(200),
 	IN _szExcludedSeasons varchar(200),
 	IN _bPaused boolean
 )
 BEGIN
-	if not exists (select 1 from anime where nKey = _nKey) then 
+	if not exists (select 1 from anime where nKey = _nKey) then
 		insert into anime (
 			nKey,
 			nLanguageId,
 			szTitle,
 			szURL,
+			szCoverImageUrl,
 			szCustomDirectory,
 			szExcludedSeasons,
 			bPaused
@@ -22,6 +24,7 @@ BEGIN
 			_nLanguageId,
 			_szTitle,
 			_szURL,
+			_szCoverImageUrl,
 			_szCustomDirectory,
 			_szExcludedSeasons,
 			_bPaused
@@ -31,6 +34,7 @@ BEGIN
 		set nLanguageId = _nLanguageId,
 			szTitle = _szTitle,
 			szURL = _szURL,
+			szCoverImageUrl = _szCoverImageUrl,
 			szCustomDirectory = _szCustomDirectory,
 			szExcludedSeasons = _szExcludedSeasons,
 			bPaused = _bPaused
