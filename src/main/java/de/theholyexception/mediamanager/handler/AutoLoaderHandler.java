@@ -13,13 +13,12 @@ import de.theholyexception.mediamanager.models.aniworld.Season;
 import de.theholyexception.mediamanager.settings.SettingProperty;
 import de.theholyexception.mediamanager.settings.Settings;
 import de.theholyexception.mediamanager.util.*;
-import de.theholyexception.mediamanager.util.WebSocketResponse;
-import de.theholyexception.mediamanager.util.WebSocketUtils;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import io.javalin.openapi.*;
 import lombok.extern.slf4j.Slf4j;
+import me.kaigermany.ultimateutils.sync.thread.CoProcessor;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -328,7 +327,7 @@ public class AutoLoaderHandler extends Handler {
                 Anime anime = optAnime.get();
                 db.executeSafe("delete from anime where nKey = ?", id);
                 subscribedAnimes.remove(anime);
-                
+
                 // Notify all WebSocket clients that subscriptions have changed
                 notifyDataChanged("subscriptions");
                 

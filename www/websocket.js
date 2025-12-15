@@ -24,10 +24,10 @@ function connect() {
             return; // Don't process keepalive messages further
         }
 
-        if (data.cmd != "systemInfo" || true) {
+        /*if (data.cmd != "systemInfo" || true) {
             console.log("Receiving:")
             console.log(data)
-        }
+        }*/
 
         let targetSystem = "default";
         if (data.targetSystem != undefined) targetSystem = data.targetSystem;
@@ -79,10 +79,10 @@ function sendPacket(cmd, targetSystem, content) {
         targetSystem: targetSystem,
         content: content
     }
-    if (cmd != "systemInfo" && cmd != "keepalive") {
+    /*if (cmd != "systemInfo" && cmd != "keepalive") {
         console.log("Sending")
         console.log(request)
-    }
+    }*/
     ws.send(JSON.stringify(request));
 }
 

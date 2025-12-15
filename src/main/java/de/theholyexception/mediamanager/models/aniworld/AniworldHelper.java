@@ -27,6 +27,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AniworldHelper {
 
+    public static int GID_EPISODE_LANGUAGE_RESOLVER = 883855723;
+
+
     @Getter
     private static final Map<String, AtomicInteger> statistics = Collections.synchronizedMap(new HashMap<>());
 
@@ -192,7 +195,7 @@ public class AniworldHelper {
         episode.setLanguageIds(languageIds);
 
         episodeLanguageCache.put(episode.getAniworldUrl(), languageIds);
-        urlResolver.putTask(task, 883855723);
+        urlResolver.putTask(task, GID_EPISODE_LANGUAGE_RESOLVER);
         return task;
     }
 

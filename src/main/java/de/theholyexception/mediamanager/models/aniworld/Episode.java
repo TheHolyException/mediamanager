@@ -82,7 +82,7 @@ public class Episode {
     public List<Integer> getLanguageIds() {
         if (languageIds == null) {
             AniworldHelper.resolveEpisodeLanguages(this);
-            AniworldHelper.urlResolver.awaitGroup(883855723);
+            AniworldHelper.urlResolver.awaitGroup(AniworldHelper.GID_EPISODE_LANGUAGE_RESOLVER);
             this.isDirty = true;
         }
         return languageIds;
@@ -97,7 +97,7 @@ public class Episode {
 
             ArrayList<Integer> languageIDsPrev = new ArrayList<>(languageIds == null ? new ArrayList<>() : languageIds);
             AniworldHelper.resolveEpisodeLanguages(this);
-            AniworldHelper.urlResolver.awaitGroup(883855723);
+            AniworldHelper.urlResolver.awaitGroup(AniworldHelper.GID_EPISODE_LANGUAGE_RESOLVER);
             if (languageIDsPrev.containsAll(languageIds))
                 this.isDirty = true;
         }
