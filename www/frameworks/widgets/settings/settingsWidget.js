@@ -332,13 +332,13 @@ class SettingsWidget extends BaseWidget {
             if (data.status === 'success') {
                 this.#showStatus(widget, 'success', 'Settings saved successfully');
                 
-                // Show yeti notification
-                if (window.yeti) {
-                    window.yeti.show({
+                // Show toast notification
+                if (window.toast) {
+                    window.toast.show({
                         title: 'Settings',
                         message: 'Settings saved successfully',
-                        severity: 'ok',
-                        time: 3000
+                        severity: 'success',
+                        duration: 3000
                     });
                 }
                 
@@ -354,13 +354,13 @@ class SettingsWidget extends BaseWidget {
             } else {
                 this.#showStatus(widget, 'error', data.message || 'Failed to save settings');
                 
-                // Show yeti notification
-                if (window.yeti) {
-                    window.yeti.show({
+                // Show toast notification
+                if (window.toast) {
+                    window.toast.show({
                         title: 'Settings Error',
                         message: data.message || 'Failed to save settings',
-                        severity: 'nok',
-                        time: 5000
+                        severity: 'error',
+                        duration: 5000
                     });
                 }
             }
@@ -369,13 +369,13 @@ class SettingsWidget extends BaseWidget {
             console.error('Error saving settings:', error);
             this.#showStatus(widget, 'error', 'Failed to save settings');
             
-            // Show yeti notification
-            if (window.yeti) {
-                window.yeti.show({
+            // Show toast notification
+            if (window.toast) {
+                window.toast.show({
                     title: 'Settings Error',
                     message: 'Failed to save settings',
-                    severity: 'nok',
-                    time: 5000
+                    severity: 'error',
+                    duration: 5000
                 });
             }
         })

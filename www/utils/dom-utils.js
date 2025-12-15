@@ -259,41 +259,41 @@ class APIUtils {
     
     /**
      * Handle API errors consistently
-     * @param {Error} error 
-     * @param {string} defaultMessage 
+     * @param {Error} error
+     * @param {string} defaultMessage
      */
     static handleError(error, defaultMessage = 'An error occurred') {
         const message = error.message || defaultMessage;
-        
-        if (window.yeti) {
-            window.yeti.show({
+
+        if (window.toast) {
+            window.toast.show({
                 message,
-                severity: 'nok',
-                time: 5000
+                severity: 'error',
+                duration: 5000
             });
         } else {
             console.error('API Error:', message);
         }
-        
+
         return message;
     }
     
     /**
      * Handle API success consistently
-     * @param {*} response 
-     * @param {string} defaultMessage 
+     * @param {*} response
+     * @param {string} defaultMessage
      */
     static handleSuccess(response, defaultMessage = 'Operation completed successfully') {
         const message = response?.message || defaultMessage;
-        
-        if (window.yeti) {
-            window.yeti.show({
+
+        if (window.toast) {
+            window.toast.show({
                 message,
-                severity: 'ok',
-                time: 3000
+                severity: 'success',
+                duration: 3000
             });
         }
-        
+
         return message;
     }
 }

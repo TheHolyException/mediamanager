@@ -1,0 +1,201 @@
+/**
+ * Toast Notification System - Dark Theme Styling
+ */
+
+:root {
+    /* Success colors */
+    --toast-success-bg: #1a3d1a;
+    --toast-success-accent: #31a335;
+
+    /* Error colors */
+    --toast-error-bg: #3d1a1a;
+    --toast-error-accent: #f44336;
+
+    /* Warning colors */
+    --toast-warning-bg: #3d2a1a;
+    --toast-warning-accent: #ed7a00;
+
+    /* Info colors */
+    --toast-info-bg: #1a2a3d;
+    --toast-info-accent: #0891b2;
+
+    /* Common styling */
+    --toast-text-color: #f5f7fa;
+    --toast-shadow: rgba(0, 0, 0, 0.5);
+    --toast-border-width: 4px;
+    --toast-radius: 8px;
+    --toast-gap: 12px;
+}
+
+/* Container for all toast notifications */
+.toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--toast-gap);
+    z-index: 8000;
+    pointer-events: none;
+    max-width: calc(100vw - 40px);
+}
+
+/* Individual toast notification */
+.toast {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 16px 20px;
+    border-radius: var(--toast-radius);
+    box-shadow: 0 4px 12px var(--toast-shadow);
+    color: var(--toast-text-color);
+    min-width: 300px;
+    max-width: 500px;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+/* Severity-specific backgrounds and border accents */
+.toast-success {
+    background-color: var(--toast-success-bg);
+    border-left: var(--toast-border-width) solid var(--toast-success-accent);
+}
+
+.toast-error {
+    background-color: var(--toast-error-bg);
+    border-left: var(--toast-border-width) solid var(--toast-error-accent);
+}
+
+.toast-warning {
+    background-color: var(--toast-warning-bg);
+    border-left: var(--toast-border-width) solid var(--toast-warning-accent);
+}
+
+.toast-info {
+    background-color: var(--toast-info-bg);
+    border-left: var(--toast-border-width) solid var(--toast-info-accent);
+}
+
+/* Icon section */
+.toast-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toast-icon i {
+    font-size: 24px;
+}
+
+.toast-success .toast-icon i {
+    color: var(--toast-success-accent);
+}
+
+.toast-error .toast-icon i {
+    color: var(--toast-error-accent);
+}
+
+.toast-warning .toast-icon i {
+    color: var(--toast-warning-accent);
+}
+
+.toast-info .toast-icon i {
+    color: var(--toast-info-accent);
+}
+
+/* Content section */
+.toast-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.toast-title {
+    font-weight: 600;
+    font-size: 1em;
+    margin-bottom: 4px;
+    color: var(--toast-text-color);
+}
+
+.toast-message {
+    font-size: 0.95em;
+    line-height: 1.4;
+    color: var(--toast-text-color);
+    word-wrap: break-word;
+}
+
+/* Close button */
+.toast-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9aa5b1;
+    transition: color 0.2s ease, transform 0.2s ease;
+    border-radius: 4px;
+}
+
+.toast-close:hover {
+    color: var(--toast-text-color);
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toast-close:active {
+    transform: scale(0.95);
+}
+
+.toast-close i {
+    font-size: 16px;
+}
+
+/* Animation states */
+.toast-fade-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast-fade-out {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .toast-container {
+        right: 10px;
+        bottom: 10px;
+        max-width: calc(100vw - 20px);
+    }
+
+    .toast {
+        min-width: 250px;
+        max-width: 100%;
+        padding: 12px 16px;
+    }
+
+    .toast-icon i {
+        font-size: 20px;
+    }
+
+    .toast-title {
+        font-size: 0.95em;
+    }
+
+    .toast-message {
+        font-size: 0.9em;
+    }
+}
+
+@media (max-width: 480px) {
+    .toast {
+        min-width: 200px;
+        gap: 10px;
+    }
+}

@@ -1,4 +1,4 @@
-const yeti = new Yeti();
+const toast = new Toast();
 let dashboard;
 let targetFolders = [];
 let currentEmbeddedWidget = null;
@@ -29,14 +29,14 @@ $(document).ready(function () {
 });
 
 /**
- * Centralized API error handler using Yeti popups
+ * Centralized API error handler using Toast notifications
  * @param {object} xhr - The jQuery XHR object from the failed AJAX request
  * @param {string} defaultMessage - Default error message to show if parsing fails
- * @param {object} options - Additional options for Yeti popup
+ * @param {object} options - Additional options for Toast notification
  */
 function handleAPIError(xhr, defaultMessage, options = {}) {
     let errorMessage = defaultMessage || 'An error occurred';
-    
+
     // Try to extract error message from response
     try {
         if (xhr.responseText) {
@@ -46,40 +46,40 @@ function handleAPIError(xhr, defaultMessage, options = {}) {
     } catch (e) {
         // Use default message if response parsing fails
     }
-    
-    // Show error popup using Yeti
-    yeti.show({
+
+    // Show error notification using Toast
+    toast.show({
         message: errorMessage,
-        severity: 'nok',
-        time: 5000,
+        severity: 'error',
+        duration: 5000,
         ...options // Allow overriding default options
     });
-    
+
     return errorMessage;
 }
 
 /**
- * Centralized API success handler using Yeti popups
+ * Centralized API success handler using Toast notifications
  * @param {object} response - The response data from successful API call
  * @param {string} defaultMessage - Default success message to show
- * @param {object} options - Additional options for Yeti popup
+ * @param {object} options - Additional options for Toast notification
  */
 function handleAPISuccess(response, defaultMessage, options = {}) {
     let successMessage = defaultMessage || 'Operation completed successfully';
-    
+
     // Try to extract success message from response
     if (response && response.message) {
         successMessage = response.message;
     }
-    
-    // Show success popup using Yeti
-    yeti.show({
+
+    // Show success notification using Toast
+    toast.show({
         message: successMessage,
-        severity: 'ok',
-        time: 3000,
+        severity: 'success',
+        duration: 3000,
         ...options // Allow overriding default options
     });
-    
+
     return successMessage;
 }
 

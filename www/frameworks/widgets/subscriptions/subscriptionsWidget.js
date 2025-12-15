@@ -935,29 +935,25 @@ class SubscriptionsWidget extends BaseWidget {
     }
 
     showNotification(message, type = 'info') {
-        // Map notification types to yeti severity levels
-        const severityMap = {
-            'success': 'ok',
-            'info': 'info', 
-            'error': 'nok',
-            'warning': 'warn'
-        };
-        
-        // Check if yeti is available globally
-        if (typeof window.yeti !== 'undefined') {
-            window.yeti.show({
+        // Valid toast severity types
+        const validSeverities = ['success', 'info', 'error', 'warning'];
+        const severity = validSeverities.includes(type) ? type : 'info';
+
+        // Check if toast is available globally
+        if (typeof window.toast !== 'undefined') {
+            window.toast.show({
                 message: message,
-                severity: severityMap[type] || 'info',
-                time: 5000
+                severity: severity,
+                duration: 5000
             });
-        } else if (typeof yeti !== 'undefined') {
-            yeti.show({
+        } else if (typeof toast !== 'undefined') {
+            toast.show({
                 message: message,
-                severity: severityMap[type] || 'info',
-                time: 5000
+                severity: severity,
+                duration: 5000
             });
         } else {
-            // Fallback to console logging if yeti is not available
+            // Fallback to console logging if toast is not available
             console.log(`${type.toUpperCase()}: ${message}`);
         }
     }

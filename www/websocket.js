@@ -33,10 +33,10 @@ function connect() {
         if (data.targetSystem != undefined) targetSystem = data.targetSystem;
 
         if (cmd == "response") {
-            yeti.show({
+            toast.show({
                 message: content.message,
-                severity: getYetiServerity(content.code),
-                time: 5000
+                severity: getToastSeverity(content.code),
+                duration: 5000
             });
             return;
         }
@@ -86,11 +86,11 @@ function sendPacket(cmd, targetSystem, content) {
     ws.send(JSON.stringify(request));
 }
 
-function getYetiServerity(code) {
+function getToastSeverity(code) {
     switch (code) {
-        case 2: return 'ok'
-        case 3: return 'warn'
-        case 4: return 'nok'
+        case 2: return 'success'
+        case 3: return 'warning'
+        case 4: return 'error'
         default: return 'info'
     }
 }
