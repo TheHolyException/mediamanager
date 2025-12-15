@@ -485,8 +485,6 @@ class SubscriptionsWidget extends BaseWidget {
         widget.find('.sub-url, .sub-subfolder, .sub-excluded').val('');
         widget.find('.sub-language').val('1');
         widget.find('.sub-target-folder').prop('selectedIndex', 0);
-        widget.find('input[name="quality"][value="720p"]').prop('checked', true);
-        widget.find('.auto-start').prop('checked', false);
     }
 
     validateForm(widget) {
@@ -572,9 +570,7 @@ class SubscriptionsWidget extends BaseWidget {
             url: widget.find('.sub-url').val().trim(),
             languageId: parseInt(widget.find('.sub-language').val()),
             directory: subfolder,
-            excludedSeasons: widget.find('.sub-excluded').val().trim(),
-            quality: widget.find('input[name="quality"]:checked').val(),
-            autoStart: widget.find('.auto-start').prop('checked')
+            excludedSeasons: widget.find('.sub-excluded').val().trim()
         };
 
         ApiClient.addSubscription(data)
