@@ -23,6 +23,24 @@ public class SettingProperty<T> {
         subscribers.forEach(item -> item.accept(value));
     }
 
+    public void setValueSafe(String val) {
+        if (value instanceof Integer) {
+            setValue((T) Integer.valueOf(val));
+        } else if (value instanceof Long) {
+            setValue((T) Long.valueOf(val));
+        } else if (value instanceof Double) {
+            setValue((T) Double.valueOf(val));
+        } else if (value instanceof Float) {
+            setValue((T) Float.valueOf(val));
+        } else if (value instanceof Boolean) {
+            setValue((T) Boolean.valueOf(val));
+        } else if (value instanceof String) {
+            setValue((T) val);
+        } else {
+            throw new IllegalArgumentException("Unsupported type: " + value.getClass().getName());
+        }
+    }
+
     @Override
     public String toString() {
         return metadata.name() + " - " + value;
@@ -39,6 +57,11 @@ public class SettingProperty<T> {
 
     public Type getArgumentType() {
         return ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+    }
+
+    public String getValueSafe() {
+        if (value == null) return "null";
+        return value.toString();
     }
 
 }

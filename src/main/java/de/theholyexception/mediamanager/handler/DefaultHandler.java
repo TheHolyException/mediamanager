@@ -620,15 +620,24 @@ public class DefaultHandler extends Handler {
                     JSONObject setting = (JSONObject) o;
                     String key = (String) setting.get("key");
                     String val = (String) setting.get("value");
-                    
-                    switch (key) {
-                        case "THREADS" -> spThreads.setValue(Integer.parseInt(val));
-                        case "PARALLEL_DOWNLOADS" -> spDownloadThreads.setValue(Integer.parseInt(val));
-                        case "RETRY_DELAY_FORMULA" -> spRetryDelayFormula.setValue(val);
-                        case "MAX_RETRY_DELAY_MINUTES" -> spMaxRetryDelayMinutes.setValue(Integer.parseInt(val));
-                        default -> errors.add("Invalid setting: " + key);
+
+                    SettingProperty<?> property = switch (key) {
+                        case "THREADS" -> spThreads;
+                        case "PARALLEL_DOWNLOADS" -> spDownloadThreads;
+                        case "RETRY_DELAY_FORMULA" -> spRetryDelayFormula;
+                        case "MAX_RETRY_DELAY_MINUTES" -> spMaxRetryDelayMinutes;
+                        default -> null;
+                    };
+
+                    if (property == null) {
+                        errors.add("Invalid setting: " + key);
+                        continue;
                     }
-                    log.info("Changed setting {} to: {}", key, val);
+
+                    if (!property.getValueSafe().equals(val)) {
+                        property.setValueSafe(val);
+                        log.info("Changed setting {} to: {}", key, val);
+                    }
                 } catch (NumberFormatException ex) {
                     errors.add("Invalid numeric value for setting");
                 } catch (Exception ex) {
