@@ -152,6 +152,7 @@ public class MediaManager {
      */
     private void loadConfigFile() throws InitializationException {
         MediaManagerConfig.initialize(Paths.get(("./config/config.toml")));
+        changeLogLevel();
 
         try {
             systemSettings = new ConfigJSON(new File("./config/systemsettings.json"));
@@ -172,7 +173,6 @@ public class MediaManager {
      */
     private void loadConfiguration() throws InitializationException {
         try {
-            changeLogLevel();
             Settings.init(systemSettings);
             handlers.values().forEach(Handler::loadConfigurations);
             systemSettings.saveConfig(FileConfiguration.SaveOption.PRETTY_PRINT);
